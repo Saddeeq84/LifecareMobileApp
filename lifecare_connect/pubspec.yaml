@@ -1,0 +1,57 @@
+name: lifecare_connect
+description: A new Flutter project for Community Health Workers.
+
+publish_to: 'none' # Prevent accidental publishing to pub.dev
+
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # 📷 Media and File Upload
+  image_picker: ^1.0.4
+  file_picker: ^10.2.0
+
+  # 💬 Localization & Date Formatting
+  intl: ^0.20.2
+
+  # 💾 Local Storage and Notifications
+  shared_preferences: ^2.2.2
+  flutter_local_notifications: ^19.3.0
+
+  # 🔉 Media Playback
+  video_player: ^2.7.2
+  just_audio: ^0.9.36
+
+  # 🔐 Firebase & Auth (⬇️ Uncomment when ready to activate Firebase backend)
+  # firebase_core: ^2.25.0
+  # firebase_auth: ^4.17.0
+  # cloud_firestore: ^4.14.0
+  # firebase_storage: ^11.5.3
+
+  # 🔐 Social Login (⬇️ Optional: Google/Facebook login)
+  # google_sign_in: ^6.2.1
+  # flutter_facebook_auth: ^6.0.2
+
+  # 🧭 Routing, State Management
+  # provider: ^6.1.1
+  # go_router: ^13.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  #assets:
+    # - assets/audio/sample_audio1.mp3
+    # - assets/audio/sample_audio2.mp3
+    # - assets/audio/alert.png
+    # - assets/audio/food.png
+    # - assets/images/mosquito.png
