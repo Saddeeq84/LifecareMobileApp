@@ -8,7 +8,7 @@ import 'login_patient.dart';
 import 'login_admin.dart';
 import 'login_doctor.dart';
 import 'register_role_selection.dart';
-import 'package:lifecare_connect/screens/facility_login_screen.dart'; // ✅ Import the Facility Login screen
+import 'package:lifecare_connect/screens/facility_login_screen.dart'; // ✅ Facility Login
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
@@ -68,6 +68,7 @@ class LoginPage extends StatelessWidget {
                   icon: const Icon(Icons.medical_services_outlined),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.teal,
+                    foregroundColor: Colors.white, // ✅ White text & icon
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                   onPressed: () {
@@ -85,6 +86,7 @@ class LoginPage extends StatelessWidget {
                   icon: const Icon(Icons.people_outline),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.teal,
+                    foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                   onPressed: () {
@@ -102,6 +104,7 @@ class LoginPage extends StatelessWidget {
                   icon: const Icon(Icons.local_hospital_outlined),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.teal,
+                    foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                   onPressed: () {
@@ -119,6 +122,7 @@ class LoginPage extends StatelessWidget {
                   icon: const Icon(Icons.admin_panel_settings_outlined),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.teal,
+                    foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                   onPressed: () {
@@ -131,11 +135,12 @@ class LoginPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 15),
 
-                // 🏥 Facility (Corporate) Login ✅ ADDED
+                // 🏥 Facility (Corporate) Login
                 ElevatedButton.icon(
                   icon: const Icon(Icons.business_outlined),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.teal,
+                    foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                   onPressed: () {
@@ -177,4 +182,3 @@ class LoginPage extends StatelessWidget {
     );
   }
 }
-// 📱 This is the main entry point for the LifeCare Connect app.

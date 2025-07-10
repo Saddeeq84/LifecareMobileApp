@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'login_chw.dart';
 import 'login_patient.dart';
 import 'login_admin.dart';
-import 'login_doctor.dart'; // Doctor login screen
+import 'login_doctor.dart';
+import 'facility_login_screen.dart'; 
 
 class RoleSelectionPage extends StatelessWidget {
   const RoleSelectionPage({super.key});
@@ -55,6 +56,13 @@ class RoleSelectionPage extends StatelessWidget {
                   label: 'Admin',
                   screen: const LoginAdminScreen(),
                 ),
+                const SizedBox(height: 15),
+
+                _buildRoleButton(
+                  context,
+                  label: 'Facility/Corporate Login',
+                  screen: const FacilityLoginScreen(),
+                ),
               ],
             ),
           ),
@@ -63,7 +71,8 @@ class RoleSelectionPage extends StatelessWidget {
     );
   }
 
-  Widget _buildRoleButton(BuildContext context, {
+  Widget _buildRoleButton(
+    BuildContext context, {
     required String label,
     required Widget screen,
   }) {
@@ -72,7 +81,9 @@ class RoleSelectionPage extends StatelessWidget {
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.teal,
+          foregroundColor: Colors.white, 
           padding: const EdgeInsets.symmetric(vertical: 16),
+          textStyle: const TextStyle(fontSize: 16),
         ),
         onPressed: () {
           Navigator.push(
@@ -80,12 +91,8 @@ class RoleSelectionPage extends StatelessWidget {
             MaterialPageRoute(builder: (_) => screen),
           );
         },
-        child: Text(
-          label,
-          style: const TextStyle(fontSize: 16, color: Colors.white),
-        ),
+        child: Text(label),
       ),
     );
   }
 }
-// This is the role selection page that allows users to choose their role and navigate to the appropriate login screen.

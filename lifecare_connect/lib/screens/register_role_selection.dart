@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'chw_register.dart';
 import 'login_patient_register.dart';
 import 'doctor_register.dart';
-import 'package:lifecare_connect/screens/facility_register_screen.dart'; // ✅ Import facility registration
+import 'package:lifecare_connect/screens/facility_register_screen.dart'; // ✅ Facility Registration
 
 class RegisterRoleSelectionScreen extends StatelessWidget {
   const RegisterRoleSelectionScreen({super.key});
@@ -82,7 +82,7 @@ class RegisterRoleSelectionScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 20),
 
-                    // 🏥 Facility / Corporate ✅ ADDED
+                    // 🏥 Facility / Corporate
                     _buildRoleButton(
                       context,
                       label: 'Facility / Corporate',
@@ -99,7 +99,7 @@ class RegisterRoleSelectionScreen extends StatelessWidget {
     );
   }
 
-  // 🔁 Reusable Button Builder
+  // 🔁 Reusable Button Builder with white text + icon
   Widget _buildRoleButton(
     BuildContext context, {
     required String label,
@@ -109,10 +109,14 @@ class RegisterRoleSelectionScreen extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton.icon(
-        icon: Icon(icon),
-        label: Text(label, style: const TextStyle(fontSize: 16)),
+        icon: Icon(icon, color: Colors.white), // ✅ White icon
+        label: Text(
+          label,
+          style: const TextStyle(fontSize: 16, color: Colors.white), // ✅ White text
+        ),
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.teal,
+          foregroundColor: Colors.white, // ✅ Affects ripple + disabled state
           padding: const EdgeInsets.symmetric(vertical: 16),
         ),
         onPressed: () {
@@ -125,3 +129,4 @@ class RegisterRoleSelectionScreen extends StatelessWidget {
     );
   }
 }
+// ✅ This screen allows users to select their registration role
