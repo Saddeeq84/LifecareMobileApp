@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+
 import 'screens/dashboards/patient_dashboard.dart';
 import 'screens/dashboards/chw_dashboard.dart';
 import 'screens/dashboards/doctor_dashboard.dart';
@@ -27,22 +28,25 @@ import 'screens/appointments/book_patient_appointment_screen.dart';
 import 'screens/patient_education_screen.dart';
 
 // Doctor Screens
-// import 'screens/doctor_consultation.dart';
-import 'screens/doctor_referrals.dart';
+import 'screens/doctor_referrals_screen.dart';
+import 'screens/doctor_patients_screen.dart'; // ✅ Correct import
+import 'screens/doctor_scheduled_consults_screen.dart';
+import 'screens/doctor_notes_screen.dart';
+import 'screens/doctor_reports_screen.dart';
+import 'screens/doctor_profile_screen.dart';
+
 
 // ✅ Real login screen
 import 'screens/login_page.dart';
 
 // ✅ TEMP: Add dashboard selector for UI-only testing
-import 'screens/dashboard_selector_screen.dart'; // 👈 Create this file
+import 'screens/dashboard_selector_screen.dart';
 
-// Define the notifications plugin globally
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // ✅ Setup notifications (UI only)
   const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
   const iosSettings = DarwinInitializationSettings();
   const initSettings = InitializationSettings(
@@ -72,10 +76,10 @@ class LifeCareConnectApp extends StatelessWidget {
       // initialRoute: '/login',
 
       // ✅ TEMP: Testing mode entry screen for Patient/CHW/Doctor/Admin
-      home: const DashboardSelectorScreen(), // 👈 For UI testing only
+      home: const DashboardSelectorScreen(),
 
       routes: {
-        // 🔐 Login system (keep this intact for later)
+        // 🔐 Login
         '/login': (context) => const LoginPage(),
 
         // 🧑‍⚕️ Patient Routes
@@ -83,6 +87,7 @@ class LifeCareConnectApp extends StatelessWidget {
         '/patient_appointments': (context) => const PatientAppointmentsScreen(),
         '/book_patient_appointment': (context) => const BookPatientAppointmentScreen(),
         '/patient_education': (context) => const PatientEducationScreen(),
+        '/doctor_notes': (context) => const DoctorNotesScreen(),
 
         // 👩‍⚕️ CHW Routes
         '/chw_dashboard': (context) => const CHWDashboard(),
@@ -110,15 +115,34 @@ class LifeCareConnectApp extends StatelessWidget {
             ),
 
         // 👨‍⚕️ Doctor Routes
-        '/doctor_dashboard': (context) => const DoctorDashboardScreen(),
-        // '/doctor_consultations': (context) => const DoctorConsultationsScreen(),
+        '/doctor_dashboard': (context) => const DoctorDashboard(),
+        '/doctor_patients': (context) => const DoctorPatientsScreen(),
         '/doctor_referrals': (context) => const DoctorReferralsScreen(),
+        '/doctor_profile': (context) => const PlaceholderScreen('Doctor Profile'),
+      '/doctor_schedule': (context) => const DoctorScheduledConsultsScreen(),
+      '/doctor_reports': (context) => const DoctorReportsScreen(),
+      '/doctor_profile': (context) => const DoctorProfileScreen(),
 
-        // 🧑‍💼 Admin Dashboard (UI only)
+        // 🧑‍💼 Admin Dashboard
         '/admin_dashboard': (context) => const AdminDashboard(),
       },
     );
   }
 }
-// Note: Ensure that the recipientType and recipientName are passed correctly
-// in the chat screens to avoid errors. This is a placeholder for the actual chat implementation.
+
+/// Simple placeholder screen for routes not yet implemented.
+class PlaceholderScreen extends StatelessWidget {
+  final String title;
+  const PlaceholderScreen(this.title, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(title)),
+      body: Center(child: Text('$title screen coming soon!')),
+    );
+  }
+}
+// Note: This code provides a basic structure for the LifeCare Connect app.
+// You can expand the functionality by integrating with a backend or database to fetch real data,
+// implementing authentication, and adding more features as needed.
