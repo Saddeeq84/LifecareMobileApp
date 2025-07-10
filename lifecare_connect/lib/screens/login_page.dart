@@ -7,7 +7,8 @@ import 'login_chw.dart';
 import 'login_patient.dart';
 import 'login_admin.dart';
 import 'login_doctor.dart';
-import 'register_role_selection.dart'; // ✅ Add this import
+import 'register_role_selection.dart';
+import 'package:lifecare_connect/screens/facility_login_screen.dart'; // ✅ Import the Facility Login screen
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
@@ -23,7 +24,7 @@ class LoginPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Header
+                // 🔷 Header
                 Container(
                   padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 16),
                   decoration: BoxDecoration(
@@ -62,7 +63,7 @@ class LoginPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 25),
 
-                // CHW Login
+                // 👩‍⚕️ CHW Login
                 ElevatedButton.icon(
                   icon: const Icon(Icons.medical_services_outlined),
                   style: ElevatedButton.styleFrom(
@@ -79,7 +80,7 @@ class LoginPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 15),
 
-                // Patient Login
+                // 🧑‍⚕️ Patient Login
                 ElevatedButton.icon(
                   icon: const Icon(Icons.people_outline),
                   style: ElevatedButton.styleFrom(
@@ -96,7 +97,7 @@ class LoginPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 15),
 
-                // Doctor Login
+                // 👨‍⚕️ Doctor Login
                 ElevatedButton.icon(
                   icon: const Icon(Icons.local_hospital_outlined),
                   style: ElevatedButton.styleFrom(
@@ -113,7 +114,7 @@ class LoginPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 15),
 
-                // Admin Login
+                // 🧑‍💼 Admin Login
                 ElevatedButton.icon(
                   icon: const Icon(Icons.admin_panel_settings_outlined),
                   style: ElevatedButton.styleFrom(
@@ -127,6 +128,23 @@ class LoginPage extends StatelessWidget {
                     );
                   },
                   label: const Text('Admin'),
+                ),
+                const SizedBox(height: 15),
+
+                // 🏥 Facility (Corporate) Login ✅ ADDED
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.business_outlined),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.teal,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const FacilityLoginScreen()),
+                    );
+                  },
+                  label: const Text('Facility / Corporate Login'),
                 ),
 
                 const SizedBox(height: 40),
@@ -159,3 +177,4 @@ class LoginPage extends StatelessWidget {
     );
   }
 }
+// 📱 This is the main entry point for the LifeCare Connect app.

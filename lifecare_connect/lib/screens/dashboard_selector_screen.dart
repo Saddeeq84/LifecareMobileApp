@@ -1,3 +1,4 @@
+// lib/screens/dashboard_selector_screen.dart
 import 'package:flutter/material.dart';
 
 class DashboardSelectorScreen extends StatelessWidget {
@@ -5,56 +6,34 @@ class DashboardSelectorScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dashboards = [
+      {"title": "Patient", "route": "/patient_dashboard"},
+      {"title": "CHW", "route": "/chw_dashboard"},
+      {"title": "Doctor", "route": "/doctor_dashboard"},
+      {"title": "Admin", "route": "/admin_dashboard"},
+      {"title": "Facility", "route": "/facility_dashboard"}, // ✅ NEW
+    ];
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Test Dashboard Selector')),
-      body: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            ElevatedButton.icon(
-              icon: const Icon(Icons.person),
-              label: const Text('Patient Dashboard'),
-              onPressed: () => Navigator.pushNamed(context, '/patient_dashboard'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                minimumSize: const Size(double.infinity, 50),
-              ),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.health_and_safety),
-              label: const Text('CHW Dashboard'),
-              onPressed: () => Navigator.pushNamed(context, '/chw_dashboard'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.teal,
-                minimumSize: const Size(double.infinity, 50),
-              ),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.local_hospital),
-              label: const Text('Doctor Dashboard'),
-              onPressed: () => Navigator.pushNamed(context, '/doctor_dashboard'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.indigo,
-                minimumSize: const Size(double.infinity, 50),
-              ),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.admin_panel_settings),
-              label: const Text('Admin Dashboard'),
-              onPressed: () => Navigator.pushNamed(context, '/admin_dashboard'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.deepPurple,
-                minimumSize: const Size(double.infinity, 50),
-              ),
-            ),
-          ],
-        ),
+      appBar: AppBar(
+        title: const Text("Select Dashboard"),
+        backgroundColor: Colors.teal.shade800,
+      ),
+      body: ListView.separated(
+        padding: const EdgeInsets.all(24),
+        itemCount: dashboards.length,
+        separatorBuilder: (_, __) => const Divider(),
+        itemBuilder: (context, index) {
+          final dash = dashboards[index];
+          return ListTile(
+            title: Text(dash['title']!, style: const TextStyle(fontWeight: FontWeight.w600)),
+            trailing: const Icon(Icons.arrow_forward_ios),
+            onTap: () {
+              Navigator.pushNamed(context, dash['route']!);
+            },
+          );
+        },
       ),
     );
   }
 }
-// This code defines a screen that allows users to select between different dashboards (Patient, CHW, Doctor, Admin).

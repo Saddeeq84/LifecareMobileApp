@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'chw_register.dart';
 import 'login_patient_register.dart';
 import 'doctor_register.dart';
+import 'package:lifecare_connect/screens/facility_register_screen.dart'; // ✅ Import facility registration
 
 class RegisterRoleSelectionScreen extends StatelessWidget {
   const RegisterRoleSelectionScreen({super.key});
@@ -22,12 +23,11 @@ class RegisterRoleSelectionScreen extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 20),
           child: Column(
             children: [
-              // Top banner
+              // 🟢 Top banner
               Container(
                 width: double.infinity,
                 color: Colors.teal,
-                padding:
-                    const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
+                padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
                 child: const Text(
                   'Take this simple step to join us or access quality care from the comfort of your home',
                   style: TextStyle(
@@ -41,7 +41,7 @@ class RegisterRoleSelectionScreen extends StatelessWidget {
               ),
               const SizedBox(height: 40),
 
-              // Role Selection Section
+              // 🧩 Role Selection Section
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 32.0),
                 child: Column(
@@ -55,7 +55,7 @@ class RegisterRoleSelectionScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 30),
 
-                    // Health Worker Button
+                    // 👩‍⚕️ Health Worker
                     _buildRoleButton(
                       context,
                       label: 'Health Worker',
@@ -64,7 +64,7 @@ class RegisterRoleSelectionScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 20),
 
-                    // Patient Button
+                    // 🧑‍⚕️ Patient
                     _buildRoleButton(
                       context,
                       label: 'Patient',
@@ -73,12 +73,21 @@ class RegisterRoleSelectionScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 20),
 
-                    // Doctor Button
+                    // 👨‍⚕️ Doctor
                     _buildRoleButton(
                       context,
                       label: 'Doctor',
                       icon: Icons.local_hospital_outlined,
                       screen: const DoctorRegisterScreen(),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // 🏥 Facility / Corporate ✅ ADDED
+                    _buildRoleButton(
+                      context,
+                      label: 'Facility / Corporate',
+                      icon: Icons.business_outlined,
+                      screen: const FacilityRegisterScreen(),
                     ),
                   ],
                 ),
@@ -90,7 +99,7 @@ class RegisterRoleSelectionScreen extends StatelessWidget {
     );
   }
 
-  // Reusable Button Builder
+  // 🔁 Reusable Button Builder
   Widget _buildRoleButton(
     BuildContext context, {
     required String label,

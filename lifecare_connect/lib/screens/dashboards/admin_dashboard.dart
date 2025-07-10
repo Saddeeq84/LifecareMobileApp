@@ -1,181 +1,113 @@
-// admin_dashboard.dart
-// ignore_for_file: use_build_context_synchronously, prefer_const_declarations
-
 import 'package:flutter/material.dart';
 
-// 🔒 Firebase disabled temporarily
-// import 'package:firebase_auth/firebase_auth.dart';
-
-class AdminDashboard extends StatefulWidget {
+class AdminDashboard extends StatelessWidget {
   const AdminDashboard({super.key});
 
-  @override
-  State<AdminDashboard> createState() => _AdminDashboardState();
-}
-
-class _AdminDashboardState extends State<AdminDashboard> {
-  int _currentIndex = 0;
-
-  // 🔒 Simulated user data
-  final Map<String, String> simulatedUser = {
-    'email': 'admin@example.com',
-    'uid': 'ABC123XYZ',
-  };
-
-  final List<Widget> _pages = [
-    const AdminOverviewPage(),
-    const CHWActivityPage(),
-    const ReportsPage(),
-    const ProfilePage(),
-  ];
-
-  void logout() async {
-    // 🔒 Simulate logout
-    Navigator.pushNamedAndRemoveUntil(context, '/', (_) => false);
+  void _logout(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Logged out (UI only)")),
+    );
+    Future.delayed(const Duration(seconds: 1), () {
+      Navigator.pushReplacementNamed(context, '/login');
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Admin Dashboard'),
-        backgroundColor: Colors.teal,
+        title: const Text("Admin Dashboard"),
+        backgroundColor: Colors.teal.shade800,
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: logout,
+            onPressed: () => _logout(context),
             tooltip: 'Logout',
           ),
         ],
       ),
-      body: _pages[_currentIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        selectedItemColor: Colors.teal,
-        unselectedItemColor: Colors.grey,
-        onTap: (int index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard_outlined),
-            label: 'Overview',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.group_outlined),
-            label: 'CHWs',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.insert_chart_outlined),
-            label: 'Reports',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            label: 'Profile',
-          ),
-        ],
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: GridView.count(
+          crossAxisCount: 2,
+          crossAxisSpacing: 20,
+          mainAxisSpacing: 20,
+          children: _adminItems.map((item) {
+            return DashboardTile(
+              icon: item.icon,
+              label: item.label,
+              onTap: () => Navigator.pushNamed(context, item.route),
+            );
+          }).toList(),
+        ),
       ),
     );
   }
 }
 
-// ========== Individual Pages ==========
+class DashboardTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
 
-class AdminOverviewPage extends StatelessWidget {
-  const AdminOverviewPage({super.key});
+  const DashboardTile({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    // 🔒 Simulated email display
-    final simulatedEmail = 'admin@example.com';
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Welcome, Admin!',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 12),
-          Text('Logged in as: $simulatedEmail'),
-          const SizedBox(height: 24),
-          const Card(
-            child: ListTile(
-              leading: Icon(Icons.people),
-              title: Text('Total CHWs Registered'),
-              subtitle: Text('Coming soon...'),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.teal.shade100,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 40, color: Colors.teal.shade800),
+            const SizedBox(height: 10),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontWeight: FontWeight.w600),
             ),
-          ),
-          const Card(
-            child: ListTile(
-              leading: Icon(Icons.receipt),
-              title: Text('Pending Approvals'),
-              subtitle: Text('Coming soon...'),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
 
-class CHWActivityPage extends StatelessWidget {
-  const CHWActivityPage({super.key});
+class AdminDashboardItem {
+  final IconData icon;
+  final String label;
+  final String route;
 
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Text('Community Health Workers Activity - Coming soon'),
-    );
-  }
+  const AdminDashboardItem({
+    required this.icon,
+    required this.label,
+    required this.route,
+  });
 }
 
-class ReportsPage extends StatelessWidget {
-  const ReportsPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Text('Reports and Analytics - Coming soon'),
-    );
-  }
-}
-
-class ProfilePage extends StatelessWidget {
-  const ProfilePage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    // 🔒 Simulated user info
-    final simulatedEmail = 'admin@example.com';
-    final simulatedUID = 'ABC123XYZ';
-
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.person, size: 60, color: Colors.teal),
-          const SizedBox(height: 20),
-          Text('Email: $simulatedEmail'),
-          const SizedBox(height: 10),
-          Text('UID: $simulatedUID'),
-          const SizedBox(height: 20),
-          ElevatedButton.icon(
-            onPressed: () {
-              Navigator.pushNamedAndRemoveUntil(context, '/', (_) => false);
-            },
-            icon: const Icon(Icons.logout),
-            label: const Text('Logout'),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
-          ),
-        ],
-      ),
-    );
-  }
-}
-// This file is part of the LifeCare Connect project.
-// It implements the admin dashboard with navigation and simulated user data.
+const List<AdminDashboardItem> _adminItems = [
+  AdminDashboardItem(
+      icon: Icons.people, label: "Manage Users", route: "/admin_manage_users"),
+  AdminDashboardItem(
+      icon: Icons.local_hospital, label: "Facilities", route: "/admin_facilities"),
+  AdminDashboardItem(
+      icon: Icons.bar_chart, label: "Reports", route: "/admin_reports"),
+  AdminDashboardItem(
+      icon: Icons.school, label: "Training Modules", route: "/admin_training"),
+  AdminDashboardItem(
+      icon: Icons.message, label: "Messages", route: "/admin_messages"),
+  AdminDashboardItem(
+      icon: Icons.settings, label: "Settings", route: "/admin_settings"),
+];

@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+// 📦 Dashboards
 import 'screens/dashboards/patient_dashboard.dart';
 import 'screens/dashboards/chw_dashboard.dart';
 import 'screens/dashboards/doctor_dashboard.dart';
 import 'screens/dashboards/admin_dashboard.dart';
+import 'screens/dashboards/facility_dashboard.dart';
 
-// CHW Screens
+// 👩‍⚕️ CHW Screens
 import 'screens/chw_my_patients_screen.dart';
 import 'screens/chw_profile_screen.dart';
 import 'screens/chw_messages_screen.dart';
@@ -22,31 +24,43 @@ import 'screens/forms/chats/doctor_list_screen.dart';
 import 'screens/forms/chats/patient_list_screen.dart';
 import 'screens/forms/chats/chw_chat_screen.dart' as chw_chat;
 
-// Patient Screens
+// 🧑‍⚕️ Patient Screens
 import 'screens/appointments/patient_appointment_screen.dart';
 import 'screens/appointments/book_patient_appointment_screen.dart';
 import 'screens/patient_education_screen.dart';
 
-// Doctor Screens
+// 👨‍⚕️ Doctor Screens
 import 'screens/doctor_referrals_screen.dart';
-import 'screens/doctor_patients_screen.dart'; // ✅ Correct import
+import 'screens/doctor_patients_screen.dart';
 import 'screens/doctor_scheduled_consults_screen.dart';
 import 'screens/doctor_notes_screen.dart';
 import 'screens/doctor_reports_screen.dart';
 import 'screens/doctor_profile_screen.dart';
 
+// 🧑‍💼 Admin Screens
+import 'screens/admin_manage_users_screen.dart';
+import 'screens/admin_facilities_screen.dart';
+import 'screens/admin_register_facility_screen.dart';
+import 'screens/admin_reports_screen.dart';
+import 'screens/admin_training_screen.dart';
+import 'screens/admin_messages_screen.dart';
+import 'screens/admin_settings_screen.dart';
 
-// ✅ Real login screen
+// 🏥 Facility Screens
+import 'screens/facility_login_screen.dart';
+import 'screens/facility_register_screen.dart';
+
+// 🔐 Login Screen (now the entry point)
 import 'screens/login_page.dart';
 
-// ✅ TEMP: Add dashboard selector for UI-only testing
-import 'screens/dashboard_selector_screen.dart';
-
-final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+// 🔔 Local Notifications
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Initialize local notifications for Android & iOS
   const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
   const iosSettings = DarwinInitializationSettings();
   const initSettings = InitializationSettings(
@@ -72,24 +86,22 @@ class LifeCareConnectApp extends StatelessWidget {
         scaffoldBackgroundColor: Colors.grey[50],
       ),
 
-      // ✅ Uncomment the next line for real login when Firebase is ready
-      // initialRoute: '/login',
+      // 🚀 App now starts from the Login Page
+      home: const LoginPage(),
 
-      // ✅ TEMP: Testing mode entry screen for Patient/CHW/Doctor/Admin
-      home: const DashboardSelectorScreen(),
-
+      // 🌐 Route definitions
       routes: {
-        // 🔐 Login
+        // 🔐 LOGIN
         '/login': (context) => const LoginPage(),
 
-        // 🧑‍⚕️ Patient Routes
+        // 🧑‍⚕️ PATIENT ROUTES
         '/patient_dashboard': (context) => const PatientDashboard(),
         '/patient_appointments': (context) => const PatientAppointmentsScreen(),
-        '/book_patient_appointment': (context) => const BookPatientAppointmentScreen(),
+        '/book_patient_appointment': (context) =>
+            const BookPatientAppointmentScreen(),
         '/patient_education': (context) => const PatientEducationScreen(),
-        '/doctor_notes': (context) => const DoctorNotesScreen(),
 
-        // 👩‍⚕️ CHW Routes
+        // 👩‍⚕️ CHW ROUTES
         '/chw_dashboard': (context) => const CHWDashboard(),
         '/chw_my_patients': (context) => CHWMyPatientsScreen(),
         '/chw_profile': (context) => const CHWProfileScreen(),
@@ -104,8 +116,9 @@ class LifeCareConnectApp extends StatelessWidget {
               notificationsPlugin: flutterLocalNotificationsPlugin,
             ),
 
-        // 💬 CHW Chat
-        '/chat_selection': (context) => const chat_selection.ChatSelectionScreen(),
+        // 💬 CHW CHAT
+        '/chat_selection': (context) =>
+            const chat_selection.ChatSelectionScreen(),
         '/chw_chat_doctor': (context) => const DoctorListScreen(),
         '/chw_chat_patient': (context) => const PatientListScreen(),
         '/chw_chat': (context) => const chw_chat.CHWChatScreen(
@@ -114,35 +127,32 @@ class LifeCareConnectApp extends StatelessWidget {
               recipientName: 'Unknown',
             ),
 
-        // 👨‍⚕️ Doctor Routes
+        // 👨‍⚕️ DOCTOR ROUTES
         '/doctor_dashboard': (context) => const DoctorDashboard(),
         '/doctor_patients': (context) => const DoctorPatientsScreen(),
         '/doctor_referrals': (context) => const DoctorReferralsScreen(),
-        '/doctor_profile': (context) => const PlaceholderScreen('Doctor Profile'),
-      '/doctor_schedule': (context) => const DoctorScheduledConsultsScreen(),
-      '/doctor_reports': (context) => const DoctorReportsScreen(),
-      '/doctor_profile': (context) => const DoctorProfileScreen(),
+        '/doctor_profile': (context) => const DoctorProfileScreen(),
+        '/doctor_schedule': (context) => const DoctorScheduledConsultsScreen(),
+        '/doctor_notes': (context) => const DoctorNotesScreen(),
+        '/doctor_reports': (context) => const DoctorReportsScreen(),
 
-        // 🧑‍💼 Admin Dashboard
+        // 🧑‍💼 ADMIN ROUTES
         '/admin_dashboard': (context) => const AdminDashboard(),
+        '/admin_manage_users': (context) => const AdminManageUsersScreen(),
+        '/admin_facilities': (context) => const AdminFacilitiesScreen(),
+        '/admin_register_facility': (context) =>
+            const RegisterFacilityScreen(),
+        '/admin_reports': (context) => const AdminReportsScreen(),
+        '/admin_training': (context) => const AdminTrainingScreen(),
+        '/admin_messages': (context) => const AdminMessagesScreen(),
+        '/admin_settings': (context) => const AdminSettingsScreen(),
+
+        // 🏥 FACILITY ROUTES
+        '/facility_login': (context) => const FacilityLoginScreen(),
+        '/facility_register': (context) => const FacilityRegisterScreen(),
+        '/facility_dashboard': (context) => const FacilityDashboard(),
       },
     );
   }
 }
-
-/// Simple placeholder screen for routes not yet implemented.
-class PlaceholderScreen extends StatelessWidget {
-  final String title;
-  const PlaceholderScreen(this.title, {super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: Center(child: Text('$title screen coming soon!')),
-    );
-  }
-}
-// Note: This code provides a basic structure for the LifeCare Connect app.
-// You can expand the functionality by integrating with a backend or database to fetch real data,
-// implementing authentication, and adding more features as needed.
+// 📱 This is the main entry point for the LifeCare Connect app.

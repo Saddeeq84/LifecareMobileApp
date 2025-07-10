@@ -19,14 +19,6 @@ class _DoctorNotesScreenState extends State<DoctorNotesScreen> {
       "note": "Patient presents with signs of preeclampsia. BP elevated. Advised urgent scan.",
       "date": "2025-07-10"
     },
-    {
-      "patient": "John Yusuf",
-      "age": "41",
-      "gender": "Male",
-      "condition": "Hypertension",
-      "note": "Follow-up for hypertension. Medication adjusted.",
-      "date": "2025-07-08"
-    },
   ];
 
   void _openAddNoteForm({String? preselectedPatient}) {
@@ -118,37 +110,28 @@ class AddMedicalNoteScreen extends StatefulWidget {
 
 class _AddMedicalNoteScreenState extends State<AddMedicalNoteScreen> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _noteCtrl = TextEditingController();
+  final _noteCtrl = TextEditingController();
+  final _customLabCtrl = TextEditingController();
+  final _customMedCtrl = TextEditingController();
+  final _customScanCtrl = TextEditingController();
+
   String? selectedPatient;
+  Map<String, String>? selectedPatientData;
 
   final List<Map<String, String>> patientList = [
-    {
-      "name": "Fatima Bello",
-      "age": "29",
-      "gender": "Female",
-      "condition": "Preeclampsia"
-    },
-    {
-      "name": "John Yusuf",
-      "age": "41",
-      "gender": "Male",
-      "condition": "Hypertension"
-    },
-    {
-      "name": "Grace Danjuma",
-      "age": "32",
-      "gender": "Female",
-      "condition": "Diabetes"
-    },
-    {
-      "name": "Kabiru Saleh",
-      "age": "37",
-      "gender": "Male",
-      "condition": "Asthma"
-    },
+    {"name": "Fatima Bello", "age": "29", "gender": "Female", "condition": "Preeclampsia"},
+    {"name": "John Yusuf", "age": "41", "gender": "Male", "condition": "Hypertension"},
+    {"name": "Grace Danjuma", "age": "32", "gender": "Female", "condition": "Diabetes"},
+    {"name": "Kabiru Saleh", "age": "37", "gender": "Male", "condition": "Asthma"},
   ];
 
-  Map<String, String>? selectedPatientData;
+  final List<String> labTests = ["Blood Count", "Urinalysis", "Malaria Test"];
+  final List<String> medications = ["Paracetamol", "Lisinopril", "Metformin"];
+  final List<String> scans = ["Ultrasound", "X-ray", "MRI"];
+
+  String? selectedLab;
+  String? selectedMed;
+  String? selectedScan;
 
   @override
   void initState() {
@@ -165,17 +148,31 @@ class _AddMedicalNoteScreenState extends State<AddMedicalNoteScreen> {
   @override
   void dispose() {
     _noteCtrl.dispose();
+    _customLabCtrl.dispose();
+    _customMedCtrl.dispose();
+    _customScanCtrl.dispose();
     super.dispose();
   }
 
   void _saveNote() {
     if (_formKey.currentState!.validate() && selectedPatientData != null) {
+      String combinedNote = _noteCtrl.text.trim();
+      if (selectedLab != null || _customLabCtrl.text.isNotEmpty) {
+        combinedNote += "\n\n🧪 Lab Test: ${selectedLab ?? ''} ${_customLabCtrl.text}";
+      }
+      if (selectedMed != null || _customMedCtrl.text.isNotEmpty) {
+        combinedNote += "\n\n💊 Medication: ${selectedMed ?? ''} ${_customMedCtrl.text}";
+      }
+      if (selectedScan != null || _customScanCtrl.text.isNotEmpty) {
+        combinedNote += "\n\n🖥️ Scan Request: ${selectedScan ?? ''} ${_customScanCtrl.text}";
+      }
+
       widget.onSave({
         "patient": selectedPatientData!["name"] ?? "",
         "age": selectedPatientData!["age"] ?? "",
         "gender": selectedPatientData!["gender"] ?? "",
         "condition": selectedPatientData!["condition"] ?? "",
-        "note": _noteCtrl.text.trim(),
+        "note": combinedNote,
         "date": DateTime.now().toString().split(' ')[0],
       });
       Navigator.pop(context);
@@ -191,51 +188,93 @@ class _AddMedicalNoteScreenState extends State<AddMedicalNoteScreen> {
         title: const Text("Add Medical Note"),
         backgroundColor: Colors.indigo,
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Form(
           key: _formKey,
           child: Column(
             children: [
-              isPreselected
-                  ? TextFormField(
-                      initialValue: selectedPatient,
-                      readOnly: true,
-                      decoration: const InputDecoration(labelText: "Patient"),
-                    )
-                  : DropdownButtonFormField<String>(
-                      value: selectedPatient,
-                      items: patientList.map((p) {
-                        return DropdownMenuItem(
-                          value: p["name"],
-                          child: Text(p["name"]!),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          selectedPatient = value;
-                          selectedPatientData = patientList
-                              .firstWhere((p) => p["name"] == value);
-                        });
-                      },
-                      decoration: const InputDecoration(
-                        labelText: "Select Patient",
-                      ),
-                      validator: (val) =>
-                          val == null || val.isEmpty ? "Please select a patient" : null,
-                    ),
+              if (!isPreselected)
+                DropdownButtonFormField<String>(
+                  value: selectedPatient,
+                  items: patientList.map((p) {
+                    return DropdownMenuItem(
+                      value: p["name"],
+                      child: Text(p["name"]!),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      selectedPatient = value;
+                      selectedPatientData = patientList.firstWhere((p) => p["name"] == value);
+                    });
+                  },
+                  decoration: const InputDecoration(labelText: "Select Patient"),
+                  validator: (val) => val == null ? "Please select a patient" : null,
+                ),
+              if (isPreselected)
+                TextFormField(
+                  initialValue: selectedPatient,
+                  readOnly: true,
+                  decoration: const InputDecoration(labelText: "Patient"),
+                ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _noteCtrl,
-                maxLines: 6,
+                maxLines: 4,
                 decoration: const InputDecoration(
                   labelText: "Clinical Note",
                   border: OutlineInputBorder(),
                 ),
-                validator: (val) =>
-                    val == null || val.isEmpty ? "Note cannot be empty" : null,
+                validator: (val) => val == null || val.isEmpty ? "Note is required" : null,
               ),
               const SizedBox(height: 20),
+
+              // Lab test
+              DropdownButtonFormField<String>(
+                value: selectedLab,
+                items: labTests.map((test) {
+                  return DropdownMenuItem(value: test, child: Text(test));
+                }).toList(),
+                onChanged: (val) => setState(() => selectedLab = val),
+                decoration: const InputDecoration(labelText: "Select Lab Test (optional)"),
+              ),
+              TextFormField(
+                controller: _customLabCtrl,
+                decoration: const InputDecoration(labelText: "Other Lab Test"),
+              ),
+              const SizedBox(height: 20),
+
+              // Medication
+              DropdownButtonFormField<String>(
+                value: selectedMed,
+                items: medications.map((med) {
+                  return DropdownMenuItem(value: med, child: Text(med));
+                }).toList(),
+                onChanged: (val) => setState(() => selectedMed = val),
+                decoration: const InputDecoration(labelText: "Prescribe Medicine (optional)"),
+              ),
+              TextFormField(
+                controller: _customMedCtrl,
+                decoration: const InputDecoration(labelText: "Other Medication"),
+              ),
+              const SizedBox(height: 20),
+
+              // Scan
+              DropdownButtonFormField<String>(
+                value: selectedScan,
+                items: scans.map((s) {
+                  return DropdownMenuItem(value: s, child: Text(s));
+                }).toList(),
+                onChanged: (val) => setState(() => selectedScan = val),
+                decoration: const InputDecoration(labelText: "Request Scan (optional)"),
+              ),
+              TextFormField(
+                controller: _customScanCtrl,
+                decoration: const InputDecoration(labelText: "Other Scan Type"),
+              ),
+              const SizedBox(height: 24),
+
               ElevatedButton.icon(
                 onPressed: _saveNote,
                 icon: const Icon(Icons.save),

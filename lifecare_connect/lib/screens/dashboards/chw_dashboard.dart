@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
-import '../chw_my_patients_screen.dart'; // 👈 Update with the correct relative path if needed
+import '../chw_my_patients_screen.dart'; // 👈 Update path if needed
 
 class CHWDashboard extends StatelessWidget {
   const CHWDashboard({super.key});
 
   void _logout(BuildContext context) {
-    // Simulated logout (no Firebase yet)
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Logged out successfully (simulated)')),
     );
 
-    // Simulated redirect to login page
     Future.delayed(const Duration(seconds: 1), () {
       Navigator.pushReplacementNamed(context, '/login');
     });
@@ -126,66 +124,16 @@ class DashboardItem {
 }
 
 const List<DashboardItem> _dashboardItems = [
-  DashboardItem(
-    icon: Icons.person_add_alt_1,
-    label: 'Register Patient',
-    route: '/register_patient',
-  ),
-  DashboardItem(
-    icon: Icons.checklist,
-    label: 'ANC / PNC Checklist',
-    route: '/anc_checklist',
-  ),
-  DashboardItem(
-    icon: Icons.calendar_today,
-    label: 'Upcoming Visits',
-    route: '/chw_visits',
-  ),
-  DashboardItem(
-    icon: Icons.video_call,
-    label: 'Referrals & Teleconsult',
-    route: '/referrals',
-  ),
-  DashboardItem(
-    icon: Icons.library_books,
-    label: 'Training & Education',
-    route: '/training_education',
-  ),
-  DashboardItem(
-    icon: Icons.bar_chart,
-    label: 'Reports',
-    route: '/chw_reports',
-  ),
-  DashboardItem(
-    icon: Icons.schedule,
-    label: 'Schedule Appointment',
-    route: '/chw_appointments',
-  ),
-
-  // ✅ Renamed to 'Chat' for messaging with doctor/patient
-  DashboardItem(
-    icon: Icons.chat,
-    label: 'Chat',
-    route: '/chat_selection',
-  ),
-
-  DashboardItem(
-    icon: Icons.people,
-    label: 'My Patients',
-    route: '/chw_my_patients',
-  ),
-
-  // ✅ This is now clearly 'Messages' (inbox-style screen)
-  DashboardItem(
-    icon: Icons.chat_bubble_outline,
-    label: 'Messages',
-    route: '/chw_messages',
-  ),
-
-  DashboardItem(
-    icon: Icons.person_outline,
-    label: 'My Profile',
-    route: '/chw_profile',
-  ),
+  DashboardItem(icon: Icons.person_add_alt_1, label: 'Register Patient', route: '/register_patient'),
+  DashboardItem(icon: Icons.checklist, label: 'ANC / PNC Checklist', route: '/anc_checklist'),
+  DashboardItem(icon: Icons.calendar_today, label: 'Upcoming Visits', route: '/chw_visits'),
+  DashboardItem(icon: Icons.video_call, label: 'Referrals & Teleconsult', route: '/referrals'),
+  DashboardItem(icon: Icons.library_books, label: 'Training & Education', route: '/training_education'),
+  DashboardItem(icon: Icons.bar_chart, label: 'Reports', route: '/chw_reports'),
+  DashboardItem(icon: Icons.schedule, label: 'Schedule Appointment', route: '/chw_appointments'),
+  DashboardItem(icon: Icons.chat, label: 'Chat', route: '/chat_selection'),
+  DashboardItem(icon: Icons.people, label: 'My Patients', route: '/chw_my_patients'),
+  DashboardItem(icon: Icons.chat_bubble_outline, label: 'Messages', route: '/chw_messages'),
+  DashboardItem(icon: Icons.person_outline, label: 'My Profile', route: '/chw_profile'), // ✅ New Profile
+  DashboardItem(icon: Icons.settings, label: 'Settings', route: '/chw_settings'), // ✅ New Settings
 ];
-// Note: Ensure that the recipientType and recipientName are passed correctly
