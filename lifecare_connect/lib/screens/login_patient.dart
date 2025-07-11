@@ -1,11 +1,8 @@
 // ignore_for_file: use_build_context_synchronously
 
 import 'package:flutter/material.dart';
-
-// 🔒 Firebase and helper functions disabled temporarily
-// import 'package:firebase_auth/firebase_auth.dart';
-// import '../helpers/auth_helper.dart';
-// import 'otp_verification_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'otp_verification_screen.dart';
 
 class PatientLoginScreen extends StatefulWidget {
   const PatientLoginScreen({super.key});
@@ -39,15 +36,56 @@ class _PatientLoginScreenState extends State<PatientLoginScreen>
     final password = passwordController.text.trim();
 
     setState(() => loading = true);
-    await Future.delayed(const Duration(seconds: 1)); // simulate login
 
-    // 🔒 TODO: Replace with real Firebase auth
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Logged in as $email with password $password (simulated)')),
-    );
+    try {
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
 
-    setState(() => loading = false);
-    Navigator.pushReplacementNamed(context, '/patient_dashboard');
+      Navigator.pushReplacementNamed(context, '/patient_dashboard');
+    } on FirebaseAuthException catch (e) {
+      String message;
+      switch (e.code) {
+        case 'user-not-found':
+          message = 'No user found for that email.';
+          break;
+        case 'wrong-password':
+          message = 'Incorrect password.';
+          break;
+        case 'invalid-email':
+          message = 'Invalid email format.';
+          break;
+        default:
+          message = e.message ?? 'Login failed. Please try again.';
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    } finally {
+      setState(() => loading = false);
+    }
+  }
+
+  Future<void> resetPassword() async {
+    final email = emailController.text.trim();
+
+    if (email.isEmpty || !email.contains('@')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a valid email')),
+      );
+      return;
+    }
+
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Password reset link sent to your email')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${e.toString()}')),
+      );
+    }
   }
 
   Future<void> handlePhoneLogin() async {
@@ -59,35 +97,29 @@ class _PatientLoginScreenState extends State<PatientLoginScreen>
       return;
     }
 
-    await Future.delayed(const Duration(seconds: 1)); // simulate OTP sending
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('OTP sent (simulated)')),
-    );
-
-    // 🔒 TODO: Replace with real OTP screen
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => Scaffold(
-          appBar: AppBar(title: const Text("Verify OTP")),
-          body: const Center(child: Text("🚧 OTP Verification UI coming soon")),
-        ),
-      ),
-    );
-  }
-
-  Future<void> resetPassword() async {
-    final email = emailController.text.trim();
-    if (email.isEmpty || !email.contains('@')) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter a valid email')),
-      );
-      return;
-    }
-
-    await Future.delayed(const Duration(seconds: 1)); // simulate reset
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Reset link sent (simulated)')),
+    await FirebaseAuth.instance.verifyPhoneNumber(
+      phoneNumber: phone,
+      verificationCompleted: (PhoneAuthCredential credential) async {
+        await FirebaseAuth.instance.signInWithCredential(credential);
+        Navigator.pushReplacementNamed(context, '/patient_dashboard');
+      },
+      verificationFailed: (FirebaseAuthException e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message ?? 'Verification failed')),
+        );
+      },
+      codeSent: (String verificationId, int? resendToken) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => OTPVerificationScreen(
+              verificationId: verificationId,
+              phone: phone,
+            ),
+          ),
+        );
+      },
+      codeAutoRetrievalTimeout: (String verificationId) {},
     );
   }
 
@@ -98,10 +130,7 @@ class _PatientLoginScreenState extends State<PatientLoginScreen>
         backgroundColor: Colors.teal,
         title: const Text(
           'Patient Login',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
         centerTitle: true,
         bottom: TabBar(
@@ -109,9 +138,7 @@ class _PatientLoginScreenState extends State<PatientLoginScreen>
           indicatorColor: Colors.white,
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white70,
-          labelStyle: const TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
+          labelStyle: const TextStyle(fontWeight: FontWeight.bold),
           tabs: const [
             Tab(text: 'Email Login'),
             Tab(text: 'Phone Login'),
@@ -121,7 +148,7 @@ class _PatientLoginScreenState extends State<PatientLoginScreen>
       body: TabBarView(
         controller: _tabController,
         children: [
-          // ✅ Email Login Tab
+          // Email Login Tab
           Padding(
             padding: const EdgeInsets.all(24.0),
             child: Form(
@@ -129,10 +156,8 @@ class _PatientLoginScreenState extends State<PatientLoginScreen>
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text(
-                    'Login with Email',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
+                  const Text('Login with Email',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 20),
                   TextFormField(
                     controller: emailController,
@@ -170,7 +195,7 @@ class _PatientLoginScreenState extends State<PatientLoginScreen>
             ),
           ),
 
-          // ✅ Phone Login Tab
+          // Phone Login Tab
           Padding(
             padding: const EdgeInsets.all(24.0),
             child: Form(
@@ -178,10 +203,8 @@ class _PatientLoginScreenState extends State<PatientLoginScreen>
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text(
-                    'Login with Phone',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
+                  const Text('Login with Phone',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 20),
                   TextFormField(
                     controller: phoneController,
@@ -208,4 +231,3 @@ class _PatientLoginScreenState extends State<PatientLoginScreen>
     );
   }
 }
-// This screen allows users to log in as a patient using either email or phone number.

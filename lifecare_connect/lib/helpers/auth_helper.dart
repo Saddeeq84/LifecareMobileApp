@@ -1,11 +1,8 @@
 // ignore_for_file: use_build_context_synchronously, prefer_const_constructors
 
 import 'package:flutter/material.dart';
-
-// NOTE: Firebase imports are commented out since you're in UI-only mode.
-// import 'package:firebase_core/firebase_core.dart';
-// import 'package:firebase_auth/firebase_auth.dart';
-// import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 Future<void> loginAndRedirect({
   required BuildContext context,
@@ -13,30 +10,47 @@ Future<void> loginAndRedirect({
   required String password,
 }) async {
   try {
-    // 🔧 Simulate a short loading delay
-    await Future.delayed(Duration(seconds: 1));
+    final auth = FirebaseAuth.instance;
+    final firestore = FirebaseFirestore.instance;
 
-    // 🔧 Simulate logic based on email content
-    String role;
+    // 🔐 Sign in the user with email and password
+    UserCredential userCredential = await auth.signInWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
 
-    if (email.contains('chw')) {
-      role = 'CHW';
-    } else if (email.contains('supervisor')) {
-      role = 'supervisor';
-    } else {
-      role = 'patient';
+    final user = userCredential.user;
+    if (user == null) throw Exception("User not found.");
+
+    // 🧾 Get user role from Firestore (if stored in a "users" collection)
+    final userDoc = await firestore.collection('users').doc(user.uid).get();
+
+    if (!userDoc.exists) {
+      throw Exception("User profile not found in database.");
     }
 
-    // 🔁 Simulated redirection
-    if (role == 'CHW') {
-      Navigator.pushReplacementNamed(context, '/chw_dashboard');
-    } else if (role == 'patient') {
-      Navigator.pushReplacementNamed(context, '/patient_dashboard');
-    } else if (role == 'supervisor') {
-      Navigator.pushReplacementNamed(context, '/supervisor_dashboard');
-    } else {
-      throw Exception('User role not defined.');
+    final data = userDoc.data();
+    final role = data?['role'] ?? 'patient'; // Default to 'patient'
+
+    // 🔁 Role-based redirection
+    switch (role) {
+      case 'CHW':
+        Navigator.pushReplacementNamed(context, '/chw_dashboard');
+        break;
+      case 'supervisor':
+        Navigator.pushReplacementNamed(context, '/supervisor_dashboard');
+        break;
+      case 'patient':
+        Navigator.pushReplacementNamed(context, '/patient_dashboard');
+        break;
+      default:
+        throw Exception('Unknown role: $role');
     }
+  } on FirebaseAuthException catch (e) {
+    String message = 'Login failed';
+    if (e.code == 'user-not-found') message = 'User not found';
+    if (e.code == 'wrong-password') message = 'Incorrect password';
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   } catch (e) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Login failed: $e')),

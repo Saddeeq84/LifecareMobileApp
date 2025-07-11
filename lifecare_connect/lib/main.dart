@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_app_check/firebase_app_check.dart'; // 👈 App Check import
+import 'firebase_options.dart';
 
 // 📦 Dashboards
 import 'screens/dashboards/patient_dashboard.dart';
@@ -60,7 +63,18 @@ final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize local notifications for Android & iOS
+  // ✅ Initialize Firebase
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  // ✅ Initialize Firebase App Check for Android (uses default provider)
+  await FirebaseAppCheck.instance.activate(
+    androidProvider: AndroidProvider.debug, // Use .playIntegrity for production
+    webProvider: ReCaptchaV3Provider('your-public-site-key'), // Optional if targeting web
+  );
+
+  // ✅ Initialize local notifications
   const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
   const iosSettings = DarwinInitializationSettings();
   const initSettings = InitializationSettings(
@@ -85,20 +99,15 @@ class LifeCareConnectApp extends StatelessWidget {
         useMaterial3: true,
         scaffoldBackgroundColor: Colors.grey[50],
       ),
-
-      // 🚀 App now starts from the Login Page
       home: const LoginPage(),
 
-      // 🌐 Route definitions
       routes: {
-        // 🔐 LOGIN
         '/login': (context) => const LoginPage(),
 
         // 🧑‍⚕️ PATIENT ROUTES
         '/patient_dashboard': (context) => const PatientDashboard(),
         '/patient_appointments': (context) => const PatientAppointmentsScreen(),
-        '/book_patient_appointment': (context) =>
-            const BookPatientAppointmentScreen(),
+        '/book_patient_appointment': (context) => const BookPatientAppointmentScreen(),
         '/patient_education': (context) => const PatientEducationScreen(),
 
         // 👩‍⚕️ CHW ROUTES
@@ -117,8 +126,7 @@ class LifeCareConnectApp extends StatelessWidget {
             ),
 
         // 💬 CHW CHAT
-        '/chat_selection': (context) =>
-            const chat_selection.ChatSelectionScreen(),
+        '/chat_selection': (context) => const chat_selection.ChatSelectionScreen(),
         '/chw_chat_doctor': (context) => const DoctorListScreen(),
         '/chw_chat_patient': (context) => const PatientListScreen(),
         '/chw_chat': (context) => const chw_chat.CHWChatScreen(
@@ -140,8 +148,7 @@ class LifeCareConnectApp extends StatelessWidget {
         '/admin_dashboard': (context) => const AdminDashboard(),
         '/admin_manage_users': (context) => const AdminManageUsersScreen(),
         '/admin_facilities': (context) => const AdminFacilitiesScreen(),
-        '/admin_register_facility': (context) =>
-            const RegisterFacilityScreen(),
+        '/admin_register_facility': (context) => const RegisterFacilityScreen(),
         '/admin_reports': (context) => const AdminReportsScreen(),
         '/admin_training': (context) => const AdminTrainingScreen(),
         '/admin_messages': (context) => const AdminMessagesScreen(),
@@ -155,4 +162,3 @@ class LifeCareConnectApp extends StatelessWidget {
     );
   }
 }
-// 📱 This is the main entry point for the LifeCare Connect app.
