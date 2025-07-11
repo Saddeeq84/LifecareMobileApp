@@ -62,7 +62,7 @@ class _DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
                   child: TextField(
                     decoration: InputDecoration(
                       hintText: "Search by name or ID",
-                      prefixIcon: Icon(Icons.search),
+                      prefixIcon: const Icon(Icons.search),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),

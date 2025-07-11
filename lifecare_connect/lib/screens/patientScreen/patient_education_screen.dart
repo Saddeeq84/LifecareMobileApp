@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:video_player/video_player.dart';
 import 'package:just_audio/just_audio.dart';
@@ -69,89 +70,100 @@ class _PatientEducationScreenState extends State<PatientEducationScreen>
       body: TabBarView(
         controller: _tabController,
         children: [
-          _buildVideoTab(),
-          _buildAudioTab(),
-          _buildInfographicTab(),
+          _buildFirestoreEducationTab('video'),
+          _buildFirestoreEducationTab('audio'),
+          _buildFirestoreEducationTab('infographic'),
         ],
       ),
     );
   }
 
-  Widget _buildVideoTab() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        _educationCard(
-          id: 'video1',
-          title: 'Nutrition During Pregnancy',
-          imagePath: 'assets/videos/nutrition.png',
-          onTap: () => _openVideoPlayer('assets/videos/sample_video.mp4', 'video1'),
-        ),
-        _educationCard(
-          id: 'video2',
-          title: 'Hygiene for New Mothers',
-          imagePath: 'assets/videos/hygiene.png',
-          onTap: () => _openVideoPlayer('assets/videos/sample_video2.mp4', 'video2'),
-        ),
-      ],
-    );
-  }
+  Widget _buildFirestoreEducationTab(String contentType) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('education_materials')
+          .where('contentType', isEqualTo: contentType)
+          .where('language', isEqualTo: language)
+          .orderBy('createdAt', descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return const Center(child: Text('Error loading education materials'));
+        }
 
-  Widget _buildAudioTab() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        _educationCard(
-          id: 'audio1',
-          title: 'Danger Signs in Pregnancy',
-          imagePath: 'assets/audio/alert.png',
-          onTap: () => _openAudioPlayer('assets/audio/sample_audio.mp3', 'audio1'),
-        ),
-        _educationCard(
-          id: 'audio2',
-          title: 'Child Nutrition (Hausa)',
-          imagePath: 'assets/audio/food.png',
-          onTap: () => _openAudioPlayer('assets/audio/sample_audio2.mp3', 'audio2'),
-        ),
-      ],
-    );
-  }
+        final docs = snapshot.data?.docs ?? [];
 
-  Widget _buildInfographicTab() {
-    return GridView.count(
-      padding: const EdgeInsets.all(16),
-      crossAxisCount: 2,
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      children: [
-        _infographicCard('Breastfeeding Tips', 'assets/images/breastfeeding.png'),
-        _infographicCard('Mosquito Net Use', 'assets/images/mosquito.png'),
-      ],
+        if (docs.isEmpty) {
+          return const Center(child: Text('No content available.'));
+        }
+
+        if (contentType == 'infographic') {
+          return GridView.count(
+            padding: const EdgeInsets.all(16),
+            crossAxisCount: 2,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            children: docs.map((doc) {
+              final title = doc['title'] ?? 'Untitled';
+              final url = doc['url'];
+              return _infographicCard(title, url);
+            }).toList(),
+          );
+        } else {
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: docs.map((doc) {
+              final id = doc.id;
+              final title = doc['title'] ?? 'Untitled';
+              final url = doc['url'];
+              final viewed = _viewedContent.contains(id);
+              final thumbnail = doc['thumbnailUrl'] ?? null;
+
+              return _educationCard(
+                id: id,
+                title: title,
+                imageUrl: thumbnail,
+                viewed: viewed,
+                onTap: () {
+                  _markViewed(id);
+                  if (contentType == 'video') {
+                    _openVideoPlayer(url);
+                  } else if (contentType == 'audio') {
+                    _openAudioPlayer(url);
+                  }
+                },
+              );
+            }).toList(),
+          );
+        }
+      },
     );
   }
 
   Widget _educationCard({
     required String id,
     required String title,
-    required String imagePath,
+    String? imageUrl,
+    required bool viewed,
     required VoidCallback onTap,
   }) {
-    final viewed = _viewedContent.contains(id);
     return Card(
       child: ListTile(
-        leading: Image.asset(imagePath, width: 50),
+        leading: imageUrl != null
+            ? Image.network(imageUrl, width: 50, fit: BoxFit.cover)
+            : const Icon(Icons.image),
         title: Text(title),
         subtitle: viewed ? const Text("Viewed", style: TextStyle(color: Colors.green)) : null,
         trailing: const Icon(Icons.play_circle_fill),
-        onTap: () {
-          onTap();
-          _markViewed(id);
-        },
+        onTap: onTap,
       ),
     );
   }
 
-  Widget _infographicCard(String title, String imagePath) {
+  Widget _infographicCard(String title, String imageUrl) {
     return GestureDetector(
       onTap: () {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Viewing "$title"...')));
@@ -161,7 +173,7 @@ class _PatientEducationScreenState extends State<PatientEducationScreen>
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                image: DecorationImage(image: AssetImage(imagePath), fit: BoxFit.cover),
+                image: DecorationImage(image: NetworkImage(imageUrl), fit: BoxFit.cover),
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
@@ -173,29 +185,30 @@ class _PatientEducationScreenState extends State<PatientEducationScreen>
     );
   }
 
-  void _openVideoPlayer(String assetPath, String id) {
+  void _openVideoPlayer(String url) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => VideoPlayerScreen(videoAsset: assetPath),
+        builder: (_) => VideoPlayerScreen(videoUrl: url),
       ),
     );
   }
 
-  void _openAudioPlayer(String assetPath, String id) {
+  void _openAudioPlayer(String url) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => AudioPlayerScreen(audioAsset: assetPath),
+        builder: (_) => AudioPlayerScreen(audioUrl: url),
       ),
     );
   }
 }
 
-class VideoPlayerScreen extends StatefulWidget {
-  final String videoAsset;
+// -------------------- Video Player --------------------
 
-  const VideoPlayerScreen({super.key, required this.videoAsset});
+class VideoPlayerScreen extends StatefulWidget {
+  final String videoUrl;
+  const VideoPlayerScreen({super.key, required this.videoUrl});
 
   @override
   State<VideoPlayerScreen> createState() => _VideoPlayerScreenState();
@@ -207,7 +220,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   @override
   void initState() {
     super.initState();
-    _controller = VideoPlayerController.asset(widget.videoAsset)
+    _controller = VideoPlayerController.network(widget.videoUrl)
       ..initialize().then((_) {
         setState(() {});
         _controller.play();
@@ -236,10 +249,11 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   }
 }
 
-class AudioPlayerScreen extends StatefulWidget {
-  final String audioAsset;
+// -------------------- Audio Player --------------------
 
-  const AudioPlayerScreen({super.key, required this.audioAsset});
+class AudioPlayerScreen extends StatefulWidget {
+  final String audioUrl;
+  const AudioPlayerScreen({super.key, required this.audioUrl});
 
   @override
   State<AudioPlayerScreen> createState() => _AudioPlayerScreenState();
@@ -252,7 +266,7 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
   @override
   void initState() {
     super.initState();
-    _player.setAsset(widget.audioAsset);
+    _player.setUrl(widget.audioUrl);
   }
 
   @override
@@ -291,4 +305,5 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
     );
   }
 }
-// This code defines a screen for patient education with tabs for videos, audio, and infographics, allowing users to switch languages between English and Hausa.
+// -------------------- End of Patient Education Screen --------------------
+// This code provides a comprehensive patient education screen with video, audio, and infographic content.

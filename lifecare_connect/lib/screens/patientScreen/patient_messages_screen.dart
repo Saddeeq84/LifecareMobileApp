@@ -44,7 +44,7 @@ class PatientMessagesScreen extends StatelessWidget {
             ),
             trailing: Text(
               thread.timestamp,
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
             ),
             onTap: () {
               // 🔁 Simulated: Open chat with CHW

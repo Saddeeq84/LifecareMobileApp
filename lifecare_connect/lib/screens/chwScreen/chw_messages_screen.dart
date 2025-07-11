@@ -85,7 +85,7 @@ class _CHWMessagesScreenState extends State<CHWMessagesScreen> {
                                 backgroundImage: AssetImage(msg.avatar),
                               ),
                               if (msg.unread)
-                                Positioned(
+                                const Positioned(
                                   right: 0,
                                   top: 0,
                                   child: CircleAvatar(

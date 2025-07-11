@@ -3,10 +3,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-
-// 🔒 Temporarily disabling Firebase/Firestore/Storage until backend is ready
-// import 'package:cloud_firestore/cloud_firestore.dart';
-// import 'package:firebase_storage/firebase_storage.dart' as firebase_storage;
+import 'package:cloud_firestore/cloud_firestore.dart'; // ✅ Firestore
+import 'package:firebase_storage/firebase_storage.dart' as firebase_storage; // ✅ Firebase Storage
 
 class RegisterPatientScreen extends StatefulWidget {
   const RegisterPatientScreen({super.key});
@@ -17,6 +15,7 @@ class RegisterPatientScreen extends StatefulWidget {
 
 class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
   final _formKey = GlobalKey<FormState>();
+
   final nameController = TextEditingController();
   final ageController = TextEditingController();
   String gender = 'Female';
@@ -29,7 +28,6 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
 
   File? _imageFile;
   bool loading = false;
-
   final picker = ImagePicker();
 
   Future<void> pickImage() async {
@@ -39,32 +37,61 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
     }
   }
 
-  // 🔒 Simulated version for now — actual image upload will go here
+  /// ✅ Uploads image to Firebase Storage and returns the image URL
   Future<String?> uploadImage(File file) async {
-    await Future.delayed(const Duration(seconds: 1));
-    return 'https://example.com/fake_image_url.jpg'; // Simulated URL
+    try {
+      final fileName = 'patient_images/${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final ref = firebase_storage.FirebaseStorage.instance.ref().child(fileName);
+      final uploadTask = await ref.putFile(file);
+      return await uploadTask.ref.getDownloadURL();
+    } catch (e) {
+      print('Image upload failed: $e');
+      return null;
+    }
   }
 
+  /// ✅ Submits form data to Firestore
   Future<void> handleSubmit() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => loading = true);
-
     String? imageUrl;
+
+    // ✅ Upload image if selected
     if (_imageFile != null) {
       imageUrl = await uploadImage(_imageFile!);
       print('Uploaded image URL: $imageUrl');
     }
 
-    await Future.delayed(const Duration(seconds: 1)); // Simulated save
+    try {
+      // ✅ Add patient record to Firestore
+      await FirebaseFirestore.instance.collection('patients').add({
+        'name': nameController.text.trim(),
+        'age': int.parse(ageController.text.trim()),
+        'gender': gender,
+        'phone': phoneController.text.trim(),
+        'address': addressController.text.trim(),
+        'lga': lgaController.text.trim(),
+        'kin': kinController.text.trim(),
+        'relationship': relationshipController.text.trim(),
+        'history': historyController.text.trim(),
+        'imageUrl': imageUrl ?? '',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
 
-    // 🔒 TODO: Replace this with Firestore add() logic later
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('🚧 Patient registered (UI only mode)')),
-    );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('✅ Patient successfully registered.')),
+      );
+
+      Navigator.pop(context);
+    } catch (e) {
+      print('Registration error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('❌ Failed to register patient. Try again.')),
+      );
+    }
 
     setState(() => loading = false);
-    Navigator.pop(context); // Simulated navigation
   }
 
   @override
@@ -89,15 +116,13 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
                 child: CircleAvatar(
                   radius: 60,
                   backgroundColor: Colors.grey.shade300,
-                  backgroundImage:
-                      _imageFile != null ? FileImage(_imageFile!) : null,
+                  backgroundImage: _imageFile != null ? FileImage(_imageFile!) : null,
                   child: _imageFile == null
                       ? const Icon(Icons.camera_alt, size: 40, color: Colors.white70)
                       : null,
                 ),
               ),
               const SizedBox(height: 20),
-
               buildTextField('Full Name', nameController),
               buildTextField('Age', ageController, keyboard: TextInputType.number),
               DropdownButtonFormField<String>(
@@ -110,14 +135,12 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
                 ],
                 onChanged: (value) => setState(() => gender = value!),
               ),
-              buildTextField('Phone Number', phoneController,
-                  keyboard: TextInputType.phone),
+              buildTextField('Phone Number', phoneController, keyboard: TextInputType.phone),
               buildTextField('Address', addressController, maxLines: 2),
               buildTextField('LGA', lgaController),
               buildTextField('Next of Kin', kinController),
               buildTextField('Relationship to Patient', relationshipController),
-              buildTextField('Medical Notes / Health History', historyController,
-                  maxLines: 3),
+              buildTextField('Medical Notes / Health History', historyController, maxLines: 3),
               const SizedBox(height: 20),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
@@ -136,6 +159,7 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
     );
   }
 
+  /// Utility widget for building labeled text fields
   Widget buildTextField(
     String label,
     TextEditingController controller, {
@@ -149,10 +173,9 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
         maxLines: maxLines,
         keyboardType: keyboard,
         decoration: InputDecoration(labelText: label),
-        validator: (val) =>
-            val == null || val.trim().isEmpty ? 'Enter $label' : null,
+        validator: (val) => val == null || val.trim().isEmpty ? 'Enter $label' : null,
       ),
     );
   }
 }
-// This screen allows users to register a new patient with their details, including name
+// End of file: lib/screens/register_patient.dart

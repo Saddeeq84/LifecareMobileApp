@@ -1,10 +1,10 @@
 // ignore_for_file: non_constant_identifier_names
 
 import 'package:flutter/material.dart';
-import 'chw_register.dart';
-import 'login_patient_register.dart';
-import 'doctor_register.dart';
-import 'package:lifecare_connect/screens/facility_register_screen.dart'; // ✅ Facility Registration
+import '../chwScreen/chw_register.dart';
+import '../patientScreen/login_patient_register.dart';
+import '../doctorScreen/doctor_register.dart';
+import 'package:lifecare_connect/screens/facilityScreen/facility_register_screen.dart'; // ✅ Facility Registration
 
 class RegisterRoleSelectionScreen extends StatelessWidget {
   const RegisterRoleSelectionScreen({super.key});

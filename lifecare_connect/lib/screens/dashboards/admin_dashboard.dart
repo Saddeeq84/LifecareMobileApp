@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:lifecare_connect/screens/admin/all_appointments_screen.dart';
+import 'package:lifecare_connect/screens/admin/admin_upload_education_screen.dart'; // ✅ Import your new upload screen
 
 class AdminDashboard extends StatelessWidget {
   const AdminDashboard({super.key});
@@ -10,6 +12,22 @@ class AdminDashboard extends StatelessWidget {
     Future.delayed(const Duration(seconds: 1), () {
       Navigator.pushReplacementNamed(context, '/login');
     });
+  }
+
+  void _navigate(BuildContext context, String route) {
+    if (route == '/admin_appointments') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const AdminAllAppointmentsScreen()),
+      );
+    } else if (route == '/admin_upload_education') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const AdminUploadEducationScreen()),
+      );
+    } else {
+      Navigator.pushNamed(context, route);
+    }
   }
 
   @override
@@ -36,7 +54,7 @@ class AdminDashboard extends StatelessWidget {
             return DashboardTile(
               icon: item.icon,
               label: item.label,
-              onTap: () => Navigator.pushNamed(context, item.route),
+              onTap: () => _navigate(context, item.route),
             );
           }).toList(),
         ),
@@ -45,6 +63,7 @@ class AdminDashboard extends StatelessWidget {
   }
 }
 
+// Reusable tile widget
 class DashboardTile extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -85,6 +104,7 @@ class DashboardTile extends StatelessWidget {
   }
 }
 
+// Dashboard item model
 class AdminDashboardItem {
   final IconData icon;
   final String label;
@@ -97,17 +117,14 @@ class AdminDashboardItem {
   });
 }
 
+// ✅ FULL LIST OF ADMIN FEATURES INCLUDING NEW "Upload Education"
 const List<AdminDashboardItem> _adminItems = [
-  AdminDashboardItem(
-      icon: Icons.people, label: "Manage Users", route: "/admin_manage_users"),
-  AdminDashboardItem(
-      icon: Icons.local_hospital, label: "Facilities", route: "/admin_facilities"),
-  AdminDashboardItem(
-      icon: Icons.bar_chart, label: "Reports", route: "/admin_reports"),
-  AdminDashboardItem(
-      icon: Icons.school, label: "Training Modules", route: "/admin_training"),
-  AdminDashboardItem(
-      icon: Icons.message, label: "Messages", route: "/admin_messages"),
-  AdminDashboardItem(
-      icon: Icons.settings, label: "Settings", route: "/admin_settings"),
+  AdminDashboardItem(icon: Icons.people, label: "Manage Users", route: "/admin_manage_users"),
+  AdminDashboardItem(icon: Icons.local_hospital, label: "Facilities", route: "/admin_facilities"),
+  AdminDashboardItem(icon: Icons.calendar_month, label: "All Appointments", route: "/admin_appointments"),
+  AdminDashboardItem(icon: Icons.bar_chart, label: "Reports", route: "/admin_reports"),
+  AdminDashboardItem(icon: Icons.school, label: "Training Modules", route: "/admin_training"),
+  AdminDashboardItem(icon: Icons.message, label: "Messages", route: "/admin_messages"),
+  AdminDashboardItem(icon: Icons.settings, label: "Settings", route: "/admin_settings"),
+  AdminDashboardItem(icon: Icons.upload_file, label: "Upload Education", route: "/admin_upload_education"), // ✅ NEW
 ];

@@ -2,10 +2,9 @@
 // ignore_for_file: use_super_parameters, use_build_context_synchronously
 
 import 'package:flutter/material.dart';
-
-// 🔒 Firebase temporarily disabled (backend not yet integrated)
-// import 'package:firebase_auth/firebase_auth.dart';
-// import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../services/user_service.dart'; // for role management
+import '../sharedScreen/register_role_selection.dart'; // Link to registration
 
 class LoginAdminScreen extends StatefulWidget {
   const LoginAdminScreen({Key? key}) : super(key: key);
@@ -18,6 +17,10 @@ class _LoginAdminScreenState extends State<LoginAdminScreen> {
   final _formKey = GlobalKey<FormState>();
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
+
+  final _auth = FirebaseAuth.instance;
+  final _userService = UserService();
+
   bool loading = false;
   String? adminName;
 
@@ -28,28 +31,49 @@ class _LoginAdminScreenState extends State<LoginAdminScreen> {
     super.dispose();
   }
 
+  // 🔐 Firebase login & admin role check
   Future<void> handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => loading = true);
 
-    await Future.delayed(const Duration(seconds: 1)); // simulate login
+    try {
+      final userCredential = await _auth.signInWithEmailAndPassword(
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
+      );
 
-    // 🔒 TODO: Replace with real Firebase auth logic later
-    setState(() {
-      adminName = 'Admin User';
-    });
+      // Save role as 'admin' in Firestore
+      await _userService.saveUserRole('admin');
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Welcome, $adminName')),
-    );
+      final role = await _userService.getUserRole();
 
-    setState(() => loading = false);
+      if (role == 'admin') {
+        setState(() {
+          adminName = _auth.currentUser?.email ?? 'Admin User';
+        });
 
-    // Simulated successful login redirect
-    Navigator.pushReplacementNamed(context, '/admin_dashboard');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Welcome, $adminName')),
+        );
+
+        // Navigate to admin dashboard
+        Navigator.pushReplacementNamed(context, '/admin_dashboard');
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Role not defined or unauthorized.')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Login failed: $e')),
+      );
+    } finally {
+      setState(() => loading = false);
+    }
   }
 
+  // Password reset
   Future<void> resetPassword() async {
     final email = emailController.text.trim();
     if (email.isEmpty || !email.contains('@')) {
@@ -59,12 +83,16 @@ class _LoginAdminScreenState extends State<LoginAdminScreen> {
       return;
     }
 
-    await Future.delayed(const Duration(seconds: 1)); // simulate reset
-
-    // 🔒 TODO: Replace with Firebase password reset
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Reset email sent. Check your inbox.')),
-    );
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Reset email sent. Check your inbox.')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to send reset email: $e')),
+      );
+    }
   }
 
   @override
@@ -110,9 +138,10 @@ class _LoginAdminScreenState extends State<LoginAdminScreen> {
                       controller: emailController,
                       decoration: const InputDecoration(labelText: 'Email'),
                       keyboardType: TextInputType.emailAddress,
-                      validator: (value) => value == null || !value.contains('@')
-                          ? 'Enter a valid email'
-                          : null,
+                      validator: (value) =>
+                          value == null || !value.contains('@')
+                              ? 'Enter a valid email'
+                              : null,
                     ),
                     const SizedBox(height: 10),
                     TextFormField(
@@ -140,6 +169,19 @@ class _LoginAdminScreenState extends State<LoginAdminScreen> {
                       onPressed: resetPassword,
                       child: const Text('Forgot password?'),
                     ),
+
+                    // Registration link
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const RegisterRoleSelectionScreen(),
+                          ),
+                        );
+                      },
+                      child: const Text("Don't have an account? Create one"),
+                    ),
                   ],
                 ),
               ),
@@ -150,5 +192,4 @@ class _LoginAdminScreenState extends State<LoginAdminScreen> {
     );
   }
 }
-// This screen allows admins to log in with their email and password.
-// It includes a welcome banner, form fields for email and password, and buttons for login and
+// End of file: lib/screens/login_admin.dart

@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-class MyHealthScreen extends StatefulWidget {
-  const MyHealthScreen({super.key});
+class MyUnifiedHealthScreen extends StatefulWidget {
+  const MyUnifiedHealthScreen({super.key});
 
   @override
-  State<MyHealthScreen> createState() => _MyHealthScreenState();
+  State<MyUnifiedHealthScreen> createState() => _MyUnifiedHealthScreenState();
 }
 
-class _MyHealthScreenState extends State<MyHealthScreen> {
+class _MyUnifiedHealthScreenState extends State<MyUnifiedHealthScreen> {
+  final User? currentUser = FirebaseAuth.instance.currentUser;
   Map<String, String> selfReportedVitals = {};
   List<String> uploadedLabResults = [];
 
-  void _uploadLabResult(BuildContext context) async {
+  void _uploadLocalLabResult(BuildContext context) async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
@@ -24,7 +28,7 @@ class _MyHealthScreenState extends State<MyHealthScreen> {
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lab result "${result.files.single.name}" uploaded!')),
+        SnackBar(content: Text('Lab result "${result.files.single.name}" uploaded locally!')),
       );
     }
   }
@@ -83,42 +87,67 @@ class _MyHealthScreenState extends State<MyHealthScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (currentUser == null) {
+      return const Center(child: Text('User not logged in.'));
+    }
+
+    final healthRecordsRef = FirebaseFirestore.instance
+        .collection('patients')
+        .doc(currentUser!.uid)
+        .collection('health_records')
+        .orderBy('date', descending: true);
+
     return Scaffold(
-      body: ListView(
-        padding: const EdgeInsets.all(16.0),
-        children: [
-          _buildSectionTitle("Health Conditions", Icons.local_hospital),
-          _buildListCard(["Hypertension", "Diabetes (Type 2)"]),
+      appBar: AppBar(title: const Text("My Health Dashboard")),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: healthRecordsRef.snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+          if (snapshot.hasError) return Center(child: Text("Error: ${snapshot.error}"));
+          final docs = snapshot.data?.docs ?? [];
 
-          _buildSectionTitle("Vital Signs (Doctor's Records)", Icons.monitor_heart),
-          _buildVitalsCard(),
-          _buildAddVitalsButton(context),
+          return ListView(
+            padding: const EdgeInsets.all(16.0),
+            children: [
+              _buildSectionTitle("Health Records", Icons.folder_shared),
+              if (docs.isEmpty)
+                const Text("No health records found.")
+              else
+                ...docs.map((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  final date = (data['date'] as Timestamp?)?.toDate();
+                  final description = data['description'] ?? 'No description';
+                  final value = data['value'] ?? '';
+                  return Card(
+                    child: ListTile(
+                      title: Text(description),
+                      subtitle: Text("Value: $value\nDate: ${date?.toLocal().toString().split(' ')[0] ?? 'Unknown'}"),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => HealthRecordDetailPage(
+                              userUid: currentUser!.uid,
+                              recordId: doc.id,
+                              recordDescription: description,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  );
+                }),
 
-          _buildSectionTitle("Lab Results", Icons.science),
-          _buildUploadButton(context),
-          _buildListCard([
-            ...uploadedLabResults,
-            "FBC - Normal (2024-06-01)",
-            "Malaria Parasite - Negative (2024-05-18)"
-          ]),
+              _buildSectionTitle("Self-Reported Vitals", Icons.monitor_heart),
+              _buildVitalsCard(),
+              _buildAddVitalsButton(context),
 
-          _buildSectionTitle("Medications (Doctor's Prescription)", Icons.medication_outlined),
-          _buildListCard([
-            "Amlodipine 5mg — 1 tablet daily",
-            "Metformin 500mg — 2 tablets daily",
-          ]),
-
-          _buildSectionTitle("Vaccination History", Icons.vaccines),
-          _buildListCard([
-            "COVID-19 (2 doses, 2021)",
-            "Tetanus (2022)",
-          ]),
-
-          _buildSectionTitle("Allergies", Icons.warning_amber_outlined),
-          _buildListCard([
-            "No known drug allergies",
-          ]),
-        ],
+              _buildSectionTitle("Local Lab Uploads", Icons.upload_file),
+              _buildUploadButton(context),
+              _buildListCard(uploadedLabResults),
+            ],
+          );
+        },
       ),
     );
   }
@@ -130,77 +159,44 @@ class _MyHealthScreenState extends State<MyHealthScreen> {
         children: [
           Icon(icon, color: Colors.teal.shade700),
           const SizedBox(width: 10),
-          Text(
-            title,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-              color: Colors.teal.shade700,
-            ),
-          ),
+          Text(title,
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.teal.shade700)),
         ],
       ),
     );
   }
 
   Widget _buildVitalsCard() {
+    if (selfReportedVitals.isEmpty) {
+      return const Text("No self-reported vitals yet.");
+    }
     return Card(
       color: Colors.teal.shade50,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      margin: const EdgeInsets.only(bottom: 16),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text("From Doctor", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 20,
-              runSpacing: 10,
+        padding: const EdgeInsets.all(16),
+        child: Wrap(
+          spacing: 20,
+          runSpacing: 10,
+          children: selfReportedVitals.entries.map((entry) {
+            return Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                _vitalItem("BP", "140/90"),
-                _vitalItem("HR", "78 bpm"),
-                _vitalItem("Temp", "36.5°C"),
-                _vitalItem("SpO₂", "98%"),
-                _vitalItem("Glucose", "110 mg/dL"),
-                _vitalItem("Weight", "68 kg"),
+                Text(entry.value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4),
+                Text(entry.key, style: const TextStyle(color: Colors.grey)),
               ],
-            ),
-            if (selfReportedVitals.isNotEmpty) ...[
-              const SizedBox(height: 20),
-              const Text("Self-Reported", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 20,
-                runSpacing: 10,
-                children: selfReportedVitals.entries.map((entry) {
-                  return _vitalItem(entry.key, entry.value);
-                }).toList(),
-              ),
-            ]
-          ],
+            );
+          }).toList(),
         ),
       ),
     );
   }
 
-  Widget _vitalItem(String label, String value) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 4),
-        Text(label, style: TextStyle(color: Colors.grey[700])),
-      ],
-    );
-  }
-
   Widget _buildListCard(List<String> items) {
+    if (items.isEmpty) return const Text("No items uploaded yet.");
     return Card(
-      elevation: 1,
       margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       child: ListView.separated(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
@@ -208,10 +204,7 @@ class _MyHealthScreenState extends State<MyHealthScreen> {
         itemCount: items.length,
         separatorBuilder: (_, __) => const Divider(height: 16),
         itemBuilder: (context, index) {
-          return Text(
-            "• ${items[index]}",
-            style: const TextStyle(fontSize: 15),
-          );
+          return Text("• ${items[index]}", style: const TextStyle(fontSize: 15));
         },
       ),
     );
@@ -233,7 +226,7 @@ class _MyHealthScreenState extends State<MyHealthScreen> {
     return Align(
       alignment: Alignment.centerLeft,
       child: TextButton.icon(
-        onPressed: () => _uploadLabResult(context),
+        onPressed: () => _uploadLocalLabResult(context),
         icon: const Icon(Icons.upload_file),
         label: const Text("Upload New Lab Result"),
         style: TextButton.styleFrom(foregroundColor: Colors.teal),
@@ -241,4 +234,3 @@ class _MyHealthScreenState extends State<MyHealthScreen> {
     );
   }
 }
-// This screen displays the patient's health information, including conditions, vitals, lab results, medications, vaccinations, and allergies.

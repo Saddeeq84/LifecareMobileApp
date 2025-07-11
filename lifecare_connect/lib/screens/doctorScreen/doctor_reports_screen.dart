@@ -38,10 +38,10 @@ class DoctorReportsScreen extends StatelessWidget {
           children: [
             const Text("Summary", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
-            Wrap(
+            const Wrap(
               spacing: 12,
               runSpacing: 12,
-              children: const [
+              children: [
                 ReportCard(label: "Consults", count: 12, icon: Icons.video_call),
                 ReportCard(label: "Referrals", count: 5, icon: Icons.send_to_mobile),
                 ReportCard(label: "Notes Added", count: 8, icon: Icons.note_alt),

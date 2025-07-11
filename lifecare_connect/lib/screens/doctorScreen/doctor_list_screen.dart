@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:lifecare_connect/screens/forms/chats/chw_chat_screen.dart';
+import 'package:lifecare_connect/screens/chwScreen/chw_chat_screen.dart';
 // Ensure that CHWChatScreen is defined as a class in chw_chat_screen.dart and exported properly.
 
 final List<Map<String, String>> registeredDoctors = [

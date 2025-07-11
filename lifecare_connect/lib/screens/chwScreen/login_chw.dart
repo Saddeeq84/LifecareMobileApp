@@ -2,14 +2,9 @@
 // ignore_for_file: use_build_context_synchronously
 
 import 'package:flutter/material.dart';
-
-// 🔒 Temporarily disabling Firebase, Firestore, and social login packages
-// import 'package:firebase_auth/firebase_auth.dart';
-// import 'package:google_sign_in/google_sign_in.dart';
-// import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
-// import 'package:cloud_firestore/cloud_firestore.dart';
-
-// import '../helpers/auth_helper.dart'; // 🔒 loginAndRedirect() not needed yet
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../services/user_service.dart'; // For role management
+import '../sharedScreen/register_role_selection.dart'; // Link to registration screen
 
 class CHWLoginScreen extends StatefulWidget {
   const CHWLoginScreen({super.key});
@@ -22,6 +17,10 @@ class _CHWLoginScreenState extends State<CHWLoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
+
+  final _auth = FirebaseAuth.instance;
+  final _userService = UserService();
+
   bool loading = false;
 
   @override
@@ -31,45 +30,62 @@ class _CHWLoginScreenState extends State<CHWLoginScreen> {
     super.dispose();
   }
 
+  // 🔐 Handle email/password login with Firebase & role assignment
   Future<void> handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => loading = true);
-    await Future.delayed(const Duration(seconds: 1)); // Simulated login
 
-    // 🔒 TODO: Replace with real authentication logic
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('🚧 Login simulated (backend not yet active)')),
-    );
+    try {
+      // Sign in with Firebase
+      final userCredential = await _auth.signInWithEmailAndPassword(
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
+      );
 
-    setState(() => loading = false);
+      // Save role as 'chw' in Firestore
+      await _userService.saveUserRole('chw');
 
-    // Simulated navigation
-    Navigator.pushReplacementNamed(context, '/chw_dashboard');
+      // Verify role
+      final role = await _userService.getUserRole();
+
+      if (role == 'chw') {
+        // Navigate to CHW dashboard
+        Navigator.pushReplacementNamed(context, '/chw_dashboard');
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Role not defined or unauthorized.')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Login failed: $e')),
+      );
+    } finally {
+      setState(() => loading = false);
+    }
   }
 
-  Future<void> loginWithGoogle() async {
-    setState(() => loading = true);
-    await Future.delayed(const Duration(seconds: 1)); // Simulated login
+  // Password reset via Firebase
+  Future<void> resetPassword() async {
+    final email = emailController.text.trim();
+    if (!email.contains('@')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a valid email')),
+      );
+      return;
+    }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('🚧 Google login simulated')),
-    );
-
-    setState(() => loading = false);
-    Navigator.pushReplacementNamed(context, '/chw_dashboard');
-  }
-
-  Future<void> loginWithFacebook() async {
-    setState(() => loading = true);
-    await Future.delayed(const Duration(seconds: 1)); // Simulated login
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('🚧 Facebook login simulated')),
-    );
-
-    setState(() => loading = false);
-    Navigator.pushReplacementNamed(context, '/chw_dashboard');
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Reset email sent. Check your inbox.')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to send reset email: $e')),
+      );
+    }
   }
 
   @override
@@ -125,32 +141,21 @@ class _CHWLoginScreenState extends State<CHWLoginScreen> {
               ),
               const SizedBox(height: 12),
               TextButton(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('🚧 Forgot password not yet implemented')),
-                  );
-                },
+                onPressed: resetPassword,
                 child: const Text('Forgot Password?'),
               ),
               const Divider(height: 40),
-              ElevatedButton.icon(
-                icon: const Icon(Icons.login),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.teal,
-                  minimumSize: const Size.fromHeight(45),
-                ),
-                onPressed: loading ? null : loginWithGoogle,
-                label: const Text('Login with Google'),
-              ),
-              const SizedBox(height: 10),
-              ElevatedButton.icon(
-                icon: const Icon(Icons.facebook),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  minimumSize: const Size.fromHeight(45),
-                ),
-                onPressed: loading ? null : loginWithFacebook,
-                label: const Text('Login with Facebook'),
+              // Registration link
+              TextButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const RegisterRoleSelectionScreen(),
+                    ),
+                  );
+                },
+                child: const Text("Don't have an account? Create one"),
               ),
             ],
           ),
@@ -159,4 +164,4 @@ class _CHWLoginScreenState extends State<CHWLoginScreen> {
     );
   }
 }
-// This screen allows community health workers to log in with their email and password.
+// End of file: lib/screens/login_chw.dart

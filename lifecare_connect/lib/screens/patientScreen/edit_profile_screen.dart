@@ -50,7 +50,7 @@ class EditProfileScreen extends StatelessWidget {
         initialValue: initialValue,
         decoration: InputDecoration(
           labelText: label,
-          border: OutlineInputBorder(),
+          border: const OutlineInputBorder(),
         ),
         validator: (val) => val == null || val.isEmpty ? 'Required' : null,
       ),

@@ -82,7 +82,7 @@ class _ChatWithCHWScreenState extends State<ChatWithCHWScreen> {
       _controller.clear();
 
       // Simulated reply
-      Future.delayed(Duration(seconds: 1), () {
+      Future.delayed(const Duration(seconds: 1), () {
         setState(() {
           chatMessages[selectedCHW!.name]!.insert(
             0,
@@ -135,7 +135,7 @@ class _ChatWithCHWScreenState extends State<ChatWithCHWScreen> {
           color: Colors.green.shade50,
           child: Row(
             children: [
-              Icon(Icons.person, color: Colors.green),
+              const Icon(Icons.person, color: Colors.green),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(selectedCHW!.name,
@@ -174,7 +174,7 @@ class _ChatWithCHWScreenState extends State<ChatWithCHWScreen> {
                   },
                 ),
         ),
-        Divider(height: 1),
+        const Divider(height: 1),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           child: Row(

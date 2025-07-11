@@ -3,12 +3,12 @@
 import 'package:flutter/material.dart';
 
 // Import the role-specific login screens
-import 'login_chw.dart';
-import 'login_patient.dart';
-import 'login_admin.dart';
-import 'login_doctor.dart';
+import '../chwScreen/login_chw.dart';
+import '../patientScreen/login_patient.dart';
+import '../adminScreen/login_admin.dart';
+import '../doctorScreen/login_doctor.dart';
 import 'register_role_selection.dart';
-import 'package:lifecare_connect/screens/facility_login_screen.dart'; // ✅ Facility Login
+import 'package:lifecare_connect/screens/facilityScreen/facility_login_screen.dart'; // ✅ Facility Login
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});

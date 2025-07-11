@@ -74,6 +74,13 @@ class DashboardTile extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.indigo.shade100,
           borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.indigo.shade50,
+              blurRadius: 4,
+              offset: const Offset(2, 2),
+            ),
+          ],
         ),
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -144,12 +151,15 @@ const List<DashboardItem> _doctorDashboardItems = [
     label: 'Messages',
     route: '/chat_selection',
   ),
-DashboardItem(
-  icon: Icons.person,
-  label: 'Profile',
-  route: '/doctor_profile',
-),
+  DashboardItem(
+    icon: Icons.person,
+    label: 'Profile',
+    route: '/doctor_profile',
+  ),
 ];
-// Note: Ensure that the routes used in the DashboardItem list are defined in your main app routing configuration.
-// This code assumes that the routes like '/doctor_patients', '/doctor_schedule', etc.
-// are already set up in your Flutter app's routing system.
+
+// NOTE:
+// - Ensure the named routes like '/doctor_patients', '/doctor_schedule', etc.
+//   are registered in your app's route table (MaterialApp.routes).
+// - This dashboard focuses on doctor interactions — inputting prescriptions, diagnoses,
+//   lab requests, reviewing patients, notes, etc.

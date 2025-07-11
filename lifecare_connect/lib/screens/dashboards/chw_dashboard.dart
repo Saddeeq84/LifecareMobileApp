@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../chw_my_patients_screen.dart'; // 👈 Update path if needed
+import '../chwScreen/chw_my_patients_screen.dart'; // Make sure this path is correct
 
 class CHWDashboard extends StatelessWidget {
   const CHWDashboard({super.key});
@@ -51,6 +51,7 @@ class CHWDashboard extends StatelessWidget {
               label: item.label,
               onTap: () {
                 if (item.route == '/chw_my_patients') {
+                  // Navigate to CHWMyPatientsScreen with MaterialPageRoute
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -58,6 +59,7 @@ class CHWDashboard extends StatelessWidget {
                     ),
                   );
                 } else {
+                  // Navigate by named route for others
                   Navigator.pushNamed(context, item.route);
                 }
               },
@@ -89,6 +91,13 @@ class DashboardTile extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.teal.shade100,
           borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.teal.shade50,
+              blurRadius: 4,
+              offset: const Offset(2, 2),
+            ),
+          ],
         ),
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -134,6 +143,7 @@ const List<DashboardItem> _dashboardItems = [
   DashboardItem(icon: Icons.chat, label: 'Chat', route: '/chat_selection'),
   DashboardItem(icon: Icons.people, label: 'My Patients', route: '/chw_my_patients'),
   DashboardItem(icon: Icons.chat_bubble_outline, label: 'Messages', route: '/chw_messages'),
-  DashboardItem(icon: Icons.person_outline, label: 'My Profile', route: '/chw_profile'), // ✅ New Profile
-  DashboardItem(icon: Icons.settings, label: 'Settings', route: '/chw_settings'), // ✅ New Settings
+  DashboardItem(icon: Icons.person_outline, label: 'My Profile', route: '/chw_profile'),
+  DashboardItem(icon: Icons.settings, label: 'Settings', route: '/chw_settings'),
 ];
+// End of file: lib/screens/dashboards/chw_dashboard.dart

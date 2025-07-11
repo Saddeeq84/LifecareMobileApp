@@ -1,87 +1,83 @@
+// ignore_for_file: avoid_print
+
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'dart:ui';
+
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_app_check/firebase_app_check.dart'; // 👈 App Check import
+import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'firebase_options.dart';
 
-// 📦 Dashboards
+// Screens
 import 'screens/dashboards/patient_dashboard.dart';
 import 'screens/dashboards/chw_dashboard.dart';
 import 'screens/dashboards/doctor_dashboard.dart';
 import 'screens/dashboards/admin_dashboard.dart';
 import 'screens/dashboards/facility_dashboard.dart';
+import 'screens/sharedScreen/login_page.dart';
+import 'screens/admin/admin_upload_education_screen.dart'; // ✅ Imported Upload Education screen
 
-// 👩‍⚕️ CHW Screens
-import 'screens/chw_my_patients_screen.dart';
-import 'screens/chw_profile_screen.dart';
-import 'screens/chw_messages_screen.dart';
-import 'screens/forms/register_new_patient.dart';
-import 'screens/forms/anc_pnc_checklist.dart';
-import 'screens/forms/chw_upcoming_visits.dart';
-import 'screens/forms/chw_referrals.dart';
-import 'screens/forms/chw_training_and_education.dart';
-import 'screens/forms/chw_reports.dart';
-import 'screens/forms/chw_appointments.dart';
-import 'screens/forms/chats/chat_selection_screen.dart' as chat_selection;
-import 'screens/forms/chats/doctor_list_screen.dart';
-import 'screens/forms/chats/patient_list_screen.dart';
-import 'screens/forms/chats/chw_chat_screen.dart' as chw_chat;
-
-// 🧑‍⚕️ Patient Screens
-import 'screens/appointments/patient_appointment_screen.dart';
-import 'screens/appointments/book_patient_appointment_screen.dart';
-import 'screens/patient_education_screen.dart';
-
-// 👨‍⚕️ Doctor Screens
-import 'screens/doctor_referrals_screen.dart';
-import 'screens/doctor_patients_screen.dart';
-import 'screens/doctor_scheduled_consults_screen.dart';
-import 'screens/doctor_notes_screen.dart';
-import 'screens/doctor_reports_screen.dart';
-import 'screens/doctor_profile_screen.dart';
-
-// 🧑‍💼 Admin Screens
-import 'screens/admin_manage_users_screen.dart';
-import 'screens/admin_facilities_screen.dart';
-import 'screens/admin_register_facility_screen.dart';
-import 'screens/admin_reports_screen.dart';
-import 'screens/admin_training_screen.dart';
-import 'screens/admin_messages_screen.dart';
-import 'screens/admin_settings_screen.dart';
-
-// 🏥 Facility Screens
-import 'screens/facility_login_screen.dart';
-import 'screens/facility_register_screen.dart';
-
-// 🔐 Login Screen (now the entry point)
-import 'screens/login_page.dart';
-
-// 🔔 Local Notifications
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
+
+final FirebaseAnalytics analytics = FirebaseAnalytics.instance;
+final FirebaseMessaging messaging = FirebaseMessaging.instance;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // ✅ Initialize Firebase
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // ✅ Initialize Firebase App Check for Android (uses default provider)
+  // Enable Firestore cache only once (recommended location)
+  FirebaseFirestore.instance.settings = const Settings(persistenceEnabled: true);
+
   await FirebaseAppCheck.instance.activate(
-    androidProvider: AndroidProvider.debug, // Use .playIntegrity for production
-    webProvider: ReCaptchaV3Provider('your-public-site-key'), // Optional if targeting web
+    androidProvider: AndroidProvider.debug,
+    webProvider: ReCaptchaV3Provider('your-public-site-key'),
   );
 
-  // ✅ Initialize local notifications
+  FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+  PlatformDispatcher.instance.onError = (error, stack) {
+    FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+    return true;
+  };
+
+  await messaging.requestPermission();
+  String? fcmToken = await messaging.getToken();
+  print('🔔 FCM Token: $fcmToken');
+
   const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
   const iosSettings = DarwinInitializationSettings();
-  const initSettings = InitializationSettings(
-    android: androidSettings,
-    iOS: iosSettings,
-  );
+  const initSettings = InitializationSettings(android: androidSettings, iOS: iosSettings);
   await flutterLocalNotificationsPlugin.initialize(initSettings);
+
+  FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    RemoteNotification? notification = message.notification;
+    if (notification != null) {
+      flutterLocalNotificationsPlugin.show(
+        notification.hashCode,
+        notification.title,
+        notification.body,
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'high_importance_channel',
+            'High Importance Notifications',
+            importance: Importance.max,
+            priority: Priority.high,
+            icon: '@mipmap/ic_launcher',
+          ),
+        ),
+      );
+    }
+  });
 
   runApp(const LifeCareConnectApp());
 }
@@ -94,71 +90,92 @@ class LifeCareConnectApp extends StatelessWidget {
     return MaterialApp(
       title: 'LifeCare Connect',
       debugShowCheckedModeBanner: false,
+      navigatorObservers: [FirebaseAnalyticsObserver(analytics: analytics)],
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
         useMaterial3: true,
         scaffoldBackgroundColor: Colors.grey[50],
       ),
-      home: const LoginPage(),
-
+      home: const AppEntryPoint(),
       routes: {
         '/login': (context) => const LoginPage(),
-
-        // 🧑‍⚕️ PATIENT ROUTES
         '/patient_dashboard': (context) => const PatientDashboard(),
-        '/patient_appointments': (context) => const PatientAppointmentsScreen(),
-        '/book_patient_appointment': (context) => const BookPatientAppointmentScreen(),
-        '/patient_education': (context) => const PatientEducationScreen(),
-
-        // 👩‍⚕️ CHW ROUTES
         '/chw_dashboard': (context) => const CHWDashboard(),
-        '/chw_my_patients': (context) => CHWMyPatientsScreen(),
-        '/chw_profile': (context) => const CHWProfileScreen(),
-        '/chw_messages': (context) => const CHWMessagesScreen(),
-        '/register_patient': (context) => const RegisterNewPatientScreen(),
-        '/anc_checklist': (context) => const ANCChecklistScreen(),
-        '/chw_visits': (context) => const CHWUpcomingVisitsScreen(),
-        '/referrals': (context) => const CHWReferralsScreen(),
-        '/training_education': (context) => const CHWTrainingAndEducationScreen(),
-        '/chw_reports': (context) => const CHWReportsScreen(),
-        '/chw_appointments': (context) => CHWAppointmentsScreen(
-              notificationsPlugin: flutterLocalNotificationsPlugin,
-            ),
-
-        // 💬 CHW CHAT
-        '/chat_selection': (context) => const chat_selection.ChatSelectionScreen(),
-        '/chw_chat_doctor': (context) => const DoctorListScreen(),
-        '/chw_chat_patient': (context) => const PatientListScreen(),
-        '/chw_chat': (context) => const chw_chat.CHWChatScreen(
-              chatId: 'default_chat',
-              recipientType: 'Unknown',
-              recipientName: 'Unknown',
-            ),
-
-        // 👨‍⚕️ DOCTOR ROUTES
         '/doctor_dashboard': (context) => const DoctorDashboard(),
-        '/doctor_patients': (context) => const DoctorPatientsScreen(),
-        '/doctor_referrals': (context) => const DoctorReferralsScreen(),
-        '/doctor_profile': (context) => const DoctorProfileScreen(),
-        '/doctor_schedule': (context) => const DoctorScheduledConsultsScreen(),
-        '/doctor_notes': (context) => const DoctorNotesScreen(),
-        '/doctor_reports': (context) => const DoctorReportsScreen(),
-
-        // 🧑‍💼 ADMIN ROUTES
         '/admin_dashboard': (context) => const AdminDashboard(),
-        '/admin_manage_users': (context) => const AdminManageUsersScreen(),
-        '/admin_facilities': (context) => const AdminFacilitiesScreen(),
-        '/admin_register_facility': (context) => const RegisterFacilityScreen(),
-        '/admin_reports': (context) => const AdminReportsScreen(),
-        '/admin_training': (context) => const AdminTrainingScreen(),
-        '/admin_messages': (context) => const AdminMessagesScreen(),
-        '/admin_settings': (context) => const AdminSettingsScreen(),
-
-        // 🏥 FACILITY ROUTES
-        '/facility_login': (context) => const FacilityLoginScreen(),
-        '/facility_register': (context) => const FacilityRegisterScreen(),
+        '/admin_panel': (context) => const AdminDashboard(),
         '/facility_dashboard': (context) => const FacilityDashboard(),
+        '/admin_upload_education': (context) => const AdminUploadEducationScreen(), // ✅ New route
       },
     );
+  }
+}
+
+class AppEntryPoint extends StatefulWidget {
+  const AppEntryPoint({super.key});
+
+  @override
+  State<AppEntryPoint> createState() => _AppEntryPointState();
+}
+
+class _AppEntryPointState extends State<AppEntryPoint> {
+  User? _user;
+  String? _role;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAuthAndRole();
+  }
+
+  Future<void> _checkAuthAndRole() async {
+    _user = FirebaseAuth.instance.currentUser;
+
+    if (_user == null) {
+      setState(() {
+        _loading = false;
+        _role = null;
+      });
+      return;
+    }
+
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(_user!.uid).get();
+      _role = doc.exists && doc.data()!.containsKey('role') ? doc['role'] as String : null;
+    } catch (e) {
+      print('Error fetching user role: $e');
+      _role = null;
+    }
+
+    setState(() => _loading = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_user == null || _role == null) {
+      return const LoginPage();
+    }
+
+    switch (_role!.toLowerCase()) {
+      case 'patient':
+        return const PatientDashboard();
+      case 'doctor':
+        return const DoctorDashboard();
+      case 'chw':
+        return const CHWDashboard();
+      case 'admin':
+        return const AdminDashboard();
+      case 'facility':
+        return const FacilityDashboard();
+      default:
+        return const LoginPage();
+    }
   }
 }

@@ -2,11 +2,9 @@
 // ignore_for_file: use_build_context_synchronously
 
 import 'package:flutter/material.dart';
-import 'register_role_selection.dart'; // ✅ Link to registration
-
-// 🔒 Firebase temporarily disabled
-// import 'package:firebase_auth/firebase_auth.dart';
-// import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../services/user_service.dart'; // Add this import for UserService
+import '../sharedScreen/register_role_selection.dart'; // ✅ Link to registration
 
 class LoginDoctorScreen extends StatefulWidget {
   const LoginDoctorScreen({super.key});
@@ -19,6 +17,9 @@ class _LoginDoctorScreenState extends State<LoginDoctorScreen> {
   final _formKey = GlobalKey<FormState>();
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
+  final _auth = FirebaseAuth.instance;
+  final _userService = UserService();
+
   bool loading = false;
 
   @override
@@ -28,23 +29,44 @@ class _LoginDoctorScreenState extends State<LoginDoctorScreen> {
     super.dispose();
   }
 
+  // 🔐 Handle email/password login with Firebase, assign role, and navigate
   Future<void> handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => loading = true);
-    await Future.delayed(const Duration(seconds: 1)); // Simulated login delay
 
-    // 🔒 TODO: Replace with Firebase role & approval check
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('🚧 Login simulated (no Firebase yet)')),
-    );
+    try {
+      // Firebase sign-in
+      final userCredential = await _auth.signInWithEmailAndPassword(
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
+      );
 
-    setState(() => loading = false);
+      // Save the role as 'doctor' in Firestore
+      await _userService.saveUserRole('doctor');
 
-    // Simulated successful login
-    Navigator.pushReplacementNamed(context, '/doctor_dashboard');
+      // Get the role back to confirm
+      final role = await _userService.getUserRole();
+
+      if (role == 'doctor') {
+        // Navigate to doctor dashboard
+        Navigator.pushReplacementNamed(context, '/doctor_dashboard');
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Role not defined or unauthorized.')),
+        );
+      }
+    } catch (e) {
+      // Show error snackbar
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Login failed: $e')),
+      );
+    } finally {
+      setState(() => loading = false);
+    }
   }
 
+  // Simulated reset password handler with validation
   Future<void> resetPassword() async {
     final email = emailController.text.trim();
     if (!email.contains('@')) {
@@ -54,10 +76,16 @@ class _LoginDoctorScreenState extends State<LoginDoctorScreen> {
       return;
     }
 
-    await Future.delayed(const Duration(seconds: 1)); // Simulated reset delay
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Reset email sent (simulated)')),
-    );
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Reset email sent. Check your inbox.')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to send reset email: $e')),
+      );
+    }
   }
 
   @override
@@ -140,14 +168,13 @@ class _LoginDoctorScreenState extends State<LoginDoctorScreen> {
                           child: const Text('Forgot password?'),
                         ),
 
-                        // ✅ Create Account
+                        // ✅ Link to registration screen
                         TextButton(
                           onPressed: () {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) =>
-                                    const RegisterRoleSelectionScreen(),
+                                builder: (_) => const RegisterRoleSelectionScreen(),
                               ),
                             );
                           },
@@ -165,5 +192,4 @@ class _LoginDoctorScreenState extends State<LoginDoctorScreen> {
     );
   }
 }
-// This screen allows doctors to log in with their email and password.
-// It includes a welcome banner, form fields for email and password, and buttons for login and
+// End of file: lib/screens/login_doctor.dart

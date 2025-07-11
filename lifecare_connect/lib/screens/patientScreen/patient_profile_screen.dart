@@ -117,7 +117,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Simulated logout')),
             );
-            Future.delayed(Duration(seconds: 1), () {
+            Future.delayed(const Duration(seconds: 1), () {
               Navigator.pushNamedAndRemoveUntil(context, '/', (_) => false);
             });
           },

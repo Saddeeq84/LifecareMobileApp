@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-import 'login_chw.dart';
-import 'login_patient.dart';
-import 'login_admin.dart';
-import 'login_doctor.dart';
-import 'facility_login_screen.dart'; 
+import '../chwScreen/login_chw.dart';
+import '../patientScreen/login_patient.dart';
+import '../adminScreen/login_admin.dart';
+import '../doctorScreen/login_doctor.dart';
+import '../facilityScreen/facility_login_screen.dart';
 
 class RoleSelectionPage extends StatelessWidget {
   const RoleSelectionPage({super.key});
@@ -30,6 +30,7 @@ class RoleSelectionPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 30),
 
+                // Button for Community Health Worker Login
                 _buildRoleButton(
                   context,
                   label: 'Community Health Worker',
@@ -37,13 +38,15 @@ class RoleSelectionPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 15),
 
+                // Button for Patient Login
                 _buildRoleButton(
                   context,
                   label: 'Patient',
-                  screen: const PatientLoginScreen(),
+                  screen: const LoginPatient(),
                 ),
                 const SizedBox(height: 15),
 
+                // Button for Doctor Login
                 _buildRoleButton(
                   context,
                   label: 'Doctor',
@@ -51,6 +54,7 @@ class RoleSelectionPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 15),
 
+                // Button for Admin Login
                 _buildRoleButton(
                   context,
                   label: 'Admin',
@@ -58,6 +62,7 @@ class RoleSelectionPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 15),
 
+                // Button for Facility/Corporate Login
                 _buildRoleButton(
                   context,
                   label: 'Facility/Corporate Login',
@@ -81,11 +86,12 @@ class RoleSelectionPage extends StatelessWidget {
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.teal,
-          foregroundColor: Colors.white, 
+          foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 16),
           textStyle: const TextStyle(fontSize: 16),
         ),
         onPressed: () {
+          // Navigate to the selected role's login screen
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => screen),
@@ -96,3 +102,4 @@ class RoleSelectionPage extends StatelessWidget {
     );
   }
 }
+// End of file: lib/screens/role_selection.dart
