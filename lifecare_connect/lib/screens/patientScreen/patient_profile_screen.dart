@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 import 'edit_profile_screen.dart';
 
 class PatientProfileScreen extends StatefulWidget {
@@ -10,9 +13,57 @@ class PatientProfileScreen extends StatefulWidget {
 
 class _PatientProfileScreenState extends State<PatientProfileScreen> {
   bool notificationsEnabled = true;
+  bool _isLoading = true;
+  Map<String, dynamic>? _profileData;
+
+  final _auth = FirebaseAuth.instance;
+  final _firestore = FirebaseFirestore.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchProfile();
+  }
+
+  Future<void> _fetchProfile() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    try {
+      final doc = await _firestore.collection('patient_profiles').doc(user.uid).get();
+
+      if (doc.exists) {
+        setState(() {
+          _profileData = doc.data();
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading profile: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to load profile')),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final user = _auth.currentUser;
+
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    final fullName = _profileData?['fullName'] ?? 'Unknown';
+    final age = (_profileData?['age'] ?? '').toString();
+    final gender = _profileData?['gender'] ?? 'Not set';
+    final phone = _profileData?['phone'] ?? 'Not set';
+    final location = _profileData?['address'] ?? 'Not set';
+    final patientId = user?.uid.substring(0, 6).toUpperCase() ?? 'LC-00000';
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -45,20 +96,23 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                 ],
               ),
               const SizedBox(height: 10),
-              const Text(
-                'Maryam Ibrahim',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              Text(
+                fullName,
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
-              const Text('Patient ID: LC-20451'),
+              Text('Patient ID: $patientId'),
               const SizedBox(height: 8),
               TextButton.icon(
                 icon: const Icon(Icons.edit, size: 18),
                 label: const Text('Edit Profile'),
-                onPressed: () {
-                  Navigator.push(
+                onPressed: () async {
+                  final updated = await Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const EditProfileScreen()),
                   );
+                  if (updated == true) {
+                    _fetchProfile(); // Refresh after editing
+                  }
                 },
               ),
             ],
@@ -67,7 +121,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
 
         const SizedBox(height: 30),
 
-        // 📅 Appointment Summary
+        // 📅 Appointment Summary (placeholder)
         Card(
           color: Colors.green.shade50,
           child: ListTile(
@@ -88,10 +142,10 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
         // 🔎 Personal Info
         const Text('Personal Info', style: TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 10),
-        _profileTile('Age', '29'),
-        _profileTile('Gender', 'Female'),
-        _profileTile('Phone', '+234 803 123 4567'),
-        _profileTile('Location', 'Kabri Village, Gombe'),
+        _profileTile('Age', age),
+        _profileTile('Gender', gender),
+        _profileTile('Phone', phone),
+        _profileTile('Location', location),
 
         const SizedBox(height: 30),
 
@@ -111,15 +165,13 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
 
         const SizedBox(height: 30),
 
-        // 🚪 Logout Button
+        // 🚪 Logout
         ElevatedButton.icon(
-          onPressed: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Simulated logout')),
-            );
-            Future.delayed(const Duration(seconds: 1), () {
+          onPressed: () async {
+            await FirebaseAuth.instance.signOut();
+            if (context.mounted) {
               Navigator.pushNamedAndRemoveUntil(context, '/', (_) => false);
-            });
+            }
           },
           icon: const Icon(Icons.logout),
           label: const Text('Logout'),
@@ -138,5 +190,3 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
     );
   }
 }
-// This code defines a profile screen for patients, allowing them to view and edit their personal information, manage notifications, and log out.
-// It includes a profile picture, personal info section, appointment summary, and settings options.

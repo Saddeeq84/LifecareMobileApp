@@ -1,5 +1,3 @@
-// lib/screens/patient_dashboard.dart
-
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -8,12 +6,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:lifecare_connect/screens/appointments/patient_appointment_screen.dart';
 import 'package:lifecare_connect/screens/patient_education_screen.dart';
 import 'package:lifecare_connect/screens/daily_health_tips_screen.dart';
-import 'package:lifecare_connect/screens/chat_with_chw_screen.dart';
 import 'package:lifecare_connect/screens/patient_profile_screen.dart';
 import 'package:lifecare_connect/screens/my_health_tab.dart';
 import 'package:lifecare_connect/screens/patient_services_tab.dart';
 import 'package:lifecare_connect/screens/booking_history_screen.dart';
 import 'package:lifecare_connect/screens/admin_facilities_screen.dart';
+import 'package:lifecare_connect/screens/chat_chw_screen.dart';
 
 class PatientDashboard extends StatelessWidget {
   const PatientDashboard({super.key});
@@ -89,12 +87,14 @@ class _PatientDashboardMainViewState extends State<PatientDashboardMainView> {
   bool _showChatBadge = true;
   bool _showAppointmentBadge = true;
   String? _userRole;
+  String? _patientUid;
+  String? _chatId;
 
   @override
   void initState() {
     super.initState();
     _showOnboarding();
-    _getRole();
+    _initializeChatData();
   }
 
   Future<void> _showOnboarding() async {
@@ -112,10 +112,12 @@ class _PatientDashboardMainViewState extends State<PatientDashboardMainView> {
     }
   }
 
-  Future<void> _getRole() async {
+  Future<void> _initializeChatData() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       _userRole = prefs.getString('user_role');
+      _patientUid = FirebaseAuth.instance.currentUser?.uid;
+      _chatId = _patientUid; // Assuming each patient has a chat doc with ID same as UID
     });
   }
 
@@ -132,7 +134,57 @@ class _PatientDashboardMainViewState extends State<PatientDashboardMainView> {
         const _DashboardPage(title: 'Daily Tips', icon: Icons.tips_and_updates_outlined, content: DailyHealthTipsScreen()),
         const _DashboardPage(title: 'Services', icon: Icons.medical_services_outlined, content: PatientServicesTab()),
         const _DashboardPage(title: 'Bookings', icon: Icons.history, content: BookingHistoryScreen()),
-        const _DashboardPage(title: 'Chat', icon: Icons.chat_outlined, content: ChatWithCHWScreen()),
+
+        // ✅ Chat Tab with Firestore Stream
+        _DashboardPage(
+          title: 'Chat',
+          icon: Icons.chat_outlined,
+          content: (_chatId == null || _patientUid == null)
+              ? const Center(child: CircularProgressIndicator())
+              : StreamBuilder<DocumentSnapshot>(
+                  stream: FirebaseFirestore.instance.collection('chats').doc(_chatId).snapshots(),
+                  builder: (ctx, snap) {
+                    if (snap.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (!snap.hasData || !snap.data!.exists) {
+                      return ListTile(
+                        leading: const Icon(Icons.chat),
+                        title: const Text('Chat'),
+                        subtitle: const Text('Start chat'),
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const ChatCHWScreen()),
+                        ),
+                      );
+                    }
+
+                    final data = snap.data!.data() as Map<String, dynamic>;
+                    final lastMsg = data['lastMessage'] ?? 'Start chat';
+                    final hasUnread = (data['participantsRead']?[_patientUid] ?? true) == false;
+
+                    return ListTile(
+                      leading: Stack(
+                        children: [
+                          const Icon(Icons.chat),
+                          if (hasUnread)
+                            const Positioned(
+                              right: 0, top: 0,
+                              child: CircleAvatar(radius: 5, backgroundColor: Colors.red),
+                            ),
+                        ],
+                      ),
+                      title: const Text('Chat'),
+                      subtitle: Text(lastMsg, maxLines: 1, overflow: TextOverflow.ellipsis),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const ChatCHWScreen()),
+                      ),
+                    );
+                  },
+                ),
+        ),
+
         const _DashboardPage(title: 'Profile', icon: Icons.person_outline, content: PatientProfileScreen()),
         const _DashboardPage(title: 'Settings', icon: Icons.settings_outlined, content: Center(child: Text("Settings (UI only)"))),
       ];
