@@ -109,7 +109,7 @@ class LoginScreen extends StatelessWidget {
                       onPressed: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const PatientLoginScreen()),
+                          MaterialPageRoute(builder: (_) => const LoginPatient()),
                         );
                       },
                       label: const Text('Patient'),

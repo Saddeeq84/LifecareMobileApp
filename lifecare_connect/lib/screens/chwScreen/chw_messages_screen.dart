@@ -1,37 +1,49 @@
 import 'package:flutter/material.dart';
 
-class CHWMessagesScreen extends StatelessWidget {
+class CHWMessagesScreen extends StatefulWidget {
   const CHWMessagesScreen({super.key});
 
   @override
+  State<CHWMessagesScreen> createState() => _CHWMessagesScreenState();
+}
+
+class _CHWMessagesScreenState extends State<CHWMessagesScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  final ValueNotifier<String> _searchTerm = ValueNotifier('');
+
+  final List<_MessageThread> allMessages = [
+    _MessageThread(
+      patientName: 'Maryam Ibrahim',
+      lastMessage: 'Thank you for your follow-up.',
+      timestamp: '10 min ago',
+      avatar: 'assets/images/patient1.png',
+      unread: true,
+    ),
+    _MessageThread(
+      patientName: 'Fatima Lawal',
+      lastMessage: 'I have taken the supplements.',
+      timestamp: '1h ago',
+      avatar: 'assets/images/patient2.png',
+      unread: false,
+    ),
+    _MessageThread(
+      patientName: 'Rabi Usman',
+      lastMessage: 'When is my next visit?',
+      timestamp: '2 days ago',
+      avatar: 'assets/images/patient3.png',
+      unread: true,
+    ),
+  ];
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _searchTerm.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final TextEditingController searchController = TextEditingController();
-    final ValueNotifier<String> searchTerm = ValueNotifier('');
-
-    final List<_MessageThread> allMessages = [
-      _MessageThread(
-        patientName: 'Maryam Ibrahim',
-        lastMessage: 'Thank you for your follow-up.',
-        timestamp: '10 min ago',
-        avatar: 'assets/images/patient1.png',
-        unread: true,
-      ),
-      _MessageThread(
-        patientName: 'Fatima Lawal',
-        lastMessage: 'I have taken the supplements.',
-        timestamp: '1h ago',
-        avatar: 'assets/images/patient2.png',
-        unread: false,
-      ),
-      _MessageThread(
-        patientName: 'Rabi Usman',
-        lastMessage: 'When is my next visit?',
-        timestamp: '2 days ago',
-        avatar: 'assets/images/patient3.png',
-        unread: true,
-      ),
-    ];
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Messages'),
@@ -47,20 +59,22 @@ class CHWMessagesScreen extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.all(16),
             child: TextField(
-              controller: searchController,
+              controller: _searchController,
+              keyboardType: TextInputType.text,
+              textInputAction: TextInputAction.search,
               decoration: InputDecoration(
                 hintText: 'Search patients...',
                 prefixIcon: const Icon(Icons.search),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
               ),
-              onChanged: (val) => searchTerm.value = val,
+              onChanged: (val) => _searchTerm.value = val,
             ),
           ),
 
           // 💬 Message List
           Expanded(
             child: ValueListenableBuilder<String>(
-              valueListenable: searchTerm,
+              valueListenable: _searchTerm,
               builder: (context, value, _) {
                 final filteredMessages = allMessages
                     .where((msg) =>
@@ -133,7 +147,6 @@ class CHWMessagesScreen extends StatelessWidget {
                               content: Text('Opening chat with ${msg.patientName}'),
                             ),
                           );
-                          // TODO: Navigate to actual chat screen
                         },
                       ),
                     );
@@ -163,4 +176,3 @@ class _MessageThread {
     this.unread = false,
   });
 }
-// This code defines a simple CHW Messages Screen with a search bar and a list of message threads.

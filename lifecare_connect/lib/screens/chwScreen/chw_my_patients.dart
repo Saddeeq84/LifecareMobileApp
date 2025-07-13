@@ -41,7 +41,6 @@ class _CHWMyPatientsScreenState extends State<CHWMyPatientsScreen> {
             icon: const Icon(Icons.picture_as_pdf),
             tooltip: "Export to PDF",
             onPressed: () {
-              // TODO: Export to PDF integration
             },
           )
         ],

@@ -1,3 +1,0 @@
-class AdminStaffListScreen {
-  const AdminStaffListScreen();
-}

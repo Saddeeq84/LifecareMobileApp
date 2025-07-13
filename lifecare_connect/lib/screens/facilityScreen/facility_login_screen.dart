@@ -34,7 +34,7 @@ class _FacilityLoginScreenState extends State<FacilityLoginScreen> {
     setState(() => loading = true);
 
     try {
-      final userCredential = await _auth.signInWithEmailAndPassword(
+      await _auth.signInWithEmailAndPassword(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
       );

@@ -157,7 +157,7 @@ class _RegisterPatientFormState extends State<RegisterPatientForm> {
         'createdAt': DateTime.now(),
       };
 
-      await _firestoreService.RegisterPatientScreen(patientData);
+      await _firestoreService.registerPatientScreen(patientData);
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('✅ Patient registered successfully')),

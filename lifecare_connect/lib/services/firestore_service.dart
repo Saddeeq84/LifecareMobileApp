@@ -6,11 +6,10 @@ class FirestoreService {
   /// Add new patient data
   Future<void> addPatient(Map<String, dynamic> data) async {
     await _db.collection('patients').add(data);
-    }
   }
 
   /// Register a new patient (alias for addPatient)
-  Future<void> registerPatient(Map<String, dynamic> patientData) async {
+  Future<void> registerPatientScreen(Map<String, dynamic> patientData) async {
     await _db.collection('patients').add(patientData);
   }
 
@@ -85,7 +84,7 @@ class FirestoreService {
         .snapshots();
   }
 
-  /// Search patients by name (case-insensitive prefix match, client-side filtering recommended)
+  /// Search patients by name
   Stream<QuerySnapshot> searchPatientsByName(String chwId, String namePrefix) {
     return _db
         .collection('patients')
@@ -95,3 +94,9 @@ class FirestoreService {
         .endAt([namePrefix + '\uf8ff'])
         .snapshots();
   }
+
+  /// Send an admin message
+  Future<void> sendAdminMessage(Map<String, dynamic> messageData) async {
+    await _db.collection('adminMessages').add(messageData);
+  }
+}

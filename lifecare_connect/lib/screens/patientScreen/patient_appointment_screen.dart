@@ -8,7 +8,6 @@ import 'package:intl/intl.dart';
 // Add this import to use isSameDay
 import 'package:table_calendar/table_calendar.dart';
 // Import isSameDay utility function
-import 'package:table_calendar/table_calendar.dart' show isSameDay;
 
 class PatientAppointmentsScreen extends StatefulWidget {
   const PatientAppointmentsScreen({super.key});

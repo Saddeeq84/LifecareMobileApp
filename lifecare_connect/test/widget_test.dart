@@ -7,7 +7,7 @@ import '../lib/main.dart'; // Adjust the path if your main.dart is located elsew
 void main() {
   testWidgets('LifeCareConnectApp loads role selection screen', (WidgetTester tester) async {
     // Launch the app
-    await tester.pumpWidget(const LifeCareConnectApp());
+    await tester.pumpWidget(const MyApp());
 
     // Look for a known piece of text from your role selection screen
     expect(find.text('Select Account Type'), findsOneWidget);

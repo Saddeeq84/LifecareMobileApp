@@ -3,16 +3,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// ✅ Screen Imports — all lowercase folders & snake_case filenames
 import 'patient_appointment_screen.dart';
 import 'patient_education_screen.dart';
 import 'daily_health_tips_screen.dart';
 import 'patient_profile_screen.dart';
 import 'my_health_tab.dart';
 import 'patient_services_tab.dart';
-// import 'booking_history_screen.dart'; // Removed because file does not exist
-
-import '../adminScreen/admin_facilities_screen.dart'; // Update the import path as needed
+import '../adminScreen/admin_facilities_screen.dart';
 import 'chat_chw_screen.dart';
 
 class PatientDashboard extends StatelessWidget {
@@ -128,10 +125,9 @@ class _PatientDashboardMainViewState extends State<PatientDashboardMainView> {
     setState(() {
       _userRole = prefs.getString('user_role');
       _patientUid = user.uid;
-      _chatId = user.uid; // Assuming chat doc id = patient UID
+      _chatId = user.uid;
     });
 
-    // Setup streams for real-time badge updates
     _chatStream = FirebaseFirestore.instance.collection('chats').doc(_chatId).snapshots();
     _appointmentsStream = FirebaseFirestore.instance
         .collection('appointments')
@@ -139,21 +135,22 @@ class _PatientDashboardMainViewState extends State<PatientDashboardMainView> {
         .where('status', isEqualTo: 'pending')
         .snapshots();
 
-    // Listen to chat updates for badge
     _chatStream!.listen((snap) {
       if (!mounted) return;
-      final data = snap.data();
+      final data = snap.data() as Map<String, dynamic>?;
+
       final participantsReadRaw = data?['participantsRead'];
       final participantsRead = participantsReadRaw is Map<String, dynamic>
           ? participantsReadRaw
           : <String, dynamic>{};
+
       final hasUnread = (_patientUid != null)
           ? (participantsRead[_patientUid] == false)
           : false;
+
       setState(() => _showChatBadge = hasUnread);
     });
 
-    // Listen to appointments updates for badge
     _appointmentsStream!.listen((snap) {
       if (!mounted) return;
       final hasPending = snap.docs.isNotEmpty;
@@ -193,11 +190,6 @@ class _PatientDashboardMainViewState extends State<PatientDashboardMainView> {
           icon: Icons.medical_services_outlined,
           content: PatientServicesTab(),
         ),
-        // const _DashboardPage(
-        //   title: 'Bookings',
-        //   icon: Icons.history,
-        //   content: BookingHistoryScreen(),
-        // ),
         _DashboardPage(
           title: 'Chat',
           icon: Icons.chat_outlined,
@@ -287,7 +279,7 @@ class _PatientDashboardMainViewState extends State<PatientDashboardMainView> {
         onTap: (i) {
           setState(() {
             _currentIndex = i;
-            if (i == 1) _showAppointmentBadge = false; // Manually hide on tab view
+            if (i == 1) _showAppointmentBadge = false;
             if (i == 6) _showChatBadge = false;
           });
         },

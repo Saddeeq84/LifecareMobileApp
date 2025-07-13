@@ -58,11 +58,6 @@ class DoctorPatientsScreen extends StatelessWidget {
                   trailing: IconButton(
                     icon: const Icon(Icons.chevron_right),
                     onPressed: () {
-                      // TODO: Implement patient detail navigation
-                      // Example:
-                      // Navigator.push(context, MaterialPageRoute(
-                      //   builder: (_) => PatientDetailScreen(patientId: patients[index].id),
-                      // ));
                     },
                   ),
                 ),

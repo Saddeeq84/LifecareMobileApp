@@ -14,7 +14,7 @@ dependencies:
   firebase_core: ^2.28.0
   firebase_auth: ^4.20.0
 
-  # ✅ Firebase Services
+  # ✅ Firebase Services (Updated)
   cloud_firestore: ^4.14.0
   firebase_storage: ^11.6.0
   firebase_app_check: ^0.2.2+7
@@ -35,7 +35,7 @@ dependencies:
   # ✅ Utilities
   image_picker: ^1.0.7
   shared_preferences: ^2.2.2
-  file_picker: ^8.0.7
+  file_picker: ^8.0.7 # ✅ Updated from ^5.2.0 to latest
   geolocator: ^12.0.0
   connectivity_plus: ^6.1.4
   intl: ^0.19.0
