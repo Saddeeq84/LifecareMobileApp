@@ -44,19 +44,9 @@ class _FacilityLoginScreenState extends State<FacilityLoginScreen> {
       // Save the role "facility" in Firestore
       await _userService.saveUserRole('facility');
 
-      final role = await _userService.getUserRole();
+      // Centralized role-based navigation
+      await _userService.navigateBasedOnRole(context);
 
-      if (role == 'facility') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Login successful!')),
-        );
-
-        Navigator.pushReplacementNamed(context, '/facility_dashboard');
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Role unauthorized or not defined.')),
-        );
-      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Login failed: $e')),
@@ -160,4 +150,4 @@ class _FacilityLoginScreenState extends State<FacilityLoginScreen> {
     );
   }
 }
-// End of file: lib/screens/facility_login_screen.dart
+// End of file: lib/screens/facility/facility_login_screen.dart

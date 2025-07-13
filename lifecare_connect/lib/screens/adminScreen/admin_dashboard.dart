@@ -40,14 +40,12 @@ class _LoginAdminScreenState extends State<LoginAdminScreen> {
       );
 
       if (user != null) {
-        // Optional: Save role for tracking
-        await _userService.saveUserRole('admin');
-        // Navigate based on actual role in Firestore
-        await _userService.navigateBasedOnRole(context);
+        await _userService.saveUserRole('admin'); // optional
+        await _userService.navigateBasedOnRole(context); // ✅ navigate based on role
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Login failed: ${e.toString()}')),
+        const SnackBar(content: Text('Login failed: \${e.toString()}')),
       );
     } finally {
       setState(() => isLoading = false);
@@ -70,7 +68,7 @@ class _LoginAdminScreenState extends State<LoginAdminScreen> {
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to send reset email: ${e.toString()}')),
+        const SnackBar(content: Text('Failed to send reset email: \${e.toString()}')),
       );
     }
   }

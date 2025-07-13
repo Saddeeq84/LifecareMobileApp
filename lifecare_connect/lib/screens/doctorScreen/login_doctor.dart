@@ -45,17 +45,9 @@ class _LoginDoctorScreenState extends State<LoginDoctorScreen> {
       // Save the role as 'doctor' in Firestore
       await _userService.saveUserRole('doctor');
 
-      // Get the role back to confirm
-      final role = await _userService.getUserRole();
-
-      if (role == 'doctor') {
-        // Navigate to doctor dashboard
-        Navigator.pushReplacementNamed(context, '/doctor_dashboard');
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Role not defined or unauthorized.')),
-        );
-      }
+      // Navigate based on actual role in Firestore
+      await _userService.navigateBasedOnRole(context);
+      
     } catch (e) {
       // Show error snackbar
       ScaffoldMessenger.of(context).showSnackBar(

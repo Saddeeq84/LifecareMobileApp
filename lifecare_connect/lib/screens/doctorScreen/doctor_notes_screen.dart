@@ -1,6 +1,7 @@
 // ignore_for_file: sort_child_properties_last
 
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class DoctorNotesScreen extends StatefulWidget {
   const DoctorNotesScreen({super.key});
@@ -10,40 +11,25 @@ class DoctorNotesScreen extends StatefulWidget {
 }
 
 class _DoctorNotesScreenState extends State<DoctorNotesScreen> {
-  List<Map<String, String>> notes = [
-    {
-      "patient": "Fatima Bello",
-      "age": "29",
-      "gender": "Female",
-      "condition": "Preeclampsia",
-      "note": "Patient presents with signs of preeclampsia. BP elevated. Advised urgent scan.",
-      "date": "2025-07-10"
-    },
-  ];
-
   void _openAddNoteForm({String? preselectedPatient}) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => AddMedicalNoteScreen(
           preselectedPatient: preselectedPatient,
-          onSave: (newNote) {
-            setState(() {
-              notes.insert(0, newNote);
-            });
-          },
         ),
       ),
     );
   }
 
-  void _viewNoteDetail(Map<String, String> note) {
+  void _viewNoteDetail(DocumentSnapshot noteDoc) {
+    final noteData = noteDoc.data() as Map<String, dynamic>;
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => ViewMedicalNoteScreen(
-          note: note,
-          onAddNote: () => _openAddNoteForm(preselectedPatient: note["patient"]),
+          note: noteData,
+          onAddNote: () => _openAddNoteForm(preselectedPatient: noteData["patient"]),
         ),
       ),
     );
@@ -56,35 +42,48 @@ class _DoctorNotesScreenState extends State<DoctorNotesScreen> {
         title: const Text("Medical Notes"),
         backgroundColor: Colors.indigo,
       ),
-      body: notes.isEmpty
-          ? const Center(child: Text("No notes available."))
-          : ListView.builder(
-              itemCount: notes.length,
-              itemBuilder: (context, index) {
-                final note = notes[index];
-                return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: ListTile(
-                    title: Text(note["patient"] ?? ""),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text("${note["age"]} yrs • ${note["gender"]} • ${note["condition"]}"),
-                        const SizedBox(height: 4),
-                        Text(
-                          (note["note"] ?? "").length > 50
-                              ? "${note["note"]!.substring(0, 50)}..."
-                              : note["note"] ?? "",
-                          style: const TextStyle(color: Colors.black87),
-                        ),
-                      ],
-                    ),
-                    trailing: Text(note["date"] ?? ""),
-                    onTap: () => _viewNoteDetail(note),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance.collection('notes').orderBy('date', descending: true).snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(child: Text("No notes available."));
+          }
+
+          final notes = snapshot.data!.docs;
+
+          return ListView.builder(
+            itemCount: notes.length,
+            itemBuilder: (context, index) {
+              final note = notes[index].data() as Map<String, dynamic>;
+              return Card(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: ListTile(
+                  title: Text(note["patient"] ?? ""),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text("${note["age"]} yrs • ${note["gender"]} • ${note["condition"]}"),
+                      const SizedBox(height: 4),
+                      Text(
+                        (note["note"] ?? "").length > 50
+                            ? "${note["note"].substring(0, 50)}..."
+                            : note["note"] ?? "",
+                        style: const TextStyle(color: Colors.black87),
+                      ),
+                    ],
                   ),
-                );
-              },
-            ),
+                  trailing: Text(note["date"] ?? ""),
+                  onTap: () => _viewNoteDetail(notes[index]),
+                ),
+              );
+            },
+          );
+        },
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _openAddNoteForm(),
         child: const Icon(Icons.note_add),
@@ -95,14 +94,9 @@ class _DoctorNotesScreenState extends State<DoctorNotesScreen> {
 }
 
 class AddMedicalNoteScreen extends StatefulWidget {
-  final Function(Map<String, String>) onSave;
   final String? preselectedPatient;
 
-  const AddMedicalNoteScreen({
-    super.key,
-    required this.onSave,
-    this.preselectedPatient,
-  });
+  const AddMedicalNoteScreen({super.key, this.preselectedPatient});
 
   @override
   State<AddMedicalNoteScreen> createState() => _AddMedicalNoteScreenState();
@@ -154,7 +148,7 @@ class _AddMedicalNoteScreenState extends State<AddMedicalNoteScreen> {
     super.dispose();
   }
 
-  void _saveNote() {
+  void _saveNote() async {
     if (_formKey.currentState!.validate() && selectedPatientData != null) {
       String combinedNote = _noteCtrl.text.trim();
       if (selectedLab != null || _customLabCtrl.text.isNotEmpty) {
@@ -167,7 +161,7 @@ class _AddMedicalNoteScreenState extends State<AddMedicalNoteScreen> {
         combinedNote += "\n\n🖥️ Scan Request: ${selectedScan ?? ''} ${_customScanCtrl.text}";
       }
 
-      widget.onSave({
+      await FirebaseFirestore.instance.collection("notes").add({
         "patient": selectedPatientData!["name"] ?? "",
         "age": selectedPatientData!["age"] ?? "",
         "gender": selectedPatientData!["gender"] ?? "",
@@ -175,6 +169,7 @@ class _AddMedicalNoteScreenState extends State<AddMedicalNoteScreen> {
         "note": combinedNote,
         "date": DateTime.now().toString().split(' ')[0],
       });
+
       Navigator.pop(context);
     }
   }
@@ -229,13 +224,9 @@ class _AddMedicalNoteScreenState extends State<AddMedicalNoteScreen> {
                 validator: (val) => val == null || val.isEmpty ? "Note is required" : null,
               ),
               const SizedBox(height: 20),
-
-              // Lab test
               DropdownButtonFormField<String>(
                 value: selectedLab,
-                items: labTests.map((test) {
-                  return DropdownMenuItem(value: test, child: Text(test));
-                }).toList(),
+                items: labTests.map((test) => DropdownMenuItem(value: test, child: Text(test))).toList(),
                 onChanged: (val) => setState(() => selectedLab = val),
                 decoration: const InputDecoration(labelText: "Select Lab Test (optional)"),
               ),
@@ -244,13 +235,9 @@ class _AddMedicalNoteScreenState extends State<AddMedicalNoteScreen> {
                 decoration: const InputDecoration(labelText: "Other Lab Test"),
               ),
               const SizedBox(height: 20),
-
-              // Medication
               DropdownButtonFormField<String>(
                 value: selectedMed,
-                items: medications.map((med) {
-                  return DropdownMenuItem(value: med, child: Text(med));
-                }).toList(),
+                items: medications.map((med) => DropdownMenuItem(value: med, child: Text(med))).toList(),
                 onChanged: (val) => setState(() => selectedMed = val),
                 decoration: const InputDecoration(labelText: "Prescribe Medicine (optional)"),
               ),
@@ -259,13 +246,9 @@ class _AddMedicalNoteScreenState extends State<AddMedicalNoteScreen> {
                 decoration: const InputDecoration(labelText: "Other Medication"),
               ),
               const SizedBox(height: 20),
-
-              // Scan
               DropdownButtonFormField<String>(
                 value: selectedScan,
-                items: scans.map((s) {
-                  return DropdownMenuItem(value: s, child: Text(s));
-                }).toList(),
+                items: scans.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
                 onChanged: (val) => setState(() => selectedScan = val),
                 decoration: const InputDecoration(labelText: "Request Scan (optional)"),
               ),
@@ -274,7 +257,6 @@ class _AddMedicalNoteScreenState extends State<AddMedicalNoteScreen> {
                 decoration: const InputDecoration(labelText: "Other Scan Type"),
               ),
               const SizedBox(height: 24),
-
               ElevatedButton.icon(
                 onPressed: _saveNote,
                 icon: const Icon(Icons.save),
@@ -289,7 +271,7 @@ class _AddMedicalNoteScreenState extends State<AddMedicalNoteScreen> {
 }
 
 class ViewMedicalNoteScreen extends StatelessWidget {
-  final Map<String, String> note;
+  final Map<String, dynamic> note;
   final VoidCallback onAddNote;
 
   const ViewMedicalNoteScreen({

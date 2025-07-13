@@ -4,15 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/user_service.dart';
 
-import '../chwScreen/login_chw.dart';
+import '../chwScreen/login_chw_screen.dart';
 import '../adminScreen/login_admin.dart';
 import '../doctorScreen/login_doctor.dart';
 import '../sharedScreen/register_role_selection.dart';
 import 'package:lifecare_connect/screens/facilityScreen/facility_login_screen.dart';
-
-import '../dashboards/patient_dashboard.dart';
-import '../dashboards/doctor_dashboard.dart';
-import '../dashboards/admin_dashboard.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -34,34 +30,17 @@ class _LoginPageState extends State<LoginPage> {
 
     try {
       // Sign in with Firebase Auth
-      final userCredential = await _auth.signInWithEmailAndPassword(
+      await _auth.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
       // On successful login, save the role as "patient"
-      // This ensures role is stored/updated in Firestore
       await _userService.saveUserRole('patient');
 
-      // Fetch role from Firestore to double-check (could also rely on saved role)
-      final role = await _userService.getUserRole();
+      // Centralized role-based navigation
+      await _userService.navigateBasedOnRole(context);
 
-      // Navigate based on role
-      if (role == 'patient') {
-        Navigator.pushReplacement(
-            context, MaterialPageRoute(builder: (_) => const PatientDashboard()));
-      } else if (role == 'doctor') {
-        Navigator.pushReplacement(
-            context, MaterialPageRoute(builder: (_) => const DoctorDashboard()));
-      } else if (role == 'admin') {
-        Navigator.pushReplacement(
-            context, MaterialPageRoute(builder: (_) => const AdminDashboard()));
-      } else {
-        // If no role or unknown role, show error
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Role not defined or unauthorized.')),
-        );
-      }
     } catch (e) {
       // Show login failure message
       ScaffoldMessenger.of(context).showSnackBar(
@@ -89,8 +68,8 @@ class _LoginPageState extends State<LoginPage> {
                   color: Colors.teal,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Column(
-                  children: const [
+                child: const Column(
+                  children: [
                     Text(
                       'LifeCare Connect',
                       textAlign: TextAlign.center,

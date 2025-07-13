@@ -1,10 +1,7 @@
-// login_chw.dart
-// ignore_for_file: use_build_context_synchronously
-
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import '../../services/user_service.dart'; // For role management
-import '../sharedScreen/register_role_selection.dart'; // Link to registration screen
+import '../../services/auth_service.dart';
+import '../../services/user_service.dart';
+import '../sharedScreen/register_role_selection.dart';
 
 class CHWLoginScreen extends StatefulWidget {
   const CHWLoginScreen({super.key});
@@ -18,10 +15,10 @@ class _CHWLoginScreenState extends State<CHWLoginScreen> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
 
-  final _auth = FirebaseAuth.instance;
-  final _userService = UserService();
+  final AuthService _authService = AuthService();
+  final UserService _userService = UserService();
 
-  bool loading = false;
+  bool isLoading = false;
 
   @override
   void dispose() {
@@ -30,60 +27,47 @@ class _CHWLoginScreenState extends State<CHWLoginScreen> {
     super.dispose();
   }
 
-  // 🔐 Handle email/password login with Firebase & role assignment
+  /// Login and route based on role
   Future<void> handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
-
-    setState(() => loading = true);
+    setState(() => isLoading = true);
 
     try {
-      // Sign in with Firebase
-      final userCredential = await _auth.signInWithEmailAndPassword(
-        email: emailController.text.trim(),
-        password: passwordController.text.trim(),
+      final user = await _authService.signInWithEmail(
+        emailController.text.trim(),
+        passwordController.text.trim(),
       );
 
-      // Save role as 'chw' in Firestore
-      await _userService.saveUserRole('chw');
-
-      // Verify role
-      final role = await _userService.getUserRole();
-
-      if (role == 'chw') {
-        // Navigate to CHW dashboard
-        Navigator.pushReplacementNamed(context, '/chw_dashboard');
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Role not defined or unauthorized.')),
-        );
+      if (user != null) {
+        await _userService.saveUserRole('chw'); // optional
+        await _userService.navigateBasedOnRole(context); // ✅ navigate based on role
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Login failed: $e')),
+        SnackBar(content: Text('Login failed: ${e.toString()}')),
       );
     } finally {
-      setState(() => loading = false);
+      setState(() => isLoading = false);
     }
   }
 
-  // Password reset via Firebase
   Future<void> resetPassword() async {
     final email = emailController.text.trim();
     if (!email.contains('@')) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter a valid email')),
+        const SnackBar(content: Text('Enter a valid email address')),
       );
       return;
     }
 
     try {
-      await _auth.sendPasswordResetEmail(email: email);
+      await _authService.sendPasswordReset(email);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Reset email sent. Check your inbox.')),
+        const SnackBar(content: Text('Password reset email sent.')),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to send reset email: $e')),
+        SnackBar(content: Text('Failed to send reset email: ${e.toString()}')),
       );
     }
   }
@@ -113,10 +97,10 @@ class _CHWLoginScreenState extends State<CHWLoginScreen> {
               const SizedBox(height: 20),
               TextFormField(
                 controller: emailController,
-                decoration: const InputDecoration(labelText: 'Email'),
                 keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(labelText: 'Email'),
                 validator: (value) =>
-                    value == null || !value.contains('@') ? 'Enter valid email' : null,
+                    value == null || !value.contains('@') ? 'Enter a valid email' : null,
               ),
               const SizedBox(height: 10),
               TextFormField(
@@ -124,9 +108,7 @@ class _CHWLoginScreenState extends State<CHWLoginScreen> {
                 obscureText: true,
                 decoration: const InputDecoration(labelText: 'Password'),
                 validator: (value) =>
-                    value == null || value.length < 6
-                        ? 'Enter 6+ character password'
-                        : null,
+                    value == null || value.length < 6 ? 'Enter 6+ character password' : null,
               ),
               const SizedBox(height: 20),
               ElevatedButton(
@@ -134,8 +116,8 @@ class _CHWLoginScreenState extends State<CHWLoginScreen> {
                   backgroundColor: Colors.teal,
                   minimumSize: const Size.fromHeight(45),
                 ),
-                onPressed: loading ? null : handleLogin,
-                child: loading
+                onPressed: isLoading ? null : handleLogin,
+                child: isLoading
                     ? const CircularProgressIndicator(color: Colors.white)
                     : const Text('Login'),
               ),
@@ -145,7 +127,6 @@ class _CHWLoginScreenState extends State<CHWLoginScreen> {
                 child: const Text('Forgot Password?'),
               ),
               const Divider(height: 40),
-              // Registration link
               TextButton(
                 onPressed: () {
                   Navigator.push(
@@ -164,4 +145,3 @@ class _CHWLoginScreenState extends State<CHWLoginScreen> {
     );
   }
 }
-// End of file: lib/screens/login_chw.dart

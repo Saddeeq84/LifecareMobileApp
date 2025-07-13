@@ -1,44 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class DoctorScheduledConsultsScreen extends StatefulWidget {
   const DoctorScheduledConsultsScreen({super.key});
 
   @override
-  State<DoctorScheduledConsultsScreen> createState() => _DoctorScheduledConsultsScreenState();
+  State<DoctorScheduledConsultsScreen> createState() =>
+      _DoctorScheduledConsultsScreenState();
 }
 
-class _DoctorScheduledConsultsScreenState extends State<DoctorScheduledConsultsScreen>
-    with SingleTickerProviderStateMixin {
+class _DoctorScheduledConsultsScreenState
+    extends State<DoctorScheduledConsultsScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-
-  final List<Map<String, String>> upcoming = [
-    {
-      "name": "Fatima Bello",
-      "condition": "Pregnancy - High Risk",
-      "datetime": "2025-07-12 10:00 AM"
-    },
-    {
-      "name": "John Yusuf",
-      "condition": "Hypertension",
-      "datetime": "2025-07-12 11:30 AM"
-    },
-  ];
-
-  final List<Map<String, String>> pending = [
-    {
-      "name": "Grace Danjuma",
-      "condition": "Diabetes",
-      "datetime": "Awaiting Confirmation"
-    },
-  ];
-
-  final List<Map<String, String>> past = [
-    {
-      "name": "Kabiru Saleh",
-      "condition": "Asthma",
-      "datetime": "2025-07-10 2:00 PM"
-    },
-  ];
 
   @override
   void initState() {
@@ -52,20 +25,25 @@ class _DoctorScheduledConsultsScreenState extends State<DoctorScheduledConsultsS
     super.dispose();
   }
 
-  Widget _buildConsultList(List<Map<String, String>> data, {bool showJoin = false}) {
-    if (data.isEmpty) {
+  /// Builds the consult list UI from a list of Firestore documents.
+  Widget _buildConsultList(List<QueryDocumentSnapshot> consults, bool showJoin) {
+    if (consults.isEmpty) {
       return const Center(child: Text("No consultations here."));
     }
 
     return ListView.builder(
-      itemCount: data.length,
+      itemCount: consults.length,
       itemBuilder: (context, index) {
-        final consult = data[index];
+        final data = consults[index].data() as Map<String, dynamic>;
+        final name = data['patientName'] ?? 'Unknown';
+        final condition = data['condition'] ?? 'Unknown';
+        final datetime = data['date'] ?? 'N/A';
+
         return Card(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: ListTile(
-            title: Text(consult["name"] ?? ""),
-            subtitle: Text("${consult["condition"]} • ${consult["datetime"]}"),
+            title: Text(name),
+            subtitle: Text('$condition • $datetime'),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -96,6 +74,27 @@ class _DoctorScheduledConsultsScreenState extends State<DoctorScheduledConsultsS
     );
   }
 
+  /// Fetches and filters consults from Firestore by status.
+  Widget _buildConsultTab(String status, {bool showJoin = false}) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('consults')
+          .where('status', isEqualTo: status)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const Center(child: Text("No consultations here."));
+        }
+
+        return _buildConsultList(snapshot.data!.docs, showJoin);
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -114,16 +113,11 @@ class _DoctorScheduledConsultsScreenState extends State<DoctorScheduledConsultsS
       body: TabBarView(
         controller: _tabController,
         children: [
-          _buildConsultList(upcoming, showJoin: true),
-          _buildConsultList(pending),
-          _buildConsultList(past),
+          _buildConsultTab("upcoming", showJoin: true),
+          _buildConsultTab("pending"),
+          _buildConsultTab("past"),
         ],
       ),
     );
   }
 }
-// Note: This code provides a basic structure for the DoctorScheduledConsultsScreen.
-// You can expand the functionality by integrating with a backend or database to fetch real data,
-// implementing video call functionality, and adding more features as needed.
-// Ensure to handle permissions and video call logic according to your app's requirements.
-// You can also customize the UI further to match your app's design language.

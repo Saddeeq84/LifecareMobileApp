@@ -68,11 +68,11 @@ class _AdminFacilitiesScreenState extends State<AdminFacilitiesScreen> {
               TextFormField(controller: _contactCtrl, decoration: const InputDecoration(labelText: 'Contact'), validator: (v) => v!.isEmpty ? 'Required' : null,),
               DropdownButtonFormField<String>(
                 value: _type,
-                items: [
-                  const DropdownMenuItem(value: 'hospital', child: Text('Hospital')),
-                  const DropdownMenuItem(value: 'laboratory', child: Text('Laboratory')),
-                  const DropdownMenuItem(value: 'pharmacy', child: Text('Pharmacy')),
-                  const DropdownMenuItem(value: 'scan_center', child: Text('Scan Center')),
+                items: const [
+                  DropdownMenuItem(value: 'hospital', child: Text('Hospital')),
+                  DropdownMenuItem(value: 'laboratory', child: Text('Laboratory')),
+                  DropdownMenuItem(value: 'pharmacy', child: Text('Pharmacy')),
+                  DropdownMenuItem(value: 'scan_center', child: Text('Scan Center')),
                 ],
                 onChanged: (v) { if (v != null) setState(() => _type = v); },
                 decoration: const InputDecoration(labelText: 'Type'),
@@ -85,7 +85,7 @@ class _AdminFacilitiesScreenState extends State<AdminFacilitiesScreen> {
                   value: e.value,
                   onChanged: (v) => setState(() => _services[e.key] = v ?? false),
                 );
-              }).toList(),
+              }),
               const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,

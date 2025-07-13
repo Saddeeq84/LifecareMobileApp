@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:video_player/video_player.dart';
-import 'package:just_audio/just_audio.dart';
+import 'package:video_player/video_player.dart' show VideoPlayer;
+import 'package:just_audio/just_audio.dart' as just_audio;
 
 class PatientEducationScreen extends StatefulWidget {
   const PatientEducationScreen({super.key});
@@ -120,7 +121,7 @@ class _PatientEducationScreenState extends State<PatientEducationScreen>
               final title = doc['title'] ?? 'Untitled';
               final url = doc['url'];
               final viewed = _viewedContent.contains(id);
-              final thumbnail = doc['thumbnailUrl'] ?? null;
+              final thumbnail = doc['thumbnailUrl'];
 
               return _educationCard(
                 id: id,
@@ -260,7 +261,7 @@ class AudioPlayerScreen extends StatefulWidget {
 }
 
 class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
-  final AudioPlayer _player = AudioPlayer();
+  final just_audio.AudioPlayer _player = just_audio.AudioPlayer();
   bool _isPlaying = false;
 
   @override

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class DoctorReferralsScreen extends StatefulWidget {
   const DoctorReferralsScreen({super.key});
@@ -11,54 +12,45 @@ class _DoctorReferralsScreenState extends State<DoctorReferralsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  List<Map<String, String>> pendingReferrals = [
-    {
-      "patient": "Fatima Bello",
-      "condition": "Pregnancy - High Risk",
-      "chw": "Amina S.",
-    },
-    {
-      "patient": "John Yusuf",
-      "condition": "Hypertension",
-      "chw": "Bello Musa",
-    },
-  ];
-
-  List<Map<String, String>> reviewedReferrals = [];
-
   @override
   void initState() {
     _tabController = TabController(length: 2, vsync: this);
     super.initState();
   }
 
-  void _handleReferralDecision(
-      Map<String, String> referral, String decision) {
-    setState(() {
-      pendingReferrals.remove(referral);
-      reviewedReferrals.add({
-        ...referral,
-        "status": decision,
+  /// Handles the doctor's decision on a referral (Accept or Reject).
+  Future<void> _handleReferralDecision(
+      DocumentSnapshot referralDoc, String decision) async {
+    try {
+      await referralDoc.reference.update({
+        'status': decision,
+        'reviewedAt': FieldValue.serverTimestamp(),
       });
-    });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Referral $decision")),
-    );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Referral $decision')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to update referral: $e')),
+      );
+    }
   }
 
-  Widget _buildReferralCard(Map<String, String> r,
+  /// Builds each referral card item with action buttons.
+  Widget _buildReferralCard(
+      Map<String, dynamic> data, DocumentSnapshot doc,
       {bool isReviewed = false}) {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: ListTile(
-        title: Text(r["patient"] ?? ""),
+        title: Text(data['patient'] ?? 'Unknown Patient'),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Condition: ${r["condition"]}"),
-            Text("Referred by: ${r["chw"]}"),
-            if (isReviewed) Text("Status: ${r["status"]}"),
+            Text("Condition: ${data['condition'] ?? 'N/A'}"),
+            Text("Referred by: ${data['chw'] ?? 'Unknown'}"),
+            if (isReviewed) Text("Status: ${data['status']}"),
           ],
         ),
         trailing: isReviewed
@@ -69,21 +61,57 @@ class _DoctorReferralsScreenState extends State<DoctorReferralsScreen>
                   IconButton(
                     icon: const Icon(Icons.check_circle, color: Colors.green),
                     tooltip: "Accept",
-                    onPressed: () => _handleReferralDecision(r, "Accepted"),
+                    onPressed: () =>
+                        _handleReferralDecision(doc, 'Accepted'),
                   ),
                   IconButton(
                     icon: const Icon(Icons.cancel, color: Colors.red),
                     tooltip: "Reject",
-                    onPressed: () => _handleReferralDecision(r, "Rejected"),
+                    onPressed: () =>
+                        _handleReferralDecision(doc, 'Rejected'),
                   ),
                 ],
               ),
         onTap: () {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("View details for ${r["patient"]}")),
+            SnackBar(content: Text("Viewing details for ${data['patient']}")),
           );
         },
       ),
+    );
+  }
+
+  /// Builds the list view of referrals filtered by status
+  Widget _buildReferralList({required bool isReviewed}) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('referrals')
+          .where('status', isEqualTo: isReviewed ? 'Accepted' : 'Pending')
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return Center(
+            child: Text(isReviewed
+                ? "No reviewed referrals yet."
+                : "No pending referrals."),
+          );
+        }
+
+        final docs = snapshot.data!.docs;
+
+        return ListView.builder(
+          itemCount: docs.length,
+          itemBuilder: (context, index) {
+            final doc = docs[index];
+            final data = doc.data() as Map<String, dynamic>;
+            return _buildReferralCard(data, doc, isReviewed: isReviewed);
+          },
+        );
+      },
     );
   }
 
@@ -93,6 +121,7 @@ class _DoctorReferralsScreenState extends State<DoctorReferralsScreen>
     super.dispose();
   }
 
+  /// Main UI build
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -110,25 +139,10 @@ class _DoctorReferralsScreenState extends State<DoctorReferralsScreen>
       body: TabBarView(
         controller: _tabController,
         children: [
-          pendingReferrals.isEmpty
-              ? const Center(child: Text("No pending referrals."))
-              : ListView(
-                  children: pendingReferrals
-                      .map((r) => _buildReferralCard(r))
-                      .toList(),
-                ),
-          reviewedReferrals.isEmpty
-              ? const Center(child: Text("No reviewed referrals yet."))
-              : ListView(
-                  children: reviewedReferrals
-                      .map((r) => _buildReferralCard(r, isReviewed: true))
-                      .toList(),
-                ),
+          _buildReferralList(isReviewed: false),
+          _buildReferralList(isReviewed: true),
         ],
       ),
     );
   }
 }
-// Note: This code provides a basic structure for the DoctorReferralsScreen.
-// You can expand the functionality by integrating with a backend or database to fetch real referral data,
-// implementing more complex referral management features, and adding more UI enhancements as needed.

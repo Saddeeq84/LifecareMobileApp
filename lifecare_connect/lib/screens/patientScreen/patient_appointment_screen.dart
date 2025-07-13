@@ -6,6 +6,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 
+// Add this import to use isSameDay
+import 'package:table_calendar/table_calendar.dart';
+// Import isSameDay utility function
+import 'package:table_calendar/table_calendar.dart' show isSameDay;
+
 class PatientAppointmentsScreen extends StatefulWidget {
   const PatientAppointmentsScreen({super.key});
 
@@ -213,18 +218,18 @@ class _AppointmentsCalendarState extends State<_AppointmentsCalendar> {
       children: [
         TableCalendar(
           focusedDay: _focusedDay,
+        TableCalendar<Map<String, dynamic>>(
+          focusedDay: _focusedDay,
           firstDay: DateTime.utc(2020),
           lastDay: DateTime.utc(2030),
           selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
           onDaySelected: _onDaySelected,
-          eventLoader: (day) => _events[day] ?? [],
+          eventLoader: (day) => _events[DateTime(day.year, day.month, day.day)] ?? [],
           calendarStyle: const CalendarStyle(
             todayDecoration: BoxDecoration(color: Colors.green, shape: BoxShape.circle),
             selectedDecoration: BoxDecoration(color: Colors.orange, shape: BoxShape.circle),
           ),
         ),
-        const SizedBox(height: 12),
-        Expanded(
           child: _selectedAppointments.isEmpty
               ? const Center(child: Text('No appointments for this day.'))
               : ListView.builder(

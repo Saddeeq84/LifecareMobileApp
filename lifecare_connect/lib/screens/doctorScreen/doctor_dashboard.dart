@@ -1,19 +1,26 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+/// Main dashboard screen for doctors
 class DoctorDashboard extends StatelessWidget {
   const DoctorDashboard({super.key});
 
-  void _logout(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Logged out successfully (simulated)')),
-    );
-    Future.delayed(const Duration(seconds: 1), () {
+  /// Logout function
+  Future<void> _logout(BuildContext context) async {
+    try {
+      await FirebaseAuth.instance.signOut();
       Navigator.pushReplacementNamed(context, '/login');
-    });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Logout failed: $e')),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -31,29 +38,43 @@ class DoctorDashboard extends StatelessWidget {
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: GridView.builder(
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 20,
-            mainAxisSpacing: 20,
-          ),
-          itemCount: _doctorDashboardItems.length,
-          itemBuilder: (context, index) {
-            final item = _doctorDashboardItems[index];
-            return DashboardTile(
-              icon: item.icon,
-              label: item.label,
-              onTap: () {
-                Navigator.pushNamed(context, item.route);
-              },
-            );
-          },
+        child: Column(
+          children: [
+            if (user != null)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Welcome, Dr. ${user.email ?? 'User'}',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+              ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: GridView.builder(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 20,
+                  mainAxisSpacing: 20,
+                ),
+                itemCount: _doctorDashboardItems.length,
+                itemBuilder: (context, index) {
+                  final item = _doctorDashboardItems[index];
+                  return DashboardTile(
+                    icon: item.icon,
+                    label: item.label,
+                    onTap: () => Navigator.pushNamed(context, item.route),
+                  );
+                },
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
+/// Reusable dashboard tile widget
 class DashboardTile extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -103,6 +124,7 @@ class DashboardTile extends StatelessWidget {
   }
 }
 
+/// Model for dashboard item
 class DashboardItem {
   final IconData icon;
   final String label;
@@ -115,6 +137,7 @@ class DashboardItem {
   });
 }
 
+/// List of dashboard features for doctors
 const List<DashboardItem> _doctorDashboardItems = [
   DashboardItem(
     icon: Icons.people,
@@ -157,9 +180,3 @@ const List<DashboardItem> _doctorDashboardItems = [
     route: '/doctor_profile',
   ),
 ];
-
-// NOTE:
-// - Ensure the named routes like '/doctor_patients', '/doctor_schedule', etc.
-//   are registered in your app's route table (MaterialApp.routes).
-// - This dashboard focuses on doctor interactions — inputting prescriptions, diagnoses,
-//   lab requests, reviewing patients, notes, etc.

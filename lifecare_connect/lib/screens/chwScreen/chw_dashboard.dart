@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../chwScreen/chw_my_patients_screen.dart';
-import '../chat_chw_side_screen.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
-/// CHW Dashboard Screen showing tiles for features like messages, patients, reports etc.
-/// One tile (Messages) shows a live unread message badge using Firestore.
+import 'chw_my_patients.dart';
+import '../chat_chw_side_screen.dart';
+import '../../services/notification_service.dart';
+import 'chw_account_settings_screen.dart';
+
 class CHWDashboard extends StatefulWidget {
   const CHWDashboard({super.key});
 
@@ -14,39 +17,86 @@ class CHWDashboard extends StatefulWidget {
 }
 
 class _CHWDashboardState extends State<CHWDashboard> {
-  // Get currently logged-in CHW's ID from Firebase Authentication
-  final String chwId = FirebaseAuth.instance.currentUser?.uid ?? '';
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  late String chwId;
 
-  /// Handle logout by showing a SnackBar and redirecting to login
-  void _logout(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Logged out successfully (simulated)')),
-    );
-    Future.delayed(const Duration(seconds: 1), () {
-      Navigator.pushReplacementNamed(context, '/login');
-    });
-  }
-
-  /// Navigate to different screens based on route.
-  /// Some screens require manual navigation (My Patients, Chat)
-  void _onTileTap(DashboardItem item) {
-    if (item.route == '/chw_my_patients') {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const CHWMyPatientsScreen()),
-      );
-    } else if (item.route == '/chat_selection') {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const ChatCHWSideScreen()),
-      );
+  @override
+  void initState() {
+    super.initState();
+    final user = _auth.currentUser;
+    chwId = user?.uid ?? '';
+    if (chwId.isEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.pushReplacementNamed(context, '/login');
+      });
     } else {
-      Navigator.pushNamed(context, item.route);
+      checkForUpcomingVisits();
+      _initializeFCM();
     }
   }
 
-  /// Get live unread message count from Firestore for the current CHW
-  Stream<int> getUnreadMessageCount(String chwId) {
+  void _initializeFCM() async {
+    FirebaseMessaging messaging = FirebaseMessaging.instance;
+
+    NotificationSettings settings = await messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+
+    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+      final fcmToken = await messaging.getToken();
+      debugPrint("\uD83D\uDCEC FCM Token: $fcmToken");
+    }
+
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      RemoteNotification? notification = message.notification;
+      if (notification != null) {
+        flutterLocalNotificationsPlugin.show(
+          notification.hashCode,
+          notification.title,
+          notification.body,
+          const NotificationDetails(
+            android: AndroidNotificationDetails(
+              'high_importance_channel',
+              'High Importance Notifications',
+              importance: Importance.max,
+              priority: Priority.high,
+            ),
+          ),
+        );
+      }
+    });
+  }
+
+  Future<void> _logout(BuildContext context) async {
+    try {
+      await _auth.signOut();
+      Navigator.pushReplacementNamed(context, '/login');
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Logout failed: $e')),
+      );
+    }
+  }
+
+  void _onTileTap(DashboardItem item) {
+    switch (item.route) {
+      case '/chw_my_patients':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const CHWMyPatientsScreen()));
+        break;
+      case '/chat_selection':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatCHWSideScreen()));
+        break;
+      case '/chw_account_settings':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const CHWAccountSettingsScreen()));
+        break;
+      default:
+        Navigator.pushNamed(context, item.route);
+    }
+  }
+
+  Stream<int> getUnreadMessageCount() {
     return FirebaseFirestore.instance
         .collection('messages')
         .where('receiverId', isEqualTo: chwId)
@@ -55,23 +105,45 @@ class _CHWDashboardState extends State<CHWDashboard> {
         .map((snapshot) => snapshot.docs.length);
   }
 
+  Future<void> checkForUpcomingVisits() async {
+    final today = DateTime.now();
+    final snapshot = await FirebaseFirestore.instance
+        .collectionGroup('anc_visits')
+        .where('nextVisitDate', isLessThanOrEqualTo: Timestamp.fromDate(today))
+        .get();
+
+    for (final doc in snapshot.docs) {
+      final data = doc.data();
+      final nextVisitDate = (data['nextVisitDate'] as Timestamp?)?.toDate();
+      final patientRef = doc.reference.parent.parent;
+
+      if (nextVisitDate != null && patientRef != null) {
+        final patientSnapshot = await patientRef.get();
+        final patientName = patientSnapshot['name'] ?? 'Unknown Patient';
+
+        final formattedDate = "${nextVisitDate.toLocal()}".split(' ')[0];
+        await NotificationService.showInstantNotification(
+          id: doc.hashCode,
+          title: "\uD83D\uDCC5 Visit Reminder",
+          body: "$patientName has a visit scheduled for $formattedDate.",
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (chwId.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: true,
-        title: const Text(
-          'CHW Dashboard',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        title: const Text('CHW Dashboard', style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.teal,
         actions: [
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.white),
-            tooltip: 'Logout',
             onPressed: () => _logout(context),
           ),
         ],
@@ -79,20 +151,15 @@ class _CHWDashboardState extends State<CHWDashboard> {
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: GridView.builder(
-          // Define dashboard grid layout: 2 columns
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 20,
-            mainAxisSpacing: 20,
+            crossAxisCount: 2, crossAxisSpacing: 20, mainAxisSpacing: 20,
           ),
           itemCount: _dashboardItems.length,
           itemBuilder: (context, index) {
             final item = _dashboardItems[index];
-
-            // For Messages tile only, show live unread count using StreamBuilder
             if (item.route == '/chw_messages') {
               return StreamBuilder<int>(
-                stream: getUnreadMessageCount(chwId),
+                stream: getUnreadMessageCount(),
                 builder: (context, snapshot) {
                   final count = snapshot.data ?? 0;
                   return DashboardTile(
@@ -103,14 +170,12 @@ class _CHWDashboardState extends State<CHWDashboard> {
                   );
                 },
               );
-            } else {
-              // All other tiles use normal DashboardTile
-              return DashboardTile(
-                icon: item.icon,
-                label: item.label,
-                onTap: () => _onTileTap(item),
-              );
             }
+            return DashboardTile(
+              icon: item.icon,
+              label: item.label,
+              onTap: () => _onTileTap(item),
+            );
           },
         ),
       ),
@@ -118,7 +183,6 @@ class _CHWDashboardState extends State<CHWDashboard> {
   }
 }
 
-/// Custom dashboard tile with optional badge
 class DashboardTile extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -152,24 +216,14 @@ class DashboardTile extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Stack(
           children: [
-            // Main content: icon and label
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(icon, size: 40, color: Colors.teal.shade800),
                 const SizedBox(height: 10),
-                Text(
-                  label,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                  ),
-                ),
+                Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 14)),
               ],
             ),
-
-            // Badge for unread count (if any)
             if (badgeCount > 0)
               Positioned(
                 top: 0,
@@ -177,16 +231,9 @@ class DashboardTile extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: Colors.red,
-                    borderRadius: BorderRadius.circular(10),
+                    color: Colors.red, borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Text(
-                    '$badgeCount',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                    ),
-                  ),
+                  child: Text('$badgeCount', style: const TextStyle(color: Colors.white, fontSize: 12)),
                 ),
               ),
           ],
@@ -196,7 +243,6 @@ class DashboardTile extends StatelessWidget {
   }
 }
 
-/// Represents a single dashboard item
 class DashboardItem {
   final IconData icon;
   final String label;
@@ -209,7 +255,6 @@ class DashboardItem {
   });
 }
 
-/// List of all dashboard tiles
 const List<DashboardItem> _dashboardItems = [
   DashboardItem(icon: Icons.person_add_alt_1, label: 'Register Patient', route: '/register_patient'),
   DashboardItem(icon: Icons.checklist, label: 'ANC / PNC Checklist', route: '/anc_checklist'),
@@ -222,5 +267,5 @@ const List<DashboardItem> _dashboardItems = [
   DashboardItem(icon: Icons.people, label: 'My Patients', route: '/chw_my_patients'),
   DashboardItem(icon: Icons.chat_bubble_outline, label: 'Messages', route: '/chw_messages'),
   DashboardItem(icon: Icons.person_outline, label: 'My Profile', route: '/chw_profile'),
-  DashboardItem(icon: Icons.settings, label: 'Settings', route: '/chw_settings'),
+  DashboardItem(icon: Icons.settings, label: 'Settings', route: '/chw_account_settings'),
 ];

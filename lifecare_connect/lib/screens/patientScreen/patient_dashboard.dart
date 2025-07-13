@@ -11,6 +11,7 @@ import 'package:lifecare_connect/screens/my_health_tab.dart';
 import 'package:lifecare_connect/screens/patient_services_tab.dart';
 import 'package:lifecare_connect/screens/booking_history_screen.dart';
 import 'package:lifecare_connect/screens/admin_facilities_screen.dart';
+// Ensure that the file admin_facilities_screen.dart contains a class named AdminFacilitiesScreen.
 import 'package:lifecare_connect/screens/chat_chw_screen.dart';
 
 class PatientDashboard extends StatelessWidget {
@@ -84,17 +85,20 @@ class PatientDashboardMainView extends StatefulWidget {
 
 class _PatientDashboardMainViewState extends State<PatientDashboardMainView> {
   int _currentIndex = 0;
-  bool _showChatBadge = true;
-  bool _showAppointmentBadge = true;
+  bool _showChatBadge = false;
+  bool _showAppointmentBadge = false;
   String? _userRole;
   String? _patientUid;
   String? _chatId;
+
+  late final Stream<DocumentSnapshot>? _chatStream;
+  late final Stream<QuerySnapshot>? _appointmentsStream;
 
   @override
   void initState() {
     super.initState();
     _showOnboarding();
-    _initializeChatData();
+    _initializeUserData();
   }
 
   Future<void> _showOnboarding() async {
@@ -104,20 +108,50 @@ class _PatientDashboardMainViewState extends State<PatientDashboardMainView> {
         context: context,
         builder: (_) => AlertDialog(
           title: const Text('Welcome to LifeCare Connect!'),
-          content: const Text('You can now book appointments, access education, services and chat with CHWs.'),
-          actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Got it!'))],
+          content: const Text(
+              'You can now book appointments, access education, services, and chat with CHWs.'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Got it!')),
+          ],
         ),
       );
       await prefs.setBool('has_seen_patient_onboarding', true);
     }
   }
 
-  Future<void> _initializeChatData() async {
+  Future<void> _initializeUserData() async {
     final prefs = await SharedPreferences.getInstance();
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
     setState(() {
       _userRole = prefs.getString('user_role');
-      _patientUid = FirebaseAuth.instance.currentUser?.uid;
-      _chatId = _patientUid; // Assuming each patient has a chat doc with ID same as UID
+      _patientUid = user.uid;
+      _chatId = user.uid; // Assuming chat doc id = patient UID
+    });
+
+    // Setup streams for real-time badge updates
+    _chatStream = FirebaseFirestore.instance.collection('chats').doc(_chatId).snapshots();
+    _appointmentsStream = FirebaseFirestore.instance
+        .collection('appointments')
+        .where('patientId', isEqualTo: _patientUid)
+        .where('status', isEqualTo: 'pending') // or some criteria for unread
+        .snapshots();
+
+    // Listen to chat updates for badge
+    _chatStream!.listen((snap) {
+      if (!mounted) return;
+      final data = snap.data();
+      final participantsRead = data?['participantsRead'] as Map<String, dynamic>? ?? {};
+      final hasUnread = participantsRead[_patientUid] == false;
+      setState(() => _showChatBadge = hasUnread);
+    });
+
+    // Listen to appointments updates for badge
+    _appointmentsStream!.listen((snap) {
+      if (!mounted) return;
+      final hasPending = snap.docs.isNotEmpty;
+      setState(() => _showAppointmentBadge = hasPending);
     });
   }
 
@@ -128,21 +162,43 @@ class _PatientDashboardMainViewState extends State<PatientDashboardMainView> {
   }
 
   List<_DashboardPage> get _pages => [
-        const _DashboardPage(title: 'My Health', icon: Icons.health_and_safety_outlined, content: MyHealthTab()),
-        const _DashboardPage(title: 'Appointments', icon: Icons.calendar_today_outlined, content: PatientAppointmentsScreen()),
-        const _DashboardPage(title: 'Education', icon: Icons.school_outlined, content: PatientEducationScreen()),
-        const _DashboardPage(title: 'Daily Tips', icon: Icons.tips_and_updates_outlined, content: DailyHealthTipsScreen()),
-        const _DashboardPage(title: 'Services', icon: Icons.medical_services_outlined, content: PatientServicesTab()),
-        const _DashboardPage(title: 'Bookings', icon: Icons.history, content: BookingHistoryScreen()),
-
-        // ✅ Chat Tab with Firestore Stream
+        const _DashboardPage(
+          title: 'My Health',
+          icon: Icons.health_and_safety_outlined,
+          content: MyHealthTab(),
+        ),
+        const _DashboardPage(
+          title: 'Appointments',
+          icon: Icons.calendar_today_outlined,
+          content: PatientAppointmentsScreen(),
+        ),
+        const _DashboardPage(
+          title: 'Education',
+          icon: Icons.school_outlined,
+          content: PatientEducationScreen(),
+        ),
+        const _DashboardPage(
+          title: 'Daily Tips',
+          icon: Icons.tips_and_updates_outlined,
+          content: DailyHealthTipsScreen(),
+        ),
+        const _DashboardPage(
+          title: 'Services',
+          icon: Icons.medical_services_outlined,
+          content: PatientServicesTab(),
+        ),
+        const _DashboardPage(
+          title: 'Bookings',
+          icon: Icons.history,
+          content: BookingHistoryScreen(),
+        ),
         _DashboardPage(
           title: 'Chat',
           icon: Icons.chat_outlined,
           content: (_chatId == null || _patientUid == null)
               ? const Center(child: CircularProgressIndicator())
               : StreamBuilder<DocumentSnapshot>(
-                  stream: FirebaseFirestore.instance.collection('chats').doc(_chatId).snapshots(),
+                  stream: _chatStream,
                   builder: (ctx, snap) {
                     if (snap.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator());
@@ -169,7 +225,8 @@ class _PatientDashboardMainViewState extends State<PatientDashboardMainView> {
                           const Icon(Icons.chat),
                           if (hasUnread)
                             const Positioned(
-                              right: 0, top: 0,
+                              right: 0,
+                              top: 0,
                               child: CircleAvatar(radius: 5, backgroundColor: Colors.red),
                             ),
                         ],
@@ -184,9 +241,16 @@ class _PatientDashboardMainViewState extends State<PatientDashboardMainView> {
                   },
                 ),
         ),
-
-        const _DashboardPage(title: 'Profile', icon: Icons.person_outline, content: PatientProfileScreen()),
-        const _DashboardPage(title: 'Settings', icon: Icons.settings_outlined, content: Center(child: Text("Settings (UI only)"))),
+        const _DashboardPage(
+          title: 'Profile',
+          icon: Icons.person_outline,
+          content: PatientProfileScreen(),
+        ),
+        const _DashboardPage(
+          title: 'Settings',
+          icon: Icons.settings_outlined,
+          content: Center(child: Text("Settings (UI only)")),
+        ),
       ];
 
   @override
@@ -217,7 +281,7 @@ class _PatientDashboardMainViewState extends State<PatientDashboardMainView> {
         onTap: (i) {
           setState(() {
             _currentIndex = i;
-            if (i == 1) _showAppointmentBadge = false;
+            if (i == 1) _showAppointmentBadge = false; // Manually hide on tab view
             if (i == 6) _showChatBadge = false;
           });
         },
