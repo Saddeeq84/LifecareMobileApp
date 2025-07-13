@@ -2,15 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:lifecare_connect/screens/patientScreen/my_health_record_details.dart';
 
-class MyUnifiedHealthScreen extends StatefulWidget {
-  const MyUnifiedHealthScreen({super.key});
+class MyHealthTab extends StatefulWidget {
+  const MyHealthTab({super.key});
 
   @override
-  State<MyUnifiedHealthScreen> createState() => _MyUnifiedHealthScreenState();
+  State<MyHealthTab> createState() => _MyHealthTabState();
 }
 
-class _MyUnifiedHealthScreenState extends State<MyUnifiedHealthScreen> {
+class _MyHealthTabState extends State<MyHealthTab> {
   final User? currentUser = FirebaseAuth.instance.currentUser;
   Map<String, String> selfReportedVitals = {};
   List<String> uploadedLabResults = [];
@@ -125,7 +126,7 @@ class _MyUnifiedHealthScreenState extends State<MyUnifiedHealthScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => HealthRecordDetailPage(
+                            builder: (_) => MyHealthRecordDetails(
                               userUid: currentUser!.uid,
                               recordId: doc.id,
                               recordDescription: description,

@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'edit_chw_profile_screen.dart'; // Add this import
+import 'chw_edit_profile_screen.dart';
+// Ensure that the following class exists in chw_edit_profile_screen.dart:
+// class CHWEditProfileScreen extends StatelessWidget { ... }
 
 class CHWProfileScreen extends StatelessWidget {
   const CHWProfileScreen({super.key});
 
   Future<DocumentSnapshot<Map<String, dynamic>>> _fetchProfile() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      throw Exception('User not logged in');
+    }
     return FirebaseFirestore.instance.collection('users').doc(uid).get();
   }
 
@@ -23,6 +28,10 @@ class CHWProfileScreen extends StatelessWidget {
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return const Center(child: Text('❌ Error loading profile.'));
           }
 
           if (!snapshot.hasData || !snapshot.data!.exists) {
@@ -64,7 +73,7 @@ class CHWProfileScreen extends StatelessWidget {
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const EditCHWProfileScreen()),
+                        MaterialPageRoute(builder: (_) => const CHWEditProfileScreen()),
                       );
                     },
                   ),

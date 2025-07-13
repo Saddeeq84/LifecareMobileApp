@@ -5,9 +5,9 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import 'chw_my_patients.dart';
-import '../chat_chw_side_screen.dart';
+import 'chat_chw_side_screen.dart';
+import 'chw_settings_screen.dart';
 import '../../services/notification_service.dart';
-import 'chw_account_settings_screen.dart';
 
 class CHWDashboard extends StatefulWidget {
   const CHWDashboard({super.key});
@@ -19,12 +19,14 @@ class CHWDashboard extends StatefulWidget {
 class _CHWDashboardState extends State<CHWDashboard> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   late String chwId;
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
   @override
   void initState() {
     super.initState();
     final user = _auth.currentUser;
     chwId = user?.uid ?? '';
+    _initializeLocalNotifications();
     if (chwId.isEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Navigator.pushReplacementNamed(context, '/login');
@@ -33,6 +35,65 @@ class _CHWDashboardState extends State<CHWDashboard> {
       checkForUpcomingVisits();
       _initializeFCM();
     }
+  }
+
+  void _initializeLocalNotifications() {
+    const AndroidInitializationSettings initializationSettingsAndroid =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+    const InitializationSettings initializationSettings =
+        InitializationSettings(android: initializationSettingsAndroid);
+    flutterLocalNotificationsPlugin.initialize(initializationSettings);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (chwId.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('CHW Dashboard', style: TextStyle(color: Colors.white)),
+        backgroundColor: Colors.teal,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.white),
+            onPressed: () => _logout(context),
+          ),
+        ],
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: GridView.builder(
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2, crossAxisSpacing: 20, mainAxisSpacing: 20,
+          ),
+          itemCount: _dashboardItems.length,
+          itemBuilder: (context, index) {
+            final item = _dashboardItems[index];
+            if (item.route == '/chw_messages') {
+              return StreamBuilder<int>(
+                stream: getUnreadMessageCount(),
+                builder: (context, snapshot) {
+                  final count = snapshot.data ?? 0;
+                  return DashboardTile(
+                    icon: item.icon,
+                    label: item.label,
+                    onTap: () => _onTileTap(item),
+                    badgeCount: count,
+                  );
+                },
+              );
+            }
+            return DashboardTile(
+              icon: item.icon,
+              label: item.label,
+              onTap: () => _onTileTap(item),
+            );
+          },
+        ),
+      ),
+    );
   }
 
   void _initializeFCM() async {
@@ -89,7 +150,7 @@ class _CHWDashboardState extends State<CHWDashboard> {
         Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatCHWSideScreen()));
         break;
       case '/chw_account_settings':
-        Navigator.push(context, MaterialPageRoute(builder: (_) => const CHWAccountSettingsScreen()));
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const CHWSettingsScreen()));
         break;
       default:
         Navigator.pushNamed(context, item.route);
@@ -129,57 +190,6 @@ class _CHWDashboardState extends State<CHWDashboard> {
         );
       }
     }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (chwId.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('CHW Dashboard', style: TextStyle(color: Colors.white)),
-        backgroundColor: Colors.teal,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.white),
-            onPressed: () => _logout(context),
-          ),
-        ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: GridView.builder(
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2, crossAxisSpacing: 20, mainAxisSpacing: 20,
-          ),
-          itemCount: _dashboardItems.length,
-          itemBuilder: (context, index) {
-            final item = _dashboardItems[index];
-            if (item.route == '/chw_messages') {
-              return StreamBuilder<int>(
-                stream: getUnreadMessageCount(),
-                builder: (context, snapshot) {
-                  final count = snapshot.data ?? 0;
-                  return DashboardTile(
-                    icon: item.icon,
-                    label: item.label,
-                    onTap: () => _onTileTap(item),
-                    badgeCount: count,
-                  );
-                },
-              );
-            }
-            return DashboardTile(
-              icon: item.icon,
-              label: item.label,
-              onTap: () => _onTileTap(item),
-            );
-          },
-        ),
-      ),
-    );
   }
 }
 

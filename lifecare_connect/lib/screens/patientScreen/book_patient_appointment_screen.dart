@@ -38,8 +38,8 @@ class _BookPatientAppointmentScreenState extends State<BookPatientAppointmentScr
     setState(() {
       availableProviders = snapshot.docs
           .map((doc) => {
-                'name': doc['name'],
-                'uid': doc.id,
+                'name': doc['name'].toString(),
+                'uid': doc.id.toString(),
               })
           .toList();
     });

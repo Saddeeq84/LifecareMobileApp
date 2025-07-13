@@ -1,7 +1,3 @@
-// File: lib/services/firestore_service.dart
-
-// ignore_for_file: prefer_interpolation_to_compose_strings
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class FirestoreService {
@@ -10,6 +6,12 @@ class FirestoreService {
   /// Add new patient data
   Future<void> addPatient(Map<String, dynamic> data) async {
     await _db.collection('patients').add(data);
+    }
+  }
+
+  /// Register a new patient (alias for addPatient)
+  Future<void> registerPatient(Map<String, dynamic> patientData) async {
+    await _db.collection('patients').add(patientData);
   }
 
   /// Get list of patients added by a specific CHW
@@ -93,4 +95,3 @@ class FirestoreService {
         .endAt([namePrefix + '\uf8ff'])
         .snapshots();
   }
-}

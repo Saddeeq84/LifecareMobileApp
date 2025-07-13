@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../chwScreen/chw_edit_profile_screen.dart'; // adjust path if needed
+import 'chw_edit_profile_screen.dart';
 
 class CHWSettingsScreen extends StatelessWidget {
   const CHWSettingsScreen({super.key});
@@ -83,7 +83,7 @@ class CHWSettingsScreen extends StatelessWidget {
   void _goToEditProfile(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+      MaterialPageRoute(builder: (context) => const CHWEditProfileScreen()),
     );
   }
 

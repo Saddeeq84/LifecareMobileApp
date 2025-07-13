@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:lifecare_connect/screens/chwScreen/anc_checklist_screen.dart';
-import 'package:lifecare_connect/screens/chwScreen/anc_visit_history_screen.dart';
+import 'package:lifecare_connect/screens/chwscreen/anc_checklist_screen.dart';
+import 'package:lifecare_connect/screens/chwscreen/anc_visit_history_screen.dart';
 
 class CHWPatientDetailScreen extends StatelessWidget {
   final Map<String, dynamic> data;

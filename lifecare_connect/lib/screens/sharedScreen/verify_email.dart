@@ -8,7 +8,6 @@ import 'package:flutter/material.dart';
 class VerifyEmailScreen extends StatefulWidget {
   const VerifyEmailScreen({super.key});
 
-  @override
   State<VerifyEmailScreen> createState() => _VerifyEmailScreenState();
 }
 

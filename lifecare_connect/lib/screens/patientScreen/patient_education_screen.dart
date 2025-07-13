@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:video_player/video_player.dart';
-import 'package:video_player/video_player.dart' show VideoPlayer;
-import 'package:just_audio/just_audio.dart' as just_audio;
+import 'package:just_audio/just_audio.dart';
 
 class PatientEducationScreen extends StatefulWidget {
   const PatientEducationScreen({super.key});
@@ -261,7 +260,7 @@ class AudioPlayerScreen extends StatefulWidget {
 }
 
 class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
-  final just_audio.AudioPlayer _player = just_audio.AudioPlayer();
+  final AudioPlayer _player = AudioPlayer();
   bool _isPlaying = false;
 
   @override
@@ -307,4 +306,3 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
   }
 }
 // -------------------- End of Patient Education Screen --------------------
-// This code provides a comprehensive patient education screen with video, audio, and infographic content.

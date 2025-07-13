@@ -3,7 +3,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 
 // Add this import to use isSameDay
@@ -216,8 +215,6 @@ class _AppointmentsCalendarState extends State<_AppointmentsCalendar> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        TableCalendar(
-          focusedDay: _focusedDay,
         TableCalendar<Map<String, dynamic>>(
           focusedDay: _focusedDay,
           firstDay: DateTime.utc(2020),
@@ -230,6 +227,7 @@ class _AppointmentsCalendarState extends State<_AppointmentsCalendar> {
             selectedDecoration: BoxDecoration(color: Colors.orange, shape: BoxShape.circle),
           ),
         ),
+        Expanded(
           child: _selectedAppointments.isEmpty
               ? const Center(child: Text('No appointments for this day.'))
               : ListView.builder(

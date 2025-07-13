@@ -1,10 +1,12 @@
 // ignore_for_file: non_constant_identifier_names
 
 import 'package:flutter/material.dart';
-import '../chwScreen/chw_register.dart';
-import '../patientScreen/login_patient_register.dart';
-import '../doctorScreen/doctor_register.dart';
-import 'package:lifecare_connect/screens/facilityScreen/facility_register_screen.dart'; // ✅ Facility Registration
+
+// ✅ Correct imports for each role's registration screen
+import 'package:lifecare_connect/screens/chwscreen/chw_create_account.dart';
+import 'package:lifecare_connect/screens/patientscreen/login_patient_register.dart';
+import 'package:lifecare_connect/screens/doctorscreen/doctor_create_account.dart';
+import 'package:lifecare_connect/screens/facilityscreen/faclity_create_account.dart';
 
 class RegisterRoleSelectionScreen extends StatelessWidget {
   const RegisterRoleSelectionScreen({super.key});
@@ -55,12 +57,12 @@ class RegisterRoleSelectionScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 30),
 
-                    // 👩‍⚕️ Health Worker
+                    // 👩‍⚕️ Community Health Worker
                     _buildRoleButton(
                       context,
                       label: 'Health Worker',
                       icon: Icons.medical_services_outlined,
-                      screen: const CHWRegisterScreen(),
+                      screen: const CHWCreateAccountScreen(), // ✅ Replace if class is CHWRegisterScreen
                     ),
                     const SizedBox(height: 20),
 
@@ -78,7 +80,7 @@ class RegisterRoleSelectionScreen extends StatelessWidget {
                       context,
                       label: 'Doctor',
                       icon: Icons.local_hospital_outlined,
-                      screen: const DoctorRegisterScreen(),
+                      screen: const DoctorCreateAccountScreen(),
                     ),
                     const SizedBox(height: 20),
 
@@ -87,7 +89,7 @@ class RegisterRoleSelectionScreen extends StatelessWidget {
                       context,
                       label: 'Facility / Corporate',
                       icon: Icons.business_outlined,
-                      screen: const FacilityRegisterScreen(),
+                      screen: const FacilityCreateAccountScreen(),
                     ),
                   ],
                 ),
@@ -99,7 +101,7 @@ class RegisterRoleSelectionScreen extends StatelessWidget {
     );
   }
 
-  // 🔁 Reusable Button Builder with white text + icon
+  // 🔁 Reusable Button Builder with consistent styling
   Widget _buildRoleButton(
     BuildContext context, {
     required String label,
@@ -109,14 +111,14 @@ class RegisterRoleSelectionScreen extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton.icon(
-        icon: Icon(icon, color: Colors.white), // ✅ White icon
+        icon: Icon(icon, color: Colors.white),
         label: Text(
           label,
-          style: const TextStyle(fontSize: 16, color: Colors.white), // ✅ White text
+          style: const TextStyle(fontSize: 16, color: Colors.white),
         ),
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.teal,
-          foregroundColor: Colors.white, // ✅ Affects ripple + disabled state
+          foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 16),
         ),
         onPressed: () {
@@ -129,4 +131,3 @@ class RegisterRoleSelectionScreen extends StatelessWidget {
     );
   }
 }
-// ✅ This screen allows users to select their registration role

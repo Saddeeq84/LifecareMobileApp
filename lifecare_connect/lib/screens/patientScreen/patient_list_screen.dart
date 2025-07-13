@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:lifecare_connect/screens/chwScreen/chw_chat_screen.dart';
+import 'package:lifecare_connect/screens/chwscreen/chw_chat_screen.dart';
 // Ensure that the file 'chw_chat_screen.dart' exists in the 'screens' directory
 // and that it defines a class named CHWChatScreen.
 

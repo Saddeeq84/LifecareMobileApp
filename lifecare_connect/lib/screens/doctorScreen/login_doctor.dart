@@ -3,8 +3,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../../services/user_service.dart'; // Add this import for UserService
-import '../sharedScreen/register_role_selection.dart'; // ✅ Link to registration
+import '../../services/user_service.dart'; // UserService import
+import '../sharedScreen/register_role_selection.dart'; // Registration link
 
 class LoginDoctorScreen extends StatefulWidget {
   const LoginDoctorScreen({super.key});
@@ -29,7 +29,6 @@ class _LoginDoctorScreenState extends State<LoginDoctorScreen> {
     super.dispose();
   }
 
-  // 🔐 Handle email/password login with Firebase, assign role, and navigate
   Future<void> handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -37,19 +36,18 @@ class _LoginDoctorScreenState extends State<LoginDoctorScreen> {
 
     try {
       // Firebase sign-in
-      final userCredential = await _auth.signInWithEmailAndPassword(
+      await _auth.signInWithEmailAndPassword(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
       );
 
-      // Save the role as 'doctor' in Firestore
+      // Save the role as 'doctor' in Firestore (optional, only if you want to update role on login)
       await _userService.saveUserRole('doctor');
 
-      // Navigate based on actual role in Firestore
+      // Navigate based on the role stored in Firestore
       await _userService.navigateBasedOnRole(context);
       
     } catch (e) {
-      // Show error snackbar
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Login failed: $e')),
       );
@@ -58,7 +56,6 @@ class _LoginDoctorScreenState extends State<LoginDoctorScreen> {
     }
   }
 
-  // Simulated reset password handler with validation
   Future<void> resetPassword() async {
     final email = emailController.text.trim();
     if (!email.contains('@')) {
@@ -159,8 +156,6 @@ class _LoginDoctorScreenState extends State<LoginDoctorScreen> {
                           onPressed: resetPassword,
                           child: const Text('Forgot password?'),
                         ),
-
-                        // ✅ Link to registration screen
                         TextButton(
                           onPressed: () {
                             Navigator.push(

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'upcoming_visits_screen.dart';  // import your upcoming visits screen
+import '../chwScreen/upcoming_visits_screen.dart';  // import your upcoming visits screen
 
 class ANCVisitHistoryScreen extends StatelessWidget {
   final String patientId;

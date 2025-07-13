@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
-class RegisterFacilityScreen extends StatefulWidget {
-  const RegisterFacilityScreen({super.key});
+class AdminRegisterFacilityScreen extends StatefulWidget {
+  const AdminRegisterFacilityScreen({super.key});
 
   @override
-  State<RegisterFacilityScreen> createState() => _RegisterFacilityScreenState();
+  State<AdminRegisterFacilityScreen> createState() => _AdminRegisterFacilityScreenState();
 }
 
-class _RegisterFacilityScreenState extends State<RegisterFacilityScreen> {
+class _AdminRegisterFacilityScreenState extends State<AdminRegisterFacilityScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameCtrl = TextEditingController();
   final TextEditingController _locationCtrl = TextEditingController();

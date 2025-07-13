@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
-import '../chwScreen/login_chw_screen.dart';
-import '../patientScreen/login_patient.dart';
+import '../chwscreen/login_chw_screen.dart';
+import '../patientscreen/login_patient.dart';
 // Make sure the imported file defines a class named LoginPatient.
 // If the class is named differently (e.g., LoginPatientScreen), update the import and usage accordingly.
-import '../adminScreen/login_admin.dart';
-import '../doctorScreen/login_doctor.dart';
-import '../facilityScreen/facility_login_screen.dart';
+import '../adminscreen/login_admin.dart';
+import '../doctorscreen/login_doctor.dart';
+import '../facilityscreen/facility_login_screen.dart';
 
 class RoleSelectionPage extends StatelessWidget {
   const RoleSelectionPage({super.key});
@@ -42,9 +42,9 @@ class RoleSelectionPage extends StatelessWidget {
 
                 // Button for Patient Login
                 _buildRoleButton(
-                  screen: const LoginPatient(), // Change 'LoginPatient' to the correct class name if needed, e.g., 'LoginPatientScreen()'
+                  context,
                   label: 'Patient',
-                  screen: const LoginPatient(),
+                  screen: const LoginPatient(), // <-- Make sure this matches the actual class name
                 ),
                 const SizedBox(height: 15),
 
@@ -104,4 +104,4 @@ class RoleSelectionPage extends StatelessWidget {
     );
   }
 }
-// End of file: lib/screens/role_selection.dart
+// End of file: lib/screens/sharedScreen/role_selection.dart

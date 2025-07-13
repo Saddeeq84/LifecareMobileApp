@@ -4,51 +4,59 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/user_service.dart';
 
-import '../chwScreen/login_chw_screen.dart';
-import '../adminScreen/login_admin.dart';
-import '../doctorScreen/login_doctor.dart';
+import '../chwscreen/login_chw_screen.dart';
+import '../adminscreen/login_admin.dart';
+import '../doctorscreen/login_doctor.dart';
 import '../sharedScreen/register_role_selection.dart';
-import 'package:lifecare_connect/screens/facilityScreen/facility_login_screen.dart';
+import 'package:lifecare_connect/screens/facilityscreen/facility_login_screen.dart';
 
-class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+class LoginPatient extends StatefulWidget {
+  const LoginPatient({super.key});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  State<LoginPatient> createState() => _LoginPatientState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _LoginPatientState extends State<LoginPatient> {
   final _auth = FirebaseAuth.instance;
   final _userService = UserService();
+  final _formKey = GlobalKey<FormState>();
+
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+
   bool _isLoading = false;
 
-  // 🔐 Handle email/password login
   Future<void> _loginUser() async {
+    if (!_formKey.currentState!.validate()) return;
+
     setState(() => _isLoading = true);
 
     try {
-      // Sign in with Firebase Auth
       await _auth.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
-      // On successful login, save the role as "patient"
+      // Save the role explicitly on login
       await _userService.saveUserRole('patient');
 
-      // Centralized role-based navigation
+      // Navigate based on role
       await _userService.navigateBasedOnRole(context);
-
     } catch (e) {
-      // Show login failure message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Login failed: $e')),
       );
     } finally {
       setState(() => _isLoading = false);
     }
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 
   @override
@@ -61,7 +69,6 @@ class _LoginPageState extends State<LoginPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // 🔷 App Header
               Container(
                 padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 16),
                 decoration: BoxDecoration(
@@ -91,62 +98,67 @@ class _LoginPageState extends State<LoginPage> {
                   ],
                 ),
               ),
-
               const SizedBox(height: 40),
-
-              // 📧 Email & Password Login Section
               const Text(
-                'Login with Email & Password',
+                'Patient Login',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 20),
-
-              TextField(
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                decoration:
-                    const InputDecoration(labelText: "Email", border: OutlineInputBorder()),
-              ),
-              const SizedBox(height: 15),
-              TextField(
-                controller: _passwordController,
-                obscureText: true,
-                decoration:
-                    const InputDecoration(labelText: "Password", border: OutlineInputBorder()),
-              ),
-              const SizedBox(height: 20),
-
-              ElevatedButton.icon(
-                onPressed: _isLoading ? null : _loginUser,
-                icon: _isLoading
-                    ? const SizedBox(
-                        height: 24,
-                        width: 24,
-                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
-                      )
-                    : const Icon(Icons.login),
-                label: const Text("Login"),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.teal,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+              Form(
+                key: _formKey,
+                child: Column(
+                  children: [
+                    TextFormField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: const InputDecoration(
+                        labelText: "Email",
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) =>
+                          value == null || !value.contains('@') ? 'Enter a valid email' : null,
+                    ),
+                    const SizedBox(height: 15),
+                    TextFormField(
+                      controller: _passwordController,
+                      obscureText: true,
+                      decoration: const InputDecoration(
+                        labelText: "Password",
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) =>
+                          value == null || value.length < 6 ? 'Minimum 6 characters' : null,
+                    ),
+                    const SizedBox(height: 20),
+                    ElevatedButton.icon(
+                      onPressed: _isLoading ? null : _loginUser,
+                      icon: _isLoading
+                          ? const SizedBox(
+                              height: 24,
+                              width: 24,
+                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
+                            )
+                          : const Icon(Icons.login),
+                      label: const Text("Login"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.teal,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-
               const SizedBox(height: 30),
               const Divider(thickness: 1.2),
               const SizedBox(height: 20),
-
-              // 🔄 Alternative Role-Based Logins
               const Text(
-                'Or select your login type:',
+                'Or select another login type:',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 25),
-
-              // 👩‍⚕️ CHW
               ElevatedButton.icon(
                 icon: const Icon(Icons.medical_services_outlined),
                 style: ElevatedButton.styleFrom(
@@ -155,26 +167,12 @@ class _LoginPageState extends State<LoginPage> {
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
                 onPressed: () => Navigator.push(
-                    context, MaterialPageRoute(builder: (_) => const CHWLoginScreen())),
+                  context,
+                  MaterialPageRoute(builder: (_) => const CHWLoginScreen()),
+                ),
                 label: const Text('Community Health Worker'),
               ),
               const SizedBox(height: 15),
-
-              // 🧑‍⚕️ Patient
-              ElevatedButton.icon(
-                icon: const Icon(Icons.people_outline),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.teal,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                ),
-                onPressed: () => Navigator.push(
-                    context, MaterialPageRoute(builder: (_) => const LoginPage())),
-                label: const Text('Patient'),
-              ),
-              const SizedBox(height: 15),
-
-              // 👨‍⚕️ Doctor
               ElevatedButton.icon(
                 icon: const Icon(Icons.local_hospital_outlined),
                 style: ElevatedButton.styleFrom(
@@ -183,12 +181,12 @@ class _LoginPageState extends State<LoginPage> {
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
                 onPressed: () => Navigator.push(
-                    context, MaterialPageRoute(builder: (_) => const LoginDoctorScreen())),
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginDoctorScreen()),
+                ),
                 label: const Text('Doctor'),
               ),
               const SizedBox(height: 15),
-
-              // 🧑‍💼 Admin
               ElevatedButton.icon(
                 icon: const Icon(Icons.admin_panel_settings_outlined),
                 style: ElevatedButton.styleFrom(
@@ -197,12 +195,12 @@ class _LoginPageState extends State<LoginPage> {
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
                 onPressed: () => Navigator.push(
-                    context, MaterialPageRoute(builder: (_) => const LoginAdminScreen())),
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginAdminScreen()),
+                ),
                 label: const Text('Admin'),
               ),
               const SizedBox(height: 15),
-
-              // 🏥 Facility Login
               ElevatedButton.icon(
                 icon: const Icon(Icons.business_outlined),
                 style: ElevatedButton.styleFrom(
@@ -211,22 +209,19 @@ class _LoginPageState extends State<LoginPage> {
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
                 onPressed: () => Navigator.push(
-                    context, MaterialPageRoute(builder: (_) => const FacilityLoginScreen())),
+                  context,
+                  MaterialPageRoute(builder: (_) => const FacilityLoginScreen()),
+                ),
                 label: const Text('Facility / Corporate Login'),
               ),
-
               const SizedBox(height: 30),
               const Divider(thickness: 1.2),
               const SizedBox(height: 10),
-
-              // 🔗 Create Account
               TextButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const RegisterRoleSelectionScreen()),
-                  );
-                },
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const RegisterRoleSelectionScreen()),
+                ),
                 child: const Text(
                   "Don't have an account? Create one",
                   style: TextStyle(

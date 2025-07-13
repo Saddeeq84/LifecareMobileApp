@@ -1,5 +1,3 @@
-// file: lib/screens/adminScreen/login_admin.dart
-
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../../services/user_service.dart';
@@ -21,6 +19,7 @@ class _LoginAdminScreenState extends State<LoginAdminScreen> {
   final UserService _userService = UserService();
 
   bool isLoading = false;
+  bool obscurePassword = true;
 
   @override
   void dispose() {
@@ -50,7 +49,7 @@ class _LoginAdminScreenState extends State<LoginAdminScreen> {
         SnackBar(content: Text('Login failed: ${e.toString()}')),
       );
     } finally {
-      setState(() => isLoading = false);
+      if (mounted) setState(() => isLoading = false);
     }
   }
 
@@ -108,8 +107,16 @@ class _LoginAdminScreenState extends State<LoginAdminScreen> {
               const SizedBox(height: 10),
               TextFormField(
                 controller: passwordController,
-                obscureText: true,
-                decoration: const InputDecoration(labelText: 'Password'),
+                obscureText: obscurePassword,
+                decoration: InputDecoration(
+                  labelText: 'Password',
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      obscurePassword ? Icons.visibility_off : Icons.visibility,
+                    ),
+                    onPressed: () => setState(() => obscurePassword = !obscurePassword),
+                  ),
+                ),
                 validator: (value) =>
                     value == null || value.length < 6 ? 'Enter 6+ character password' : null,
               ),
@@ -126,19 +133,21 @@ class _LoginAdminScreenState extends State<LoginAdminScreen> {
               ),
               const SizedBox(height: 12),
               TextButton(
-                onPressed: resetPassword,
+                onPressed: isLoading ? null : resetPassword,
                 child: const Text('Forgot Password?'),
               ),
               const Divider(height: 40),
               TextButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const RegisterRoleSelectionScreen(),
-                    ),
-                  );
-                },
+                onPressed: isLoading
+                    ? null
+                    : () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const RegisterRoleSelectionScreen(),
+                          ),
+                        );
+                      },
                 child: const Text("Don't have an account? Create one"),
               ),
             ],

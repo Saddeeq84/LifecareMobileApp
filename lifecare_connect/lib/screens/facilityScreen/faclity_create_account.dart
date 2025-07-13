@@ -1,14 +1,18 @@
-import 'package:flutter/material.dart';
+// facility_create_account.dart
+// ignore_for_file: use_build_context_synchronously
 
-class FacilityRegisterScreen extends StatefulWidget {
-  const FacilityRegisterScreen({super.key});
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // ✅ Firestore
+
+class FacilityCreateAccountScreen extends StatefulWidget {
+  const FacilityCreateAccountScreen({super.key});
 
   @override
-  State<FacilityRegisterScreen> createState() =>
-      _FacilityRegisterScreenState();
+  State<FacilityCreateAccountScreen> createState() =>
+      _FacilityCreateAccountScreenState();
 }
 
-class _FacilityRegisterScreenState extends State<FacilityRegisterScreen> {
+class _FacilityCreateAccountScreenState extends State<FacilityCreateAccountScreen> {
   final _formKey = GlobalKey<FormState>();
 
   final nameController = TextEditingController();
@@ -18,16 +22,28 @@ class _FacilityRegisterScreenState extends State<FacilityRegisterScreen> {
 
   final typeOptions = ['Hospital', 'Pharmacy', 'Laboratory', 'Scan Center'];
   String selectedType = 'Hospital';
+  bool _loading = false;
 
-  void _submitForm() {
-    if (_formKey.currentState!.validate()) {
+  Future<void> _submitForm() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _loading = true);
+
+    try {
+      await FirebaseFirestore.instance.collection('facilities').add({
+        'name': nameController.text.trim(),
+        'type': selectedType,
+        'email': emailController.text.trim(),
+        'phone': phoneController.text.trim(),
+        'address': addressController.text.trim(),
+        'isApproved': false, // ⛔️ Mark as unapproved initially
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Registration submitted. Awaiting admin approval."),
-        ),
+        const SnackBar(content: Text('✅ Registration submitted. Awaiting admin approval.')),
       );
 
-      // Clear all fields after successful "submission"
       nameController.clear();
       emailController.clear();
       phoneController.clear();
@@ -36,9 +52,14 @@ class _FacilityRegisterScreenState extends State<FacilityRegisterScreen> {
         selectedType = typeOptions[0];
       });
 
-      // Close the form screen (optional)
       Navigator.pop(context);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('❌ Failed to register facility: $e')),
+      );
     }
+
+    setState(() => _loading = false);
   }
 
   @override
@@ -66,7 +87,8 @@ class _FacilityRegisterScreenState extends State<FacilityRegisterScreen> {
                   TextFormField(
                     controller: nameController,
                     decoration: const InputDecoration(labelText: "Facility Name"),
-                    validator: (value) => value == null || value.isEmpty ? 'Enter facility name' : null,
+                    validator: (value) =>
+                        value == null || value.isEmpty ? 'Enter facility name' : null,
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
@@ -74,13 +96,7 @@ class _FacilityRegisterScreenState extends State<FacilityRegisterScreen> {
                     items: typeOptions
                         .map((t) => DropdownMenuItem(value: t, child: Text(t)))
                         .toList(),
-                    onChanged: (val) {
-                      if (val != null) {
-                        setState(() {
-                          selectedType = val;
-                        });
-                      }
-                    },
+                    onChanged: (val) => setState(() => selectedType = val!),
                     decoration: const InputDecoration(labelText: "Facility Type"),
                   ),
                   const SizedBox(height: 12),
@@ -89,14 +105,9 @@ class _FacilityRegisterScreenState extends State<FacilityRegisterScreen> {
                     decoration: const InputDecoration(labelText: "Email"),
                     keyboardType: TextInputType.emailAddress,
                     validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Enter email';
-                      }
+                      if (value == null || value.isEmpty) return 'Enter email';
                       final emailRegex = RegExp(r'^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$');
-                      if (!emailRegex.hasMatch(value)) {
-                        return 'Enter a valid email';
-                      }
-                      return null;
+                      return emailRegex.hasMatch(value) ? null : 'Enter a valid email';
                     },
                   ),
                   const SizedBox(height: 12),
@@ -119,7 +130,7 @@ class _FacilityRegisterScreenState extends State<FacilityRegisterScreen> {
                     onPressed: () {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text("Upload simulated: Legal document (UI only)"),
+                          content: Text("📎 Upload simulated (legal doc) – UI only."),
                         ),
                       );
                     },
@@ -130,20 +141,17 @@ class _FacilityRegisterScreenState extends State<FacilityRegisterScreen> {
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.teal.shade700,
-                      foregroundColor: Colors.white,
                     ),
                   ),
                   const SizedBox(height: 24),
                   ElevatedButton.icon(
-                    onPressed: _submitForm,
+                    onPressed: _loading ? null : _submitForm,
                     icon: const Icon(Icons.send, color: Colors.white),
-                    label: const Text(
-                      "Submit Registration",
-                      style: TextStyle(color: Colors.white),
-                    ),
+                    label: _loading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text("Submit Registration"),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.teal.shade800,
-                      foregroundColor: Colors.white,
                     ),
                   ),
                 ],
@@ -155,4 +163,3 @@ class _FacilityRegisterScreenState extends State<FacilityRegisterScreen> {
     );
   }
 }
-// This code defines a Flutter screen for registering a healthcare facility.

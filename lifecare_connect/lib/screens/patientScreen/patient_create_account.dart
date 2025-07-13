@@ -3,8 +3,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // ✅ Firestore
-import 'package:firebase_storage/firebase_storage.dart' as firebase_storage; // ✅ Firebase Storage
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart' as firebase_storage;
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 
 class RegisterPatientScreen extends StatefulWidget {
   const RegisterPatientScreen({super.key});
@@ -30,6 +32,8 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
   bool loading = false;
   final picker = ImagePicker();
 
+  String? _verificationId;
+
   Future<void> pickImage() async {
     final picked = await picker.pickImage(source: ImageSource.gallery);
     if (picked != null) {
@@ -37,7 +41,6 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
     }
   }
 
-  /// ✅ Uploads image to Firebase Storage and returns the image URL
   Future<String?> uploadImage(File file) async {
     try {
       final fileName = 'patient_images/${DateTime.now().millisecondsSinceEpoch}.jpg';
@@ -50,26 +53,92 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
     }
   }
 
-  /// ✅ Submits form data to Firestore
+  Future<void> handlePhoneVerification(String phoneNumber) async {
+    await FirebaseAuth.instance.verifyPhoneNumber(
+      phoneNumber: phoneNumber,
+      verificationCompleted: (PhoneAuthCredential credential) async {
+        // Optionally auto-sign in here
+        print('✅ Phone auto-verified');
+      },
+      verificationFailed: (FirebaseAuthException e) {
+        print('❌ Phone verification failed: ${e.message}');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Phone verification failed: ${e.message}')),
+        );
+      },
+      codeSent: (String verificationId, int? resendToken) async {
+        _verificationId = verificationId;
+        print('📤 Code sent to $phoneNumber');
+
+        // Ask user to input the received code
+        final codeController = TextEditingController();
+        await showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text('Enter OTP Code'),
+            content: TextField(
+              controller: codeController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: '6-digit Code'),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () async {
+                  final code = codeController.text.trim();
+                  final credential = PhoneAuthProvider.credential(
+                    verificationId: _verificationId!,
+                    smsCode: code,
+                  );
+                  try {
+                    await FirebaseAuth.instance.signInWithCredential(credential);
+                    Navigator.of(context).pop();
+                  } catch (e) {
+                    print('❌ OTP verification failed: $e');
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Invalid code, please try again.')),
+                    );
+                  }
+                },
+                child: const Text('Verify'),
+              ),
+            ],
+          ),
+        );
+      },
+      codeAutoRetrievalTimeout: (String verificationId) {
+        _verificationId = verificationId;
+      },
+    );
+  }
+
   Future<void> handleSubmit() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => loading = true);
-    String? imageUrl;
 
-    // ✅ Upload image if selected
+    String? imageUrl;
+    final phone = phoneController.text.trim();
+
+    // Upload image
     if (_imageFile != null) {
       imageUrl = await uploadImage(_imageFile!);
-      print('Uploaded image URL: $imageUrl');
+      print('📷 Uploaded image URL: $imageUrl');
     }
 
     try {
-      // ✅ Add patient record to Firestore
+      // 🔒 Firebase App Check token
+      final token = await FirebaseAppCheck.instance.getToken();
+      print('App Check token: $token');
+
+      // ☎️ Phone verification
+      await handlePhoneVerification(phone);
+
+      // 📥 Store patient info
       await FirebaseFirestore.instance.collection('patients').add({
         'name': nameController.text.trim(),
         'age': int.parse(ageController.text.trim()),
         'gender': gender,
-        'phone': phoneController.text.trim(),
+        'phone': phone,
         'address': addressController.text.trim(),
         'lga': lgaController.text.trim(),
         'kin': kinController.text.trim(),
@@ -77,15 +146,15 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
         'history': historyController.text.trim(),
         'imageUrl': imageUrl ?? '',
         'createdAt': FieldValue.serverTimestamp(),
+        'isPhoneVerified': true,
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('✅ Patient successfully registered.')),
       );
-
       Navigator.pop(context);
     } catch (e) {
-      print('Registration error: $e');
+      print('❌ Registration error: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('❌ Failed to register patient. Try again.')),
       );
@@ -98,10 +167,7 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Register Patient',
-          style: TextStyle(color: Colors.white),
-        ),
+        title: const Text('Register Patient', style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.teal,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -159,7 +225,6 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
     );
   }
 
-  /// Utility widget for building labeled text fields
   Widget buildTextField(
     String label,
     TextEditingController controller, {
@@ -178,4 +243,3 @@ class _RegisterPatientScreenState extends State<RegisterPatientScreen> {
     );
   }
 }
-// End of file: lib/screens/register_patient.dart

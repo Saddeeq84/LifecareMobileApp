@@ -87,9 +87,10 @@ class _ReferralScreenState extends State<ReferralScreen> {
       // Add referral
       await FirebaseFirestore.instance.collection('referrals').add(referralData);
 
-      // Notify facility user if facilityUserId exists
-      final facilityUserId = patientDoc.data().containsKey('facilityUserId')
-          ? patientDoc['facilityUserId']
+            // Notify facility user if facilityUserId exists
+      final patientData = patientDoc.data() as Map<String, dynamic>?;
+      final facilityUserId = (patientData != null && patientData.containsKey('facilityUserId'))
+          ? patientData['facilityUserId']
           : null;
 
       if (facilityUserId != null) {
@@ -101,7 +102,6 @@ class _ReferralScreenState extends State<ReferralScreen> {
           'read': false,
         });
       }
-
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('✅ Referral submitted')),
       );

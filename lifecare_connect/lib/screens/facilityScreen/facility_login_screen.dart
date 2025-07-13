@@ -1,9 +1,6 @@
-// lib/screens/facility/facility_login_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../services/user_service.dart';
-// Ensure that user_service.dart contains a class named UserService
 
 class FacilityLoginScreen extends StatefulWidget {
   const FacilityLoginScreen({super.key});
@@ -22,6 +19,7 @@ class _FacilityLoginScreenState extends State<FacilityLoginScreen> {
   final passwordController = TextEditingController();
 
   bool loading = false;
+  bool obscurePassword = true;
 
   @override
   void dispose() {
@@ -44,7 +42,7 @@ class _FacilityLoginScreenState extends State<FacilityLoginScreen> {
       // Save the role "facility" in Firestore
       await _userService.saveUserRole('facility');
 
-      // Centralized role-based navigation
+      // Navigate based on role
       await _userService.navigateBasedOnRole(context);
 
     } catch (e) {
@@ -52,7 +50,7 @@ class _FacilityLoginScreenState extends State<FacilityLoginScreen> {
         SnackBar(content: Text('Login failed: $e')),
       );
     } finally {
-      setState(() => loading = false);
+      if (mounted) setState(() => loading = false);
     }
   }
 
@@ -109,10 +107,16 @@ class _FacilityLoginScreenState extends State<FacilityLoginScreen> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: passwordController,
-                obscureText: true,
-                decoration: const InputDecoration(
+                obscureText: obscurePassword,
+                decoration: InputDecoration(
                   labelText: "Password",
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      obscurePassword ? Icons.visibility_off : Icons.visibility,
+                    ),
+                    onPressed: () => setState(() => obscurePassword = !obscurePassword),
+                  ),
                 ),
                 validator: (value) =>
                     value == null || value.length < 6 ? 'Enter 6+ character password' : null,
@@ -134,15 +138,17 @@ class _FacilityLoginScreenState extends State<FacilityLoginScreen> {
                 ),
               ),
               TextButton(
-                onPressed: resetPassword,
+                onPressed: loading ? null : resetPassword,
                 child: const Text('Forgot password?'),
               ),
               TextButton(
-                onPressed: () {
-                  Navigator.pushNamed(context, '/facility_register');
-                },
+                onPressed: loading
+                    ? null
+                    : () {
+                        Navigator.pushNamed(context, '/facility_register');
+                      },
                 child: const Text("Don't have an account? Register"),
-              )
+              ),
             ],
           ),
         ),
@@ -150,4 +156,3 @@ class _FacilityLoginScreenState extends State<FacilityLoginScreen> {
     );
   }
 }
-// End of file: lib/screens/facility/facility_login_screen.dart

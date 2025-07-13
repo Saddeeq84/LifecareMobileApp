@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-class EditCHWProfileScreen extends StatefulWidget {
-  const EditCHWProfileScreen({super.key});
+class CHWEditProfileScreen extends StatefulWidget {
+  const CHWEditProfileScreen({super.key});
 
   @override
-  State<EditCHWProfileScreen> createState() => _EditCHWProfileScreenState();
+  State<CHWEditProfileScreen> createState() => _CHWEditProfileScreenState();
 }
 
-class _EditCHWProfileScreenState extends State<EditCHWProfileScreen> {
+class _CHWEditProfileScreenState extends State<CHWEditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   final nameController = TextEditingController();
   final phoneController = TextEditingController();

@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="your.package.name.here">
+    package="com.example.lifecare_connect">
 
     <!-- Internet permission added here -->
     <uses-permission android:name="android.permission.INTERNET" />

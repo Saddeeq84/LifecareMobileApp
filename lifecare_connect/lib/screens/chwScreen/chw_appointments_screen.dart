@@ -229,8 +229,11 @@ class _CHWAppointmentsScreenState extends State<CHWAppointmentsScreen> {
                       labelText: 'Select Patient',
                       prefixIcon: Icon(Icons.person_search),
                     ),
-                    items: patients.map((p) {
-                      return DropdownMenuItem(value: p['id'], child: Text(p['name']));
+                    items: patients.map<DropdownMenuItem<String>>((p) {
+                      return DropdownMenuItem<String>(
+                        value: p['id'] as String,
+                        child: Text(p['name'] as String),
+                      );
                     }).toList(),
                     onChanged: (val) => setState(() => selectedPatient = val),
                     validator: (val) => val == null ? 'Please select a patient' : null,

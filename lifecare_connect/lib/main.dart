@@ -1,31 +1,139 @@
-name: lifecare_connect
-description: A Flutter app for Community Health Workers.
-publish_to: 'none'
+import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:go_router/go_router.dart';
 
-version: 1.0.0+1
+import 'firebase_options.dart';
 
-environment:
-  sdk: ">=3.3.0 <4.0.0"
+// ✅ Screen Imports — all lowercase folders & snake_case filenames
+import 'package:lifecare_connect/screens/auth/login_screen.dart';
+import 'package:lifecare_connect/screens/chwscreen/chw_create_account.dart';
+import 'package:lifecare_connect/screens/doctorscreen/doctor_dashboard.dart';
+import 'package:lifecare_connect/screens/patientscreen/patient_dashboard.dart';
+import 'package:lifecare_connect/screens/chwscreen/chw_dashboard.dart';
+import 'package:lifecare_connect/screens/adminscreen/admin_dashboard.dart';
+import 'package:lifecare_connect/screens/facilityscreen/facility_dashboard.dart';
+import 'package:lifecare_connect/screens/splash/splash_screen.dart' as splash;
 
-dependencies:
-  flutter:
-    sdk: flutter
-  firebase_core: ^2.30.0
-  firebase_auth: ^4.17.5
-  firebase_messaging: ^14.7.10
-  cloud_firestore: ^4.15.5
-  provider: ^6.1.2
-  flutter_local_notifications: ^17.1.2
-  cupertino_icons: ^1.0.6
-  image_picker: ^1.0.7
-  firebase_storage: ^11.6.6
-  file_picker: ^6.1.1
-  syncfusion_flutter_pdfviewer: ^21.2.9
-  video_player: ^2.8.2
-  url_launcher: ^6.2.5
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
 
-dev_dependencies:
-  flutter_test:
-    sdk: flutter
-  flutter_lints: ^3.0.1
-  timezone: ^0.9.2
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  print('📩 Background message: ${message.messageId}');
+}
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+
+    FirebaseFirestore.instance.settings = const Settings(
+      persistenceEnabled: true,
+      cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+    );
+
+    await FirebaseAppCheck.instance.activate(
+      webProvider: ReCaptchaV3Provider('6LffLoErAAAAAMH-nYVE9rLDo17DdQDyj9V9yJei'),
+      androidProvider: AndroidProvider.playIntegrity,
+      appleProvider: AppleProvider.deviceCheck,
+    );
+
+    const AndroidInitializationSettings androidInitSettings =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+
+    const InitializationSettings initSettings =
+        InitializationSettings(android: androidInitSettings);
+
+    await flutterLocalNotificationsPlugin.initialize(initSettings);
+
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+    await FirebaseMessaging.instance.requestPermission();
+  } catch (e) {
+    print('🔥 Firebase init failed: $e');
+  }
+
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    ErrorWidget.builder = (FlutterErrorDetails details) {
+      return Material(
+        child: Center(
+          child: Text(
+            'Something went wrong!\n${details.exception}',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.red),
+          ),
+        ),
+      );
+    };
+
+    return MaterialApp.router(
+      title: 'LifeCare Connect',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(primarySwatch: Colors.teal),
+      routerConfig: _router,
+    );
+  }
+}
+
+// 🧭 Routing
+final GoRouter _router = GoRouter(
+  initialLocation: '/splash',
+  routes: [
+    GoRoute(
+      path: '/splash',
+      builder: (context, state) => const splash.SplashScreen(),
+    ),
+    GoRoute(
+      path: '/login',
+      builder: (context, state) => const LoginScreen(),
+    ),
+    GoRoute(
+      path: '/chw_create_account',
+      builder: (context, state) => const CHWCreateAccountScreen(),
+    ),
+    GoRoute(
+      path: '/doctor_dashboard',
+      builder: (context, state) => const DoctorDashboard(),
+      redirect: (context, state) =>
+          FirebaseAuth.instance.currentUser == null ? '/login' : null,
+    ),
+    GoRoute(
+      path: '/patient_dashboard',
+      builder: (context, state) => const PatientDashboard(),
+      redirect: (context, state) =>
+          FirebaseAuth.instance.currentUser == null ? '/login' : null,
+    ),
+    GoRoute(
+      path: '/chw_dashboard',
+      builder: (context, state) => const CHWDashboard(),
+      redirect: (context, state) =>
+          FirebaseAuth.instance.currentUser == null ? '/login' : null,
+    ),
+    GoRoute(
+      path: '/admin_dashboard',
+      builder: (context, state) => const AdminDashboard(),
+      redirect: (context, state) =>
+          FirebaseAuth.instance.currentUser == null ? '/login' : null,
+    ),
+    GoRoute(
+      path: '/facility_dashboard',
+      builder: (context, state) => const FacilityDashboard(),
+      redirect: (context, state) =>
+          FirebaseAuth.instance.currentUser == null ? '/login' : null,
+    ),
+  ],
+);

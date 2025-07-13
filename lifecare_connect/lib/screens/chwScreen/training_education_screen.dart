@@ -3,7 +3,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import '../adminScreen/admin_upload_training_screen.dart';
+import '../adminscreen/admin_upload_training_screen.dart';
 import 'material_viewer_screen.dart'; // 📌 You must implement this
 
 class TrainingEducationScreen extends StatefulWidget {

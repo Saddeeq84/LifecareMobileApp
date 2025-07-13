@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'chw_patient_detail_screen.dart';
+// Update the import path below if the file exists elsewhere, for example:
+import 'chw_patient_details_screen.dart';
+// If the file does not exist, create 'chw_patient_detail_screen.dart' in the same directory.
 import 'anc_checklist_screen.dart';
 
 class CHWMyPatientsScreen extends StatefulWidget {

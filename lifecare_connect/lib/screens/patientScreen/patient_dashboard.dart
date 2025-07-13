@@ -3,16 +3,17 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:lifecare_connect/screens/appointments/patient_appointment_screen.dart';
-import 'package:lifecare_connect/screens/patient_education_screen.dart';
-import 'package:lifecare_connect/screens/daily_health_tips_screen.dart';
-import 'package:lifecare_connect/screens/patient_profile_screen.dart';
-import 'package:lifecare_connect/screens/my_health_tab.dart';
-import 'package:lifecare_connect/screens/patient_services_tab.dart';
-import 'package:lifecare_connect/screens/booking_history_screen.dart';
-import 'package:lifecare_connect/screens/admin_facilities_screen.dart';
-// Ensure that the file admin_facilities_screen.dart contains a class named AdminFacilitiesScreen.
-import 'package:lifecare_connect/screens/chat_chw_screen.dart';
+// ✅ Screen Imports — all lowercase folders & snake_case filenames
+import 'patient_appointment_screen.dart';
+import 'patient_education_screen.dart';
+import 'daily_health_tips_screen.dart';
+import 'patient_profile_screen.dart';
+import 'my_health_tab.dart';
+import 'patient_services_tab.dart';
+// import 'booking_history_screen.dart'; // Removed because file does not exist
+
+import '../adminScreen/admin_facilities_screen.dart'; // Update the import path as needed
+import 'chat_chw_screen.dart';
 
 class PatientDashboard extends StatelessWidget {
   const PatientDashboard({super.key});
@@ -135,15 +136,20 @@ class _PatientDashboardMainViewState extends State<PatientDashboardMainView> {
     _appointmentsStream = FirebaseFirestore.instance
         .collection('appointments')
         .where('patientId', isEqualTo: _patientUid)
-        .where('status', isEqualTo: 'pending') // or some criteria for unread
+        .where('status', isEqualTo: 'pending')
         .snapshots();
 
     // Listen to chat updates for badge
     _chatStream!.listen((snap) {
       if (!mounted) return;
       final data = snap.data();
-      final participantsRead = data?['participantsRead'] as Map<String, dynamic>? ?? {};
-      final hasUnread = participantsRead[_patientUid] == false;
+      final participantsReadRaw = data?['participantsRead'];
+      final participantsRead = participantsReadRaw is Map<String, dynamic>
+          ? participantsReadRaw
+          : <String, dynamic>{};
+      final hasUnread = (_patientUid != null)
+          ? (participantsRead[_patientUid] == false)
+          : false;
       setState(() => _showChatBadge = hasUnread);
     });
 
@@ -187,11 +193,11 @@ class _PatientDashboardMainViewState extends State<PatientDashboardMainView> {
           icon: Icons.medical_services_outlined,
           content: PatientServicesTab(),
         ),
-        const _DashboardPage(
-          title: 'Bookings',
-          icon: Icons.history,
-          content: BookingHistoryScreen(),
-        ),
+        // const _DashboardPage(
+        //   title: 'Bookings',
+        //   icon: Icons.history,
+        //   content: BookingHistoryScreen(),
+        // ),
         _DashboardPage(
           title: 'Chat',
           icon: Icons.chat_outlined,

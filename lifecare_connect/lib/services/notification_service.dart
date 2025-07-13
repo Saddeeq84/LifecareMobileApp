@@ -17,6 +17,28 @@ class NotificationService {
     );
   }
 
+  /// Show an instant notification (for visit reminders, etc.)
+  static Future<void> showInstantNotification({
+    required int id,
+    required String title,
+    required String body,
+  }) async {
+    const android = AndroidNotificationDetails(
+      'high_importance_channel',
+      'High Importance Notifications',
+      importance: Importance.max,
+      priority: Priority.high,
+    );
+
+    await _notifications.show(
+      id,
+      title,
+      body,
+      const NotificationDetails(android: android),
+    );
+  }
+
+  /// Show a notification immediately (generic)
   static Future<void> showNow({
     required String title,
     required String body,
