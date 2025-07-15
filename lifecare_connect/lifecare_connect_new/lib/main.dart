@@ -8,7 +8,7 @@ import 'package:go_router/go_router.dart';
 
 import 'firebase_options.dart';
 
-// ✅ Screen Imports
+// ✅ Core Screens
 import 'package:lifecare_connect/screens/auth/login_screen.dart';
 import 'package:lifecare_connect/screens/chwscreen/chw_create_account.dart';
 import 'package:lifecare_connect/screens/doctorscreen/doctor_dashboard.dart';
@@ -16,7 +16,20 @@ import 'package:lifecare_connect/screens/patientscreen/patient_dashboard.dart';
 import 'package:lifecare_connect/screens/chwscreen/chw_dashboard.dart';
 import 'package:lifecare_connect/screens/adminscreen/admin_dashboard.dart';
 import 'package:lifecare_connect/screens/facilityscreen/facility_dashboard.dart';
-import 'package:lifecare_connect/screens/sharedscreen/splash_screen.dart' as shared; // 🔄 added "as shared" to avoid conflict
+import 'package:lifecare_connect/screens/sharedscreen/splash_screen.dart' as shared;
+
+// ✅ Admin Sub-screens
+import 'package:lifecare_connect/screens/adminscreen/approval_screen.dart';
+import 'package:lifecare_connect/screens/adminscreen/admin_facilities_screen.dart';
+import 'package:lifecare_connect/screens/adminscreen/staff_list_screen.dart';
+import 'package:lifecare_connect/screens/adminscreen/patient_list_screen.dart';
+import 'package:lifecare_connect/screens/adminscreen/admin_analytics_screen.dart';
+import 'package:lifecare_connect/screens/adminscreen/admin_upload_training_screen.dart';
+import 'package:lifecare_connect/screens/adminscreen/all_appointments_screen.dart';
+import 'package:lifecare_connect/screens/adminscreen/admin_register_facility_screen.dart';
+import 'package:lifecare_connect/screens/adminscreen/admin_messages_screen.dart';
+import 'package:lifecare_connect/screens/adminscreen/referrals_screen.dart';
+import 'package:lifecare_connect/screens/adminscreen/admin_settings_screen.dart';
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
@@ -72,6 +85,7 @@ class MyApp extends StatelessWidget {
   }
 }
 
+// ✅ GoRouter Configuration
 final GoRouter _router = GoRouter(
   initialLocation: '/',
   errorBuilder: (context, state) => const Scaffold(
@@ -86,5 +100,18 @@ final GoRouter _router = GoRouter(
     GoRoute(path: '/chw_dashboard', builder: (context, state) => const CHWDashboard()),
     GoRoute(path: '/admin_dashboard', builder: (context, state) => const AdminDashboard()),
     GoRoute(path: '/facility_dashboard', builder: (context, state) => const FacilityDashboard()),
+
+    // ✅ Admin Dashboard Sub-routes
+    GoRoute(path: '/admin/approve_accounts', builder: (context, state) => const ApprovalScreen()),
+    GoRoute(path: '/admin/health_facilities', builder: (context, state) => const AdminFacilitiesScreen()),
+    GoRoute(path: '/admin/staff_list', builder: (context, state) => const StaffListScreen()),
+    GoRoute(path: '/admin/patient_list', builder: (context, state) => const PatientListScreen()),
+    GoRoute(path: '/admin/analytics', builder: (context, state) => const AdminAnalyticsScreen()),
+    GoRoute(path: '/admin/upload_training', builder: (context, state) => const AdminUploadTrainingScreen()),
+    GoRoute(path: '/admin/all_appointments', builder: (context, state) => const AdminAllAppointmentsScreen()),
+    GoRoute(path: '/admin/register_facility', builder: (context, state) => const AdminRegisterFacilityScreen()),
+    GoRoute(path: '/admin/messages', builder: (context, state) => const AdminMessagesScreen()),
+    GoRoute(path: '/admin/referrals', builder: (context, state) => const ReferralsScreen()),
+    GoRoute(path: '/admin/settings', builder: (context, state) => const AdminSettingsScreen()),
   ],
 );

@@ -2,40 +2,72 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 
-import 'approval_screen.dart';
-import 'admin_facilities_screen.dart';
-import 'staff_list_screen.dart';
-import 'admin_upload_training_screen.dart';
-import 'all_appointments_screen.dart';
-import 'admin_messages_screen.dart';
-import 'referrals_screen.dart';
-import 'admin_settings_screen.dart';
-import 'admin_register_facility_screen.dart';
-import 'admin_analytics_screen.dart';
-import 'patient_list_screen.dart';
-
 class AdminDashboard extends StatelessWidget {
   const AdminDashboard({super.key});
 
   void _logout(BuildContext context) async {
     await FirebaseAuth.instance.signOut();
-    Future.microtask(() => context.go('/login'));
+    context.go('/login'); // Use GoRouter to redirect after logout
   }
 
   @override
   Widget build(BuildContext context) {
     final List<_DashboardItem> items = [
-      _DashboardItem('🛡️ Approve Accounts', Icons.verified_user, const ApprovalScreen()),
-      _DashboardItem('🏥 Health Facilities', Icons.local_hospital, const AdminFacilitiesScreen()),
-      _DashboardItem('👩‍⚕️ Staff (Doctors, CHWs)', Icons.group, const StaffListScreen()),
-      _DashboardItem('🧑‍🤝‍🧑 Patient Register', Icons.people, const PatientListScreen()),
-      _DashboardItem('📊 Reports & Analytics', Icons.bar_chart, const AdminAnalyticsScreen()),
-      _DashboardItem('📤 Upload Training Module', Icons.upload_file, const AdminUploadTrainingScreen()),
-      _DashboardItem('📅 View All Appointments', Icons.calendar_today, const AdminAllAppointmentsScreen()),
-      _DashboardItem('➕ Register New Facility', Icons.add_business, const AdminRegisterFacilityScreen()),
-      _DashboardItem('📩 Send Message', Icons.message, const AdminMessagesScreen()),
-      _DashboardItem('🔁 View All Referrals', Icons.swap_horiz, const ReferralsScreen()),
-      _DashboardItem('⚙️ Settings', Icons.settings, const AdminSettingsScreen()),
+      _DashboardItem(
+        label: '🛡️ Approve Accounts',
+        icon: Icons.verified_user,
+        route: '/admin/approve_accounts',
+      ),
+      _DashboardItem(
+        label: '🏥 Health Facilities',
+        icon: Icons.local_hospital,
+        route: '/admin/health_facilities',
+      ),
+      _DashboardItem(
+        label: '👩‍⚕️ Staff (Doctors, CHWs)',
+        icon: Icons.group,
+        route: '/admin/staff_list',
+      ),
+      _DashboardItem(
+        label: '🧑‍🤝‍🧑 Patient Register',
+        icon: Icons.people,
+        route: '/admin/patient_list',
+      ),
+      _DashboardItem(
+        label: '📊 Reports & Analytics',
+        icon: Icons.bar_chart,
+        route: '/admin/analytics',
+      ),
+      _DashboardItem(
+        label: '📤 Upload Training Module',
+        icon: Icons.upload_file,
+        route: '/admin/upload_training',
+      ),
+      _DashboardItem(
+        label: '📅 View All Appointments',
+        icon: Icons.calendar_today,
+        route: '/admin/all_appointments',
+      ),
+      _DashboardItem(
+        label: '➕ Register New Facility',
+        icon: Icons.add_business,
+        route: '/admin/register_facility',
+      ),
+      _DashboardItem(
+        label: '📩 Send Message',
+        icon: Icons.message,
+        route: '/admin/messages',
+      ),
+      _DashboardItem(
+        label: '🔁 View All Referrals',
+        icon: Icons.swap_horiz,
+        route: '/admin/referrals',
+      ),
+      _DashboardItem(
+        label: '⚙️ Settings',
+        icon: Icons.settings,
+        route: '/admin/settings',
+      ),
     ];
 
     return Scaffold(
@@ -65,18 +97,24 @@ class AdminDashboard extends StatelessWidget {
             return ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.teal.shade600,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4),
+                ),
                 padding: const EdgeInsets.all(12),
               ),
               onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => item.targetScreen));
+                context.push(item.route); // Use GoRouter to navigate
               },
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(item.icon, size: 32, color: Colors.white),
                   const SizedBox(height: 10),
-                  Text(item.label, style: const TextStyle(fontSize: 14, color: Colors.white), textAlign: TextAlign.center),
+                  Text(
+                    item.label,
+                    style: const TextStyle(fontSize: 14, color: Colors.white),
+                    textAlign: TextAlign.center,
+                  ),
                 ],
               ),
             );
@@ -90,7 +128,11 @@ class AdminDashboard extends StatelessWidget {
 class _DashboardItem {
   final String label;
   final IconData icon;
-  final Widget targetScreen;
+  final String route;
 
-  _DashboardItem(this.label, this.icon, this.targetScreen);
+  const _DashboardItem({
+    required this.label,
+    required this.icon,
+    required this.route,
+  });
 }

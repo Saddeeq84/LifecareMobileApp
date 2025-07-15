@@ -22,9 +22,9 @@ class ApprovalScreen extends StatelessWidget {
         ),
         body: const TabBarView(
           children: [
-            _ApprovalList(role: null, approved: false),
-            _ApprovalList(role: 'doctor', approved: true),
-            _ApprovalList(role: 'facility', approved: true),
+            _ApprovalList(role: null, approved: false),         // Pending
+            _ApprovalList(role: 'doctor', approved: true),      // Approved Doctors
+            _ApprovalList(role: 'facility', approved: true),    // Approved Facilities
           ],
         ),
       ),
@@ -36,28 +36,29 @@ class _ApprovalList extends StatelessWidget {
   final String? role;
   final bool approved;
 
-  const _ApprovalList({this.role, required this.approved});
+  const _ApprovalList({
+    required this.role,
+    required this.approved,
+  });
 
   @override
   Widget build(BuildContext context) {
-    Query query = FirebaseFirestore.instance.collection('users');
+    Query<Map<String, dynamic>> query = FirebaseFirestore.instance.collection('users');
 
-    if (role != null) {
-      query = query.where('role', isEqualTo: role);
-    } else {
-      // For pending approvals (no role filter, just approved == false)
+    if (role == null) {
+      // Show users who are not yet approved
       query = query.where('approved', isEqualTo: false);
+    } else {
+      query = query
+          .where('role', isEqualTo: role)
+          .where('approved', isEqualTo: approved);
     }
 
-    if (approved) {
-      query = query.where('approved', isEqualTo: true);
-    }
-
-    return StreamBuilder<QuerySnapshot>(
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: query.snapshots(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return const Center(child: Text('Error loading users'));
+          return const Center(child: Text('❌ Error loading users'));
         }
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -71,26 +72,40 @@ class _ApprovalList extends StatelessWidget {
         return ListView.builder(
           itemCount: docs.length,
           itemBuilder: (context, index) {
-            final user = docs[index].data() as Map<String, dynamic>;
+            final data = docs[index].data();
+            final fullName = data['fullName'] ?? 'Unnamed User';
+            final email = data['email'] ?? 'No Email';
+
             return ListTile(
               leading: const Icon(Icons.account_circle),
-              title: Text(user['fullName'] ?? 'Unknown'),
-              subtitle: Text(user['email'] ?? 'No email'),
-              trailing: approved
-                  ? null
-                  : ElevatedButton(
-                      onPressed: () {
-                        FirebaseFirestore.instance
-                            .collection('users')
-                            .doc(docs[index].id)
-                            .update({'approved': true});
-                      },
+              title: Text(fullName),
+              subtitle: Text(email),
+              trailing: !approved
+                  ? ElevatedButton(
+                      onPressed: () => _approveUser(docs[index].id, context),
                       child: const Text('Approve'),
-                    ),
+                    )
+                  : null,
             );
           },
         );
       },
     );
+  }
+
+  void _approveUser(String userId, BuildContext context) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .update({'approved': true});
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('✅ User approved')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('❌ Approval failed: $e')),
+      );
+    }
   }
 }

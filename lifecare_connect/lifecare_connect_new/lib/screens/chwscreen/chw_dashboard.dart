@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:go_router/go_router.dart';
 
 import 'chw_my_patients.dart';
 import 'chat_chw_side_screen.dart';
@@ -19,7 +20,8 @@ class CHWDashboard extends StatefulWidget {
 class _CHWDashboardState extends State<CHWDashboard> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   late String chwId;
-  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
 
   @override
   void initState() {
@@ -27,9 +29,10 @@ class _CHWDashboardState extends State<CHWDashboard> {
     final user = _auth.currentUser;
     chwId = user?.uid ?? '';
     _initializeLocalNotifications();
+
     if (chwId.isEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        Navigator.pushReplacementNamed(context, '/login');
+        context.go('/login');
       });
     } else {
       checkForUpcomingVisits();
@@ -38,11 +41,9 @@ class _CHWDashboardState extends State<CHWDashboard> {
   }
 
   void _initializeLocalNotifications() {
-    const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
-    const InitializationSettings initializationSettings =
-        InitializationSettings(android: initializationSettingsAndroid);
-    flutterLocalNotificationsPlugin.initialize(initializationSettings);
+    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const initSettings = InitializationSettings(android: androidInit);
+    flutterLocalNotificationsPlugin.initialize(initSettings);
   }
 
   @override
@@ -51,6 +52,8 @@ class _CHWDashboardState extends State<CHWDashboard> {
       return const Center(child: CircularProgressIndicator());
     }
 
+    final isWide = MediaQuery.of(context).size.width > 600;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('CHW Dashboard', style: TextStyle(color: Colors.white)),
@@ -58,60 +61,74 @@ class _CHWDashboardState extends State<CHWDashboard> {
         actions: [
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.white),
-            onPressed: () => _logout(context),
+            onPressed: () => _showLogoutDialog(context),
           ),
         ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: GridView.builder(
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2, crossAxisSpacing: 20, mainAxisSpacing: 20,
-          ),
-          itemCount: _dashboardItems.length,
-          itemBuilder: (context, index) {
-            final item = _dashboardItems[index];
-            if (item.route == '/chw_messages') {
-              return StreamBuilder<int>(
-                stream: getUnreadMessageCount(),
-                builder: (context, snapshot) {
-                  final count = snapshot.data ?? 0;
-                  return DashboardTile(
-                    icon: item.icon,
-                    label: item.label,
-                    onTap: () => _onTileTap(item),
-                    badgeCount: count,
-                  );
-                },
-              );
-            }
-            return DashboardTile(
-              icon: item.icon,
-              label: item.label,
-              onTap: () => _onTileTap(item),
-            );
-          },
-        ),
+        child: isWide ? _buildGridLayout() : _buildListLayout(),
       ),
     );
+  }
+
+  Widget _buildGridLayout() {
+    return GridView.builder(
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2, crossAxisSpacing: 20, mainAxisSpacing: 20,
+      ),
+      itemCount: _dashboardItems.length,
+      itemBuilder: (context, index) {
+        final item = _dashboardItems[index];
+        return _buildDashboardTile(item);
+      },
+    );
+  }
+
+  Widget _buildListLayout() {
+    return ListView.separated(
+      itemCount: _dashboardItems.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        final item = _dashboardItems[index];
+        return _buildDashboardTile(item, isList: true);
+      },
+    );
+  }
+
+  Widget _buildDashboardTile(DashboardItem item, {bool isList = false}) {
+    final tile = item.route == '/chw_messages'
+        ? StreamBuilder<int>(
+            stream: getUnreadMessageCount(),
+            builder: (context, snapshot) {
+              final count = snapshot.data ?? 0;
+              return DashboardTile(
+                icon: item.icon,
+                label: item.label,
+                onTap: () => _onTileTap(item),
+                badgeCount: count,
+                isList: isList,
+              );
+            },
+          )
+        : DashboardTile(
+            icon: item.icon,
+            label: item.label,
+            onTap: () => _onTileTap(item),
+            isList: isList,
+          );
+    return tile;
   }
 
   void _initializeFCM() async {
     FirebaseMessaging messaging = FirebaseMessaging.instance;
 
-    NotificationSettings settings = await messaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
+    await messaging.requestPermission(alert: true, badge: true, sound: true);
+    final fcmToken = await messaging.getToken();
+    debugPrint("📬 FCM Token: $fcmToken");
 
-    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      final fcmToken = await messaging.getToken();
-      debugPrint("\uD83D\uDCEC FCM Token: $fcmToken");
-    }
-
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      RemoteNotification? notification = message.notification;
+    FirebaseMessaging.onMessage.listen((message) {
+      final notification = message.notification;
       if (notification != null) {
         flutterLocalNotificationsPlugin.show(
           notification.hashCode,
@@ -128,17 +145,6 @@ class _CHWDashboardState extends State<CHWDashboard> {
         );
       }
     });
-  }
-
-  Future<void> _logout(BuildContext context) async {
-    try {
-      await _auth.signOut();
-      Navigator.pushReplacementNamed(context, '/login');
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Logout failed: $e')),
-      );
-    }
   }
 
   void _onTileTap(DashboardItem item) {
@@ -185,8 +191,39 @@ class _CHWDashboardState extends State<CHWDashboard> {
         final formattedDate = "${nextVisitDate.toLocal()}".split(' ')[0];
         await NotificationService.showInstantNotification(
           id: doc.hashCode,
-          title: "\uD83D\uDCC5 Visit Reminder",
+          title: "📅 Visit Reminder",
           body: "$patientName has a visit scheduled for $formattedDate.",
+        );
+      }
+    }
+  }
+
+  Future<void> _showLogoutDialog(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Confirm Logout"),
+        content: const Text("Are you sure you want to logout?"),
+        actions: [
+          TextButton(
+            child: const Text("Cancel"),
+            onPressed: () => Navigator.pop(context, false),
+          ),
+          ElevatedButton(
+            child: const Text("Logout"),
+            onPressed: () => Navigator.pop(context, true),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await _auth.signOut();
+        context.go('/login');
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Logout failed: $e')),
         );
       }
     }
@@ -198,6 +235,7 @@ class DashboardTile extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
   final int badgeCount;
+  final bool isList;
 
   const DashboardTile({
     super.key,
@@ -205,51 +243,78 @@ class DashboardTile extends StatelessWidget {
     required this.label,
     required this.onTap,
     this.badgeCount = 0,
+    this.isList = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.teal.shade100,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.teal.shade50,
-              blurRadius: 4,
-              offset: const Offset(2, 2),
-            ),
-          ],
-        ),
-        padding: const EdgeInsets.all(16),
-        child: Stack(
-          children: [
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, size: 40, color: Colors.teal.shade800),
-                const SizedBox(height: 10),
-                Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 14)),
-              ],
-            ),
-            if (badgeCount > 0)
-              Positioned(
-                top: 0,
-                right: 0,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.red, borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text('$badgeCount', style: const TextStyle(color: Colors.white, fontSize: 12)),
+    final tileContent = ListTile(
+      leading: Stack(
+        children: [
+          Icon(icon, size: 36, color: Colors.teal.shade800),
+          if (badgeCount > 0)
+            Positioned(
+              right: 0,
+              top: 0,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  borderRadius: BorderRadius.circular(10),
                 ),
+                child: Text('$badgeCount', style: const TextStyle(color: Colors.white, fontSize: 10)),
               ),
-          ],
-        ),
+            ),
+        ],
       ),
+      title: Text(label, style: const TextStyle(fontSize: 16)),
+      onTap: onTap,
     );
+
+    return isList
+        ? Card(child: tileContent)
+        : GestureDetector(
+            onTap: onTap,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.teal.shade100,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.teal.shade50,
+                    blurRadius: 4,
+                    offset: const Offset(2, 2),
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.all(16),
+              child: Stack(
+                children: [
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(icon, size: 40, color: Colors.teal.shade800),
+                      const SizedBox(height: 10),
+                      Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 14)),
+                    ],
+                  ),
+                  if (badgeCount > 0)
+                    Positioned(
+                      top: 0,
+                      right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text('$badgeCount', style: const TextStyle(color: Colors.white, fontSize: 12)),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          );
   }
 }
 
