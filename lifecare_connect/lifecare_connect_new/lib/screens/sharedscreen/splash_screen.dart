@@ -17,6 +17,8 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _checkRoleAndRedirect() async {
+    await Future.delayed(const Duration(seconds: 1)); // Add small delay for safety
+
     final user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
@@ -30,6 +32,12 @@ class _SplashScreenState extends State<SplashScreen> {
 
       print('✅ Logged in user: ${user.email}');
       print('🎯 Role: $role');
+
+      if (role == null) {
+        // Role missing, force login
+        _redirectTo('/login');
+        return;
+      }
 
       switch (role) {
         case 'admin':
@@ -48,10 +56,10 @@ class _SplashScreenState extends State<SplashScreen> {
           _redirectTo('/facility_dashboard');
           break;
         default:
-          _redirectTo('/login');
+          _redirectTo('/login'); // Unknown or missing role
       }
     } catch (e) {
-      print('❌ Role detection error: $e');
+      print('❌ Role check error: $e');
       _redirectTo('/login');
     }
   }
