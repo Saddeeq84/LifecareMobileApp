@@ -1,10 +1,9 @@
-// login_doctor.dart
 // ignore_for_file: use_build_context_synchronously
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../../services/user_service.dart'; // UserService import
-import '../sharedScreen/register_role_selection.dart'; // Registration link
+import '../../services/user_service.dart';
+import '../sharedScreen/register_role_selection.dart';
 
 class LoginDoctorScreen extends StatefulWidget {
   const LoginDoctorScreen({super.key});
@@ -35,18 +34,14 @@ class _LoginDoctorScreenState extends State<LoginDoctorScreen> {
     setState(() => loading = true);
 
     try {
-      // Firebase sign-in
       await _auth.signInWithEmailAndPassword(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
       );
 
-      // Save the role as 'doctor' in Firestore (optional, only if you want to update role on login)
-      await _userService.saveUserRole('doctor');
-
-      // Navigate based on the role stored in Firestore
+      // ✅ Do NOT overwrite user role here
       await _userService.navigateBasedOnRole(context);
-      
+
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Login failed: $e')),
@@ -179,4 +174,3 @@ class _LoginDoctorScreenState extends State<LoginDoctorScreen> {
     );
   }
 }
-// End of file: lib/screens/login_doctor.dart

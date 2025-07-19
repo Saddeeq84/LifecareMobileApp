@@ -1,4 +1,4 @@
-package com.example.lifecare_connect_new
+package com.rhemn.lifecare_connect
 
 import io.flutter.embedding.android.FlutterActivity
 

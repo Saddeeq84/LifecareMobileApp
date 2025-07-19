@@ -2,7 +2,7 @@
   "project_info": {
     "project_number": "815876091951",
     "project_id": "lifecare-connect",
-    "storage_bucket": "lifecare-connect.firebasestorage.app"
+    "storage_bucket": "lifecare-connect.appspot.com"
   },
   "client": [
     {
@@ -37,13 +37,6 @@
             {
               "client_id": "815876091951-0s9vb4h4euc6sq2s5dnlcn5leflu39uo.apps.googleusercontent.com",
               "client_type": 3
-            },
-            {
-              "client_id": "815876091951-2domps0gtjrsp7fgvkq0n5scl6gjgpbv.apps.googleusercontent.com",
-              "client_type": 2,
-              "ios_info": {
-                "bundle_id": "com.example.lifecareConnect"
-              }
             }
           ]
         }

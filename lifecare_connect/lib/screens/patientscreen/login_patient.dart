@@ -23,6 +23,7 @@ class _LoginPatientState extends State<LoginPatient> with SingleTickerProviderSt
   final _passwordController = TextEditingController();
 
   bool _isLoading = false;
+  bool _obscurePassword = true;
   late TabController _tabController;
 
   @override
@@ -44,10 +45,16 @@ class _LoginPatientState extends State<LoginPatient> with SingleTickerProviderSt
 
       await _userService.saveUserRole('patient');
       await _userService.navigateBasedOnRole(context);
+    } on FirebaseAuthException catch (e) {
+      String message = 'Login failed. Please try again.';
+      if (e.code == 'user-not-found') {
+        message = 'No user found for that email.';
+      } else if (e.code == 'wrong-password') {
+        message = 'Incorrect password.';
+      }
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Login failed: $e')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Login failed: $e')));
     } finally {
       setState(() => _isLoading = false);
     }
@@ -122,10 +129,20 @@ class _LoginPatientState extends State<LoginPatient> with SingleTickerProviderSt
                   SizedBox(height: 15),
                   TextFormField(
                     controller: _passwordController,
-                    obscureText: true,
+                    obscureText: _obscurePassword,
                     decoration: InputDecoration(
                       labelText: "Password",
                       border: OutlineInputBorder(),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obscurePassword = !_obscurePassword;
+                          });
+                        },
+                      ),
                     ),
                     validator: (value) =>
                         value == null || value.length < 6 ? 'Minimum 6 characters' : null,
@@ -137,7 +154,10 @@ class _LoginPatientState extends State<LoginPatient> with SingleTickerProviderSt
                         ? SizedBox(
                             height: 24,
                             width: 24,
-                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 3,
+                            ),
                           )
                         : Icon(Icons.login),
                     label: Text("Login"),

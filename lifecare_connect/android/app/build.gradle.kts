@@ -12,21 +12,21 @@ plugins {
 android {
     namespace = "com.rhemn.lifecare_connect"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = "27.0.12077973"
+    ndkVersion = "27.0.12077973" // Optional: Use only if you're relying on NDK features
 
     defaultConfig {
         applicationId = "com.rhemn.lifecare_connect"
-        minSdk = 23                     
+        minSdk = 23
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-        multiDexEnabled = true
+        multiDexEnabled = true // ✅ Required for large apps using many methods (e.g., Firebase)
     }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
-        isCoreLibraryDesugaringEnabled = true
+        isCoreLibraryDesugaringEnabled = true // ✅ For Java 8+ APIs on lower API levels
     }
 
     kotlinOptions {
@@ -35,6 +35,7 @@ android {
 
     buildTypes {
         getByName("release") {
+            // ⚠️ Replace debug signing with a real keystore for production builds
             signingConfig = signingConfigs.getByName("debug")
         }
     }
@@ -45,10 +46,10 @@ flutter {
 }
 
 dependencies {
-    // ✅ Firebase BoM
+    // ✅ Firebase Bill of Materials - synchronizes Firebase dependency versions
     implementation(platform("com.google.firebase:firebase-bom:33.16.0"))
 
-    // ✅ Firebase dependencies
+    // ✅ Firebase SDKs
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
@@ -56,11 +57,11 @@ dependencies {
     implementation("com.google.firebase:firebase-appcheck")
     implementation("com.google.firebase:firebase-messaging")
 
-    // ✅ Other dependencies
+    // ✅ Kotlin and AndroidX dependencies
     implementation("org.jetbrains.kotlin:kotlin-stdlib:1.8.10")
     implementation("androidx.multidex:multidex:2.0.1")
     implementation("androidx.appcompat:appcompat:1.6.1")
 
-    // ✅ Required for Java 8+ compatibility
+    // ✅ Java 8+ desugaring support for backward compatibility
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 }

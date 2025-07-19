@@ -1,6 +1,7 @@
 // ignore_for_file: use_build_context_synchronously
 
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/auth_service.dart';
 import '../../services/user_service.dart';
 import '../sharedScreen/register_role_selection.dart';
@@ -32,7 +33,6 @@ class _CHWLoginScreenState extends State<CHWLoginScreen> {
 
   Future<void> handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
-
     setState(() => isLoading = true);
 
     try {
@@ -48,7 +48,31 @@ class _CHWLoginScreenState extends State<CHWLoginScreen> {
           return;
         }
 
-        await _userService.saveUserRole('chw');
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+
+        if (!doc.exists) {
+          _showSnackBar('User record not found.');
+          setState(() => isLoading = false);
+          return;
+        }
+
+        final data = doc.data();
+        final role = data?['role'] ?? '';
+        final isApproved = data?['isApproved'] ?? false;
+
+        // For CHW, doctor, and facility - require approval
+        if (role == 'chw' || role == 'doctor' || role == 'facility') {
+          if (!isApproved) {
+            _showSnackBar('Your account is pending approval by the admin.');
+            setState(() => isLoading = false);
+            return;
+          }
+        }
+
+        await _userService.saveUserRole(role);
         await _userService.navigateBasedOnRole(context);
       }
     } catch (e) {
@@ -64,7 +88,25 @@ class _CHWLoginScreenState extends State<CHWLoginScreen> {
     try {
       final user = await _authService.signInWithGoogle();
       if (user != null) {
-        await _userService.saveUserRole('chw');
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+
+        final data = doc.data();
+        final role = data?['role'] ?? '';
+        final isApproved = data?['isApproved'] ?? false;
+
+        if (role == 'chw' || role == 'doctor' || role == 'facility') {
+          if (!isApproved) {
+            _showSnackBar('Your account is pending approval by the admin.');
+            await _authService.signOut();
+            setState(() => isLoading = false);
+            return;
+          }
+        }
+
+        await _userService.saveUserRole(role);
         await _userService.navigateBasedOnRole(context);
       }
     } catch (e) {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:io';
 import '../sharedscreen/facility_register_screen.dart';
 
 class OwnerRegisterFacilityScreen extends StatefulWidget {
@@ -19,6 +20,10 @@ class _OwnerRegisterFacilityScreenState
     required String name,
     required String location,
     required String type,
+    required String contactPerson,
+    required String email,
+    required String phone,
+    required File? registrationDocument,
   }) async {
     setState(() => _isSubmitting = true);
     final user = FirebaseAuth.instance.currentUser;
@@ -31,6 +36,10 @@ class _OwnerRegisterFacilityScreenState
         'createdBy': user?.uid ?? 'unknown_owner',
         'isApproved': false, 
         'createdAt': FieldValue.serverTimestamp(),
+        'contactPerson': contactPerson,
+        'email': email,
+        'phone': phone,
+        // You can also upload registrationDocument to storage and save the URL here if needed
       });
 
       if (mounted) {

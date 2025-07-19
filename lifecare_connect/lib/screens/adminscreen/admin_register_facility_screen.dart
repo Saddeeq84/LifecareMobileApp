@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'dart:io';
 import '../sharedscreen/facility_register_screen.dart';
 
 class AdminRegisterFacilityScreen extends StatefulWidget {
@@ -18,6 +19,10 @@ class _AdminRegisterFacilityScreenState
     required String name,
     required String location,
     required String type,
+    required String contactPerson,
+    required String email,
+    required String phone,
+    required File? registrationDocument,
   }) async {
     setState(() => _isSubmitting = true);
 
@@ -29,6 +34,11 @@ class _AdminRegisterFacilityScreenState
         'createdBy': 'admin',
         'isApproved': true,
         'createdAt': FieldValue.serverTimestamp(),
+        // Optionally, you can store the extra fields if needed:
+        'contactPerson': contactPerson,
+        'email': email,
+        'phone': phone,
+        // You may need to handle registrationDocument upload separately if needed
       });
 
       if (mounted) {

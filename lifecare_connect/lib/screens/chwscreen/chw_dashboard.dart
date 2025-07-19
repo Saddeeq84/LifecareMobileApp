@@ -13,98 +13,97 @@ class CHWDashboard extends StatelessWidget {
         title: const Text('CHW Dashboard'),
         backgroundColor: Colors.teal,
       ),
-      body: Padding(
+      body: ListView(
         padding: const EdgeInsets.all(16.0),
-        child: GridView.count(
-          crossAxisCount: 2,
-          mainAxisSpacing: 20,
-          crossAxisSpacing: 20,
-          childAspectRatio: 1.2,
-          children: [
-            _buildDashboardButton(
-              context,
-              icon: Icons.person_add_alt_1,
-              label: 'Register a Patient',
-              onTap: () {
-                // TODO: Navigate to Register Patient screen
-              },
-            ),
-            _buildDashboardButton(
-              context,
-              icon: Icons.assignment_turned_in,
-              label: 'ANC/PNC Checklist',
-              onTap: () {
-                // TODO: Navigate to Checklist screen
-              },
-            ),
-            _buildDashboardButton(
-              context,
-              icon: Icons.account_circle,
-              label: 'Profile',
-              onTap: () {
-                // TODO: Navigate to Profile screen
-              },
-            ),
-            _buildDashboardButton(
-              context,
-              icon: Icons.settings,
-              label: 'Settings',
-              onTap: () {
-                // TODO: Navigate to Settings screen
-              },
-            ),
-            _buildDashboardButton(
-              context,
-              icon: Icons.group,
-              label: 'My Patients',
-              onTap: () {
-                // TODO: Navigate to My Patients screen
-              },
-            ),
-            _buildDashboardButton(
-              context,
-              icon: Icons.calendar_today,
-              label: 'Appointments',
-              onTap: () {
-                // TODO: Navigate to Appointments screen
-              },
-            ),
-            _buildDashboardButton(
-              context,
-              icon: Icons.share,
-              label: 'Referrals',
-              onTap: () {
-                // TODO: Navigate to Referrals screen
-              },
-            ),
-            _buildDashboardButton(
-              context,
-              icon: Icons.insert_chart,
-              label: 'Reports',
-              onTap: () {
-                // TODO: Navigate to Reports screen
-              },
-            ),
-            _buildDashboardButton(
-              context,
-              icon: Icons.chat,
-              label: 'Chat with Doctor',
-              onTap: () {
-                // 👇 Replace IDs with real values from auth/user model if available
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ChatScreen(
-                      currentUserId: 'chw456',
-                      receiverId: 'doctor123',
-                      receiverName: 'Dr. Yusuf',
+        children: [
+          Wrap(
+            spacing: 16,
+            runSpacing: 16,
+            children: [
+              _buildDashboardButton(
+                context,
+                icon: Icons.person_add_alt_1,
+                label: 'Register a Patient',
+                onTap: () {
+                  // TODO: Navigate to Register Patient screen
+                },
+              ),
+              _buildDashboardButton(
+                context,
+                icon: Icons.assignment_turned_in,
+                label: 'ANC/PNC Checklist',
+                onTap: () {
+                  // TODO: Navigate to Checklist screen
+                },
+              ),
+              _buildDashboardButton(
+                context,
+                icon: Icons.account_circle,
+                label: 'Profile',
+                onTap: () {
+                  // TODO: Navigate to Profile screen
+                },
+              ),
+              _buildDashboardButton(
+                context,
+                icon: Icons.settings,
+                label: 'Settings',
+                onTap: () {
+                  // TODO: Navigate to Settings screen
+                },
+              ),
+              _buildDashboardButton(
+                context,
+                icon: Icons.group,
+                label: 'My Patients',
+                onTap: () {
+                  // TODO: Navigate to My Patients screen
+                },
+              ),
+              _buildDashboardButton(
+                context,
+                icon: Icons.calendar_today,
+                label: 'Appointments',
+                onTap: () {
+                  // TODO: Navigate to Appointments screen
+                },
+              ),
+              _buildDashboardButton(
+                context,
+                icon: Icons.share,
+                label: 'Referrals',
+                onTap: () {
+                  // TODO: Navigate to Referrals screen
+                },
+              ),
+              _buildDashboardButton(
+                context,
+                icon: Icons.insert_chart,
+                label: 'Reports',
+                onTap: () {
+                  // TODO: Navigate to Reports screen
+                },
+              ),
+              _buildDashboardButton(
+                context,
+                icon: Icons.chat,
+                label: 'Chat with Doctor',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ChatScreen(
+                        currentUserId: 'chw456',
+                        receiverId: 'doctor123',
+                        receiverName: 'Dr. Yusuf',
+                      ),
                     ),
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -115,10 +114,15 @@ class CHWDashboard extends StatelessWidget {
     required String label,
     required VoidCallback onTap,
   }) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final buttonWidth = (screenWidth - 48) / 2; // For 2 items per row with spacing
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
+        width: buttonWidth,
+        height: 120,
         decoration: BoxDecoration(
           color: Colors.teal.shade100,
           borderRadius: BorderRadius.circular(12),

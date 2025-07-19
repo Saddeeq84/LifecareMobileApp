@@ -1,7 +1,7 @@
 name: lifecare_connect
 description: A mobile app for CHWs and healthcare providers to manage patients.
 version: 1.0.0+1
-publish_to: "none"
+publish_to: "none" # not published to pub.dev
 
 environment:
   sdk: ^3.8.0
@@ -18,10 +18,10 @@ dependencies:
   firebase_storage: ^11.6.0
   firebase_messaging: ^14.7.3
   firebase_analytics: ^10.10.0
+  firebase_crashlytics: ^3.5.0 # ✅ Optional but recommended
 
   # ✅ Social Authentication
   google_sign_in: ^6.2.1
-  flutter_facebook_auth: ^6.0.2
 
   # ✅ Utilities
   shared_preferences: ^2.2.2
@@ -52,18 +52,19 @@ dev_dependencies:
   build_runner: ^2.3.3
   json_serializable: ^6.6.1
 
+  # ✅ Optional tools for splash screen and icons
+  flutter_native_splash: ^2.4.0
+  flutter_launcher_icons: ^0.13.1
+
 flutter:
   uses-material-design: true
 
-  # ✅ Enable these when you add assets
-  # assets:
-  #   - assets/images/
-  #   - assets/audio/
-  #   - assets/icons/
+  assets:
+    - assets/images/
 
-  # fonts:
-  #   - family: OpenSans
-  #     fonts:
-  #       - asset: assets/fonts/OpenSans-Regular.ttf
-  #       - asset: assets/fonts/OpenSans-Bold.ttf
-  #         weight: 700
+  fonts:
+    - family: OpenSans
+      fonts:
+        - asset: assets/fonts/OpenSans-Regular.ttf
+        - asset: assets/fonts/OpenSans-Bold.ttf
+          weight: 700

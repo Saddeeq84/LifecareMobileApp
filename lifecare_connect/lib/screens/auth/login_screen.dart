@@ -4,13 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:lifecare_connect/firebase_options.dart';
 
-// Import the role-specific login screens
 import '../chwscreen/login_chw_screen.dart';
 import '../patientscreen/login_patient.dart';
 import '../adminscreen/login_admin.dart';
 import '../doctorscreen/login_doctor.dart';
 import '../sharedscreen/register_role_selection.dart';
-import 'package:lifecare_connect/screens/facilityscreen/facility_login_screen.dart'; // ✅ Facility Login
+import 'package:lifecare_connect/screens/facilityscreen/facility_login_screen.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -27,14 +26,19 @@ class LoginScreen extends StatelessWidget {
       future: _initializeFirebase(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
+          return Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         }
 
         if (snapshot.hasError) {
           return Scaffold(
-            body: Center(child: Text('Error initializing Firebase: ${snapshot.error}')),
+            body: Center(
+              child: Text(
+                'Error initializing Firebase:\n${snapshot.error}',
+                textAlign: TextAlign.center,
+              ),
+            ),
           );
         }
 
@@ -76,103 +80,95 @@ class LoginScreen extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 40),
-                    const Text(
+                    SizedBox(height: 40),
+                    Text(
                       'Select your login type:',
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
                     ),
-                    const SizedBox(height: 25),
+                    SizedBox(height: 25),
+
                     ElevatedButton.icon(
-                      icon: const Icon(Icons.medical_services_outlined),
+                      icon: Icon(Icons.medical_services_outlined),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.teal,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        padding: EdgeInsets.symmetric(vertical: 14),
                       ),
                       onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const CHWLoginScreen()),
-                        );
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => CHWLoginScreen()));
                       },
-                      label: const Text('Community Health Worker'),
+                      label: Text('Community Health Worker'),
                     ),
-                    const SizedBox(height: 15),
+
+                    SizedBox(height: 15),
+
                     ElevatedButton.icon(
-                      icon: const Icon(Icons.people_outline),
+                      icon: Icon(Icons.people_outline),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.teal,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        padding: EdgeInsets.symmetric(vertical: 14),
                       ),
                       onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const LoginPatient()),
-                        );
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => LoginPatient()));
                       },
-                      label: const Text('Patient'),
+                      label: Text('Patient'),
                     ),
-                    const SizedBox(height: 15),
+
+                    SizedBox(height: 15),
+
                     ElevatedButton.icon(
-                      icon: const Icon(Icons.local_hospital_outlined),
+                      icon: Icon(Icons.local_hospital_outlined),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.teal,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        padding: EdgeInsets.symmetric(vertical: 14),
                       ),
                       onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const LoginDoctorScreen()),
-                        );
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => LoginDoctorScreen()));
                       },
-                      label: const Text('Doctor'),
+                      label: Text('Doctor'),
                     ),
-                    const SizedBox(height: 15),
+
+                    SizedBox(height: 15),
+
                     ElevatedButton.icon(
-                      icon: const Icon(Icons.admin_panel_settings_outlined),
+                      icon: Icon(Icons.admin_panel_settings_outlined),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.teal,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        padding: EdgeInsets.symmetric(vertical: 14),
                       ),
                       onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const LoginAdminScreen()),
-                        );
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => LoginAdminScreen()));
                       },
-                      label: const Text('Admin'),
+                      label: Text('Admin'),
                     ),
-                    const SizedBox(height: 15),
+
+                    SizedBox(height: 15),
+
                     ElevatedButton.icon(
-                      icon: const Icon(Icons.business_outlined),
+                      icon: Icon(Icons.business_outlined),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.teal,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        padding: EdgeInsets.symmetric(vertical: 14),
                       ),
                       onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const FacilityLoginScreen()),
-                        );
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => FacilityLoginScreen()));
                       },
-                      label: const Text('Facility / Corporate Login'),
+                      label: Text('Facility / Corporate Login'),
                     ),
-                    const SizedBox(height: 40),
-                    const Divider(thickness: 1.2),
-                    const SizedBox(height: 10),
+
+                    SizedBox(height: 40),
+                    Divider(thickness: 1.2),
+                    SizedBox(height: 10),
                     TextButton(
                       onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const RegisterRoleSelectionScreen()),
-                        );
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => RegisterRoleSelectionScreen()));
                       },
-                      child: const Text(
+                      child: Text(
                         "Don't have an account? Create one",
                         style: TextStyle(
                           fontSize: 16,

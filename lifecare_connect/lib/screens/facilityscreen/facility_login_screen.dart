@@ -41,12 +41,9 @@ class _FacilityLoginScreenState extends State<FacilityLoginScreen> {
         password: passwordController.text.trim(),
       );
 
-      // Save the role "facility" in Firestore
-      await _userService.saveUserRole('facility');
-
-      // Navigate based on role
+      // ✅ DO NOT save user role here!
+      // Just navigate based on the role stored in Firestore
       await _userService.navigateBasedOnRole(context);
-
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Login failed: $e')),

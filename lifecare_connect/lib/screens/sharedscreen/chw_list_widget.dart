@@ -15,7 +15,9 @@ class CHWListWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final chwRef = FirebaseFirestore.instance
         .collection('users')
-        .where('role', isEqualTo: 'chw');
+        .where('role', isEqualTo: 'chw')
+        .where('isApproved', isEqualTo: true) // ✅ Only approved CHWs
+        .orderBy('createdAt', descending: true); // Optional: newest first
 
     return StreamBuilder<QuerySnapshot>(
       stream: chwRef.snapshots(),
