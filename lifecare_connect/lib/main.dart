@@ -18,9 +18,15 @@ import 'screens/adminscreen/admin_dashboard.dart';
 import 'screens/patientscreen/patient_book_doctor_screen.dart';
 import 'screens/doctorscreen/doctor_facility_referral_screen.dart';
 import 'screens/chwscreen/chw_refer_patient_screen.dart';
+import 'screens/adminscreen/approvals_screen.dart';
+import 'screens/adminscreen/approve_doctors_screen.dart';
+import 'screens/adminscreen/approve_facilities_screen.dart';
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
+
+final FirebaseAuth _auth = FirebaseAuth.instance;
+final UserService _userService = UserService();
 
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await _safeFirebaseInit();
@@ -30,7 +36,8 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 Future<void> _safeFirebaseInit() async {
   if (Firebase.apps.isEmpty) {
     await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform);
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
   }
 }
 
@@ -61,74 +68,133 @@ Future<void> initializeFirebase() async {
   await FirebaseMessaging.instance.requestPermission();
 }
 
+/// 🔁 Helper to refresh GoRouter on auth state changes and user role changes
+class GoRouterRefreshStream extends ChangeNotifier {
+  GoRouterRefreshStream(Stream<dynamic> stream) {
+    stream.listen((_) => notifyListeners());
+  }
+}
+
+// We create a combined Stream to refresh router on both auth and role changes
+Stream<dynamic> get combinedRefreshStream async* {
+  await for (final event in _auth.authStateChanges()) {
+    // Wait a bit to ensure user role is cached
+    await _userService.fetchUserRole();
+    yield event;
+  }
+}
+
+/// ⏳ Splash screen while redirecting
+class SplashScreen extends StatelessWidget {
+  const SplashScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(child: CircularProgressIndicator()),
+    );
+  }
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeFirebase();
-  runApp(LifeCareApp());
+  runApp(const LifeCareApp());
 }
 
-class LifeCareApp extends StatefulWidget {
+/// 🧭 Define the router globally for stable redirection
+final GoRouter _router = GoRouter(
+  initialLocation: '/loading',
+  refreshListenable: GoRouterRefreshStream(combinedRefreshStream),
+  redirect: (context, state) {
+    final user = _auth.currentUser;
+    final location = state.uri.toString();
+    print("🔄 Redirect called. Location: $location, User: $user");
+
+    // Not logged in
+    if (user == null) {
+      return location == '/login' ? null : '/login';
+    }
+
+    // User is logged in, check cached role (synchronous)
+    final role = _userService.cachedUserRole;
+    print("🎯 Cached User Role: $role");
+
+    // If role not yet cached, show loading screen
+    if (role == null) {
+      // Avoid redirect loop by returning null (show current page - /loading)
+      if (location != '/loading') {
+        return '/loading';
+      }
+      return null;
+    }
+
+    // From loading or login, route user to dashboard based on role
+    if (location == '/loading' || location == '/login') {
+      switch (role) {
+        case 'admin':
+          return '/admin_dashboard';
+        case 'patient':
+          return '/patient/book_doctor';
+        case 'doctor':
+          return '/doctor/facility_referral';
+        case 'chw':
+          return '/chw/refer_doctor';
+        default:
+          return '/login'; // fallback for unknown roles
+      }
+    }
+
+    return null; // no redirect
+  },
+  routes: [
+    GoRoute(
+      path: '/loading',
+      builder: (context, state) => const SplashScreen(),
+    ),
+    GoRoute(
+      path: '/login',
+      builder: (context, state) => const LoginScreen(),
+    ),
+    GoRoute(
+      path: '/admin_dashboard',
+      builder: (context, state) => const AdminDashboard(),
+    ),
+    GoRoute(
+      path: '/admin/approval_screen',
+      builder: (context, state) => const ApprovalsScreen(),
+    ),
+    GoRoute(
+      path: '/patient/book_doctor',
+      builder: (context, state) => const PatientBookDoctorScreen(),
+    ),
+    GoRoute(
+      path: '/doctor/facility_referral',
+      builder: (context, state) => const DoctorFacilityReferralScreen(),
+    ),
+    GoRoute(
+      path: '/chw/refer_doctor',
+      builder: (context, state) => const CHWReferPatientScreen(),
+    ),
+    GoRoute(
+      path: '/admin/approve_doctors',
+      builder: (context, state) => const ApproveDoctorsScreen(),
+    ),
+    GoRoute(
+      path: '/admin/approve_facilities',
+      builder: (context, state) => const ApproveFacilitiesScreen(),
+    ),
+  ],
+  errorBuilder: (context, state) => const Scaffold(
+    body: Center(
+      child: Text("❌ 404 - Page Not Found", style: TextStyle(fontSize: 20)),
+    ),
+  ),
+);
+
+/// 🌍 Main App Widget using MaterialApp.router
+class LifeCareApp extends StatelessWidget {
   const LifeCareApp({super.key});
-
-  @override
-  State<LifeCareApp> createState() => _LifeCareAppState();
-}
-
-class _LifeCareAppState extends State<LifeCareApp> {
-  final _auth = FirebaseAuth.instance;
-  final _userService = UserService();
-  late final GoRouter _router;
-
-  @override
-  void initState() {
-    super.initState();
-
-    _router = GoRouter(
-      initialLocation: '/loading',
-      refreshListenable: GoRouterRefreshStream(_auth.authStateChanges()),
-      redirect: (context, state) async {
-        final user = _auth.currentUser;
-        final location = state.uri.toString();
-
-        if (location == '/loading') {
-          if (user == null) return '/login';
-
-          final role = await _userService.getUserRole();
-          if (role == 'admin') return '/admin_dashboard';
-          if (role == 'patient') return '/patient/book_doctor';
-          if (role == 'doctor') return '/doctor/facility_referral';
-          if (role == 'chw') return '/chw/refer_doctor';
-
-          return '/login'; // fallback
-        }
-
-        if (user == null && location != '/login') return '/login';
-        if (user != null && location == '/login') {
-          final role = await _userService.getUserRole();
-          if (role == 'admin') return '/admin_dashboard';
-          if (role == 'patient') return '/patient/book_doctor';
-          if (role == 'doctor') return '/doctor/facility_referral';
-          if (role == 'chw') return '/chw/refer_doctor';
-        }
-
-        return null;
-      },
-      routes: [
-        GoRoute(
-          path: '/loading',
-          builder: (context, state) => const SplashScreen(),
-        ),
-        GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
-        GoRoute(path: '/admin_dashboard', builder: (context, state) => const AdminDashboard()),
-        GoRoute(path: '/patient/book_doctor', builder: (context, state) => const PatientBookDoctorScreen()),
-        GoRoute(path: '/doctor/facility_referral', builder: (context, state) => const DoctorFacilityReferralScreen()),
-        GoRoute(path: '/chw/refer_doctor', builder: (context, state) => const CHWReferPatientScreen()),
-      ],
-      errorBuilder: (context, state) => const Scaffold(
-        body: Center(child: Text("404 - Page Not Found", style: TextStyle(fontSize: 20))),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -140,25 +206,6 @@ class _LifeCareAppState extends State<LifeCareApp> {
         fontFamily: 'OpenSans',
       ),
       routerConfig: _router,
-    );
-  }
-}
-
-/// 🔁 Helper class to refresh GoRouter when auth state changes
-class GoRouterRefreshStream extends ChangeNotifier {
-  GoRouterRefreshStream(Stream<dynamic> stream) {
-    stream.listen((_) => notifyListeners());
-  }
-}
-
-/// ⏳ Splash/loading screen while checking auth state
-class SplashScreen extends StatelessWidget {
-  const SplashScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: CircularProgressIndicator()),
     );
   }
 }

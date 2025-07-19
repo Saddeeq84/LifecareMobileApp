@@ -6,20 +6,29 @@ admin.initializeApp({
 });
 
 async function createAdmin() {
+  const email = 'admin@test.com';
   try {
-    // ✅ Create new admin user
+    // Delete user if exists
+    const existingUser = await admin.auth().getUserByEmail(email);
+    await admin.auth().deleteUser(existingUser.uid);
+    console.log(`🗑️ Deleted existing user: ${email}`);
+  } catch (e) {
+    console.log(`ℹ️ No existing user to delete: ${email}`);
+  }
+
+  try {
     const newUser = await admin.auth().createUser({
-      email: 'admin@lifecare.com',
-      password: 'NewSecurePassword123', // Choose a strong password you'll remember
+      email,
+      password: 'admin2025',
+      emailVerified: true, // ✅ Important
     });
 
     console.log('✅ Created admin user:', newUser.uid);
 
-    // ✅ Assign admin role via custom claims
     await admin.auth().setCustomUserClaims(newUser.uid, { role: 'admin' });
     console.log('✅ Assigned admin role to:', newUser.email);
   } catch (error) {
-    console.error('❌ Error:', error);
+    console.error('❌ Error creating user:', error);
   }
 }
 

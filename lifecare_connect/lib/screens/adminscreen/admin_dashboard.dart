@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:go_router/go_router.dart'; // Required for context.go
+import 'package:go_router/go_router.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -12,7 +12,6 @@ class AdminDashboard extends StatefulWidget {
 class _AdminDashboardState extends State<AdminDashboard> {
   bool _showFacilityDropdown = false;
   bool _showStaffDropdown = false;
-  bool _showApproveDropdown = false;
 
   @override
   Widget build(BuildContext context) {
@@ -31,37 +30,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ),
             const SizedBox(height: 20),
 
-            // Approve Accounts Dropdown
-            Card(
-              elevation: 3,
-              margin: const EdgeInsets.symmetric(vertical: 10),
-              child: Column(
-                children: [
-                  ListTile(
-                    leading: const Icon(Icons.person, size: 32, color: Colors.teal),
-                    title: const Text('Approve Accounts', style: TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: const Text('Review pending registration requests'),
-                    trailing: Icon(_showApproveDropdown
-                        ? Icons.keyboard_arrow_up
-                        : Icons.keyboard_arrow_down),
-                    onTap: () {
-                      setState(() {
-                        _showApproveDropdown = !_showApproveDropdown;
-                      });
-                    },
-                  ),
-                  if (_showApproveDropdown)
-                    Column(
-                      children: [
-                        _buildSubOption(context, 'Doctors Requests', '/admin/approve_accounts/doctors'),
-                        _buildSubOption(context, 'Health Facility Requests', '/admin/approve_accounts/facilities'),
-                      ],
-                    ),
-                ],
-              ),
+            // ✅ Approve Accounts - Overview Only
+            DashboardTile(
+              icon: Icons.person,
+              title: 'Approve Accounts',
+              subtitle: 'Review all pending account requests',
+              onTap: () => context.push('/admin/approve_accounts'),
             ),
 
-            // Patient List
+            // ✅ Patient List
             DashboardTile(
               icon: Icons.list_alt,
               title: 'Patient List',
@@ -69,7 +46,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               onTap: () => context.push('/admin/patient_list'),
             ),
 
-            // Registered Health Facilities
+            // ✅ Registered Health Facilities Dropdown
             Card(
               elevation: 3,
               margin: const EdgeInsets.symmetric(vertical: 10),
@@ -79,9 +56,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     leading: const Icon(Icons.local_hospital, size: 32, color: Colors.teal),
                     title: const Text('Registered Health Facilities', style: TextStyle(fontWeight: FontWeight.bold)),
                     subtitle: const Text('Hospitals, Labs, Pharmacies, Scan Centers'),
-                    trailing: Icon(_showFacilityDropdown
-                        ? Icons.keyboard_arrow_up
-                        : Icons.keyboard_arrow_down),
+                    trailing: Icon(
+                      _showFacilityDropdown
+                          ? Icons.keyboard_arrow_up
+                          : Icons.keyboard_arrow_down,
+                    ),
                     onTap: () {
                       setState(() {
                         _showFacilityDropdown = !_showFacilityDropdown;
@@ -101,7 +80,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               ),
             ),
 
-            // Staff List
+            // ✅ Staff List Dropdown
             Card(
               elevation: 3,
               margin: const EdgeInsets.symmetric(vertical: 10),
@@ -111,9 +90,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     leading: const Icon(Icons.people, size: 32, color: Colors.teal),
                     title: const Text('Staff List', style: TextStyle(fontWeight: FontWeight.bold)),
                     subtitle: const Text('Doctors, CHWs'),
-                    trailing: Icon(_showStaffDropdown
-                        ? Icons.keyboard_arrow_up
-                        : Icons.keyboard_arrow_down),
+                    trailing: Icon(
+                      _showStaffDropdown
+                          ? Icons.keyboard_arrow_up
+                          : Icons.keyboard_arrow_down,
+                    ),
                     onTap: () {
                       setState(() {
                         _showStaffDropdown = !_showStaffDropdown;
@@ -131,7 +112,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               ),
             ),
 
-            // Analytics
+            // ✅ Analytics
             DashboardTile(
               icon: Icons.analytics,
               title: 'Analytics',
@@ -139,7 +120,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               onTap: () => context.push('/admin/analytics'),
             ),
 
-            // Settings
+            // ✅ Settings
             DashboardTile(
               icon: Icons.settings,
               title: 'Settings',
@@ -147,7 +128,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               onTap: () => context.push('/admin/settings'),
             ),
 
-            // Logout Button with Confirmation
+            // ✅ Logout
             const SizedBox(height: 30),
             ElevatedButton.icon(
               icon: const Icon(Icons.logout),
@@ -178,7 +159,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 if (shouldLogout == true) {
                   await FirebaseAuth.instance.signOut();
                   if (context.mounted) {
-                    context.go('/login'); // GoRouter-based navigation
+                    context.go('/login');
                   }
                 }
               },
@@ -191,9 +172,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   Widget _buildSubOption(BuildContext context, String label, String routeName) {
     return ListTile(
+      dense: true,
+      visualDensity: VisualDensity.compact,
       title: Text(label),
       trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-      onTap: () => context.push(routeName), // GoRouter-compatible navigation
+      onTap: () => context.push(routeName),
     );
   }
 }
@@ -227,4 +210,3 @@ class DashboardTile extends StatelessWidget {
     );
   }
 }
-// This file defines the Admin Dashboard screen for the LifeCare Connect app.
