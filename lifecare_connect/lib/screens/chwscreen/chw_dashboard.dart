@@ -1,7 +1,6 @@
 // ignore_for_file: prefer_const_constructors
 
 import 'package:flutter/material.dart';
-import '../sharedscreen/chat_screen.dart'; 
 
 class CHWDashboard extends StatelessWidget {
   const CHWDashboard({super.key});
@@ -82,23 +81,6 @@ class CHWDashboard extends StatelessWidget {
                 label: 'Reports',
                 onTap: () {
                   // TODO: Navigate to Reports screen
-                },
-              ),
-              _buildDashboardButton(
-                context,
-                icon: Icons.chat,
-                label: 'Chat with Doctor',
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ChatScreen(
-                        currentUserId: 'chw456',
-                        receiverId: 'doctor123',
-                        receiverName: 'Dr. Yusuf',
-                      ),
-                    ),
-                  );
                 },
               ),
             ],

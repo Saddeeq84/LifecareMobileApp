@@ -1,4 +1,7 @@
+// ignore_for_file: prefer_const_constructors
+
 import 'package:flutter/material.dart';
+import '../sharedscreen/Shared_Referral_Widget.dart'; 
 
 class ReferralsScreen extends StatelessWidget {
   const ReferralsScreen({super.key});
@@ -7,12 +10,10 @@ class ReferralsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('All Referrals'),
+        title: Text('All Referrals'),
         backgroundColor: Colors.teal,
       ),
-      body: const Center(
-        child: Text('Referrals Screen'),
-      ),
+      body: SharedReferralWidget(role: 'admin'),
     );
   }
 }

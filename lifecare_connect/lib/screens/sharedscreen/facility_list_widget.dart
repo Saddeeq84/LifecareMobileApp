@@ -4,18 +4,27 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class FacilityListWidget extends StatelessWidget {
   final String viewerRole;
   final Function(DocumentSnapshot facility) onFacilityTap;
+  final String? facilityType; // New: optional facilityType for filtering
 
   const FacilityListWidget({
     super.key,
     required this.viewerRole,
     required this.onFacilityTap,
+    this.facilityType,
   });
 
   @override
   Widget build(BuildContext context) {
-    final facilityRef = FirebaseFirestore.instance
-        .collection('facilities')
-        .orderBy('type');
+    // Base Firestore reference
+    Query facilityRef = FirebaseFirestore.instance.collection('facilities');
+
+    // Apply filtering if facilityType is provided
+    if (facilityType != null && facilityType!.isNotEmpty) {
+      facilityRef = facilityRef.where('type', isEqualTo: facilityType);
+    }
+
+    // Default sorting
+    facilityRef = facilityRef.orderBy('type');
 
     return StreamBuilder<QuerySnapshot>(
       stream: facilityRef.snapshots(),

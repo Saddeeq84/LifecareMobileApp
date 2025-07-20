@@ -12,7 +12,7 @@ import 'daily_health_tips_screen.dart';
 import 'patient_profile_screen.dart';
 import 'my_health_tab.dart';
 import 'patient_services_tab.dart';
-import '../adminScreen/admin_facilities_screen.dart';
+import '../adminScreen/admin_facility_screen.dart';
 import 'chat_chw_screen.dart';
 
 class PatientDashboard extends StatelessWidget {

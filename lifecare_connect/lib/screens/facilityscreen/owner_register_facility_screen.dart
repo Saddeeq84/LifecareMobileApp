@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:io';
-import '../sharedscreen/facility_register_screen.dart';
+import '../sharedscreen/facility_register_widget.dart';
 
 class OwnerRegisterFacilityScreen extends StatefulWidget {
   const OwnerRegisterFacilityScreen({super.key});
@@ -74,7 +74,7 @@ class _OwnerRegisterFacilityScreenState
       ),
       body: Padding(
         padding: const EdgeInsets.all(20),
-        child: FacilityForm(
+        child: FacilityRegisterWidget(
           isSubmitting: _isSubmitting,
           onSubmit: _handleSubmit,
         ),

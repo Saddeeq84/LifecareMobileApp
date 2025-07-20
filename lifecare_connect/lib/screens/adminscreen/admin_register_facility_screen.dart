@@ -1,7 +1,9 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/material.dart';
 import 'dart:io';
-import '../sharedscreen/facility_register_screen.dart';
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+
+import '../sharedscreen/facility_register_widget.dart';
 
 class AdminRegisterFacilityScreen extends StatefulWidget {
   const AdminRegisterFacilityScreen({super.key});
@@ -15,6 +17,19 @@ class _AdminRegisterFacilityScreenState
     extends State<AdminRegisterFacilityScreen> {
   bool _isSubmitting = false;
 
+  Future<String?> _uploadDocument(File file) async {
+    try {
+      final fileName =
+          'facility_documents/${DateTime.now().millisecondsSinceEpoch}_${file.path.split('/').last}';
+      final ref = FirebaseStorage.instance.ref().child(fileName);
+      await ref.putFile(file);
+      return await ref.getDownloadURL();
+    } catch (e) {
+      debugPrint("Document upload failed: $e");
+      return null;
+    }
+  }
+
   Future<void> _handleSubmit({
     required String name,
     required String location,
@@ -27,25 +42,30 @@ class _AdminRegisterFacilityScreenState
     setState(() => _isSubmitting = true);
 
     try {
+      String? docUrl;
+      if (registrationDocument != null) {
+        docUrl = await _uploadDocument(registrationDocument);
+      }
+
       await FirebaseFirestore.instance.collection('facilities').add({
-        'name': name,
-        'location': location,
-        'type': type,
+        'name': name.trim(),
+        'location': location.trim(),
+        'type': type.trim(),
         'createdBy': 'admin',
         'isApproved': true,
         'createdAt': FieldValue.serverTimestamp(),
-        // Optionally, you can store the extra fields if needed:
-        'contactPerson': contactPerson,
-        'email': email,
-        'phone': phone,
-        // You may need to handle registrationDocument upload separately if needed
+        'contactPerson': contactPerson.trim(),
+        'email': email.trim(),
+        'phone': phone.trim(),
+        if (docUrl != null) 'documentUrl': docUrl,
       });
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("✅ Facility registered successfully!")),
+          const SnackBar(
+              content: Text("✅ Facility registered successfully!")),
         );
-        Navigator.pop(context);
+        Navigator.of(context).pop();
       }
     } catch (e) {
       if (mounted) {
@@ -66,8 +86,8 @@ class _AdminRegisterFacilityScreenState
         backgroundColor: Colors.teal,
       ),
       body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: FacilityForm(
+        padding: const EdgeInsets.all(20), // ✅ Apply padding directly
+        child: FacilityRegisterWidget(
           isSubmitting: _isSubmitting,
           onSubmit: _handleSubmit,
         ),

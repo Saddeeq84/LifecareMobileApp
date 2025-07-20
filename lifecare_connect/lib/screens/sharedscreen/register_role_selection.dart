@@ -7,7 +7,6 @@ import 'package:lifecare_connect/screens/chwscreen/chw_create_account.dart';
 import 'package:lifecare_connect/screens/facilityscreen/owner_register_facility_screen.dart';
 import 'package:lifecare_connect/screens/patientscreen/login_patient_register.dart';
 import 'package:lifecare_connect/screens/doctorscreen/doctor_create_account.dart';
-import '../adminscreen/admin_register_facility_screen.dart';
 
 class RegisterRoleSelectionScreen extends StatelessWidget {
   const RegisterRoleSelectionScreen({super.key});
@@ -86,22 +85,12 @@ class RegisterRoleSelectionScreen extends StatelessWidget {
                     const SizedBox(height: 20),
 
                     // 🏥 Facility / Corporate
-_buildRoleButton(
-  context,
-  label: 'Facility / Corporate',
-  icon: Icons.business_outlined,
-  screen: const OwnerRegisterFacilityScreen(),
-),
-const SizedBox(height: 20),
-
-// 🧑‍💼 Admin - Register Facility/Corporate
-_buildRoleButton(
-  context,
-  label: 'Admin: Register Facility',
-  icon: Icons.admin_panel_settings_outlined,
-  screen: const AdminRegisterFacilityScreen(),
-),
-
+                    _buildRoleButton(
+                      context,
+                      label: 'Facility / Corporate',
+                      icon: Icons.business_outlined,
+                      screen: const OwnerRegisterFacilityScreen(),
+                    ),
                   ],
                 ),
               ),

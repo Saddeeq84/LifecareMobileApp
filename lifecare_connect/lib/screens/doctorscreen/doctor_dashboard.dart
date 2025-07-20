@@ -2,7 +2,6 @@
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import '../sharedscreen/chat_screen.dart'; // 
 
 class DoctorDashboard extends StatelessWidget {
   const DoctorDashboard({super.key});
@@ -13,7 +12,7 @@ class DoctorDashboard extends StatelessWidget {
       Navigator.pushReplacementNamed(context, '/login');
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Logout failed: $e')),
+        SnackBar(content: Text('Logout failed: \$e')),
       );
     }
   }
@@ -45,7 +44,7 @@ class DoctorDashboard extends StatelessWidget {
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  "Welcome, Dr. ${user.email ?? 'User'}",
+                  "Welcome, Dr. \${user.email ?? 'User'}",
                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
               ),
@@ -64,20 +63,7 @@ class DoctorDashboard extends StatelessWidget {
                     icon: item.icon,
                     label: item.label,
                     onTap: () {
-                      if (item.label == 'Messages') {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ChatScreen(
-                              currentUserId: user?.uid ?? 'doctor123', // fallback
-                              receiverId: 'chw456', // ✅ Replace with dynamic CHW ID if available
-                              receiverName: 'CHW Aisha', // ✅ Replace with actual name if dynamic
-                            ),
-                          ),
-                        );
-                      } else {
-                        Navigator.pushNamed(context, item.route);
-                      }
+                      Navigator.pushNamed(context, item.route);
                     },
                   );
                 },
@@ -182,11 +168,7 @@ const List<DashboardItem> _doctorDashboardItems = [
     label: 'Reports & Analytics',
     route: '/doctor_reports',
   ),
-  DashboardItem(
-    icon: Icons.chat,
-    label: 'Messages',
-    route: '/chat_selection', // not used in this case, but kept for structure
-  ),
+  // Removed chat/messages tab
   DashboardItem(
     icon: Icons.person,
     label: 'Profile',

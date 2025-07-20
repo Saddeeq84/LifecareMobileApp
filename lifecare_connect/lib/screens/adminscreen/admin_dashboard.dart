@@ -10,9 +10,6 @@ class AdminDashboard extends StatefulWidget {
 }
 
 class _AdminDashboardState extends State<AdminDashboard> {
-  bool _showFacilityDropdown = false;
-  bool _showStaffDropdown = false;
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -30,105 +27,64 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ),
             const SizedBox(height: 20),
 
-            // ✅ Approve Accounts - Overview Only
             DashboardTile(
               icon: Icons.person,
               title: 'Approve Accounts',
               subtitle: 'Review all pending account requests',
-              onTap: () => context.push('/admin/approve_accounts'),
+              onTap: () => context.push('/admin/approvals_screen'),
             ),
-
-            // ✅ Patient List
             DashboardTile(
               icon: Icons.list_alt,
               title: 'Patient List',
               subtitle: 'View all registered patients',
               onTap: () => context.push('/admin/patient_list'),
             ),
-
-            // ✅ Registered Health Facilities Dropdown
-            Card(
-              elevation: 3,
-              margin: const EdgeInsets.symmetric(vertical: 10),
-              child: Column(
-                children: [
-                  ListTile(
-                    leading: const Icon(Icons.local_hospital, size: 32, color: Colors.teal),
-                    title: const Text('Registered Health Facilities', style: TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: const Text('Hospitals, Labs, Pharmacies, Scan Centers'),
-                    trailing: Icon(
-                      _showFacilityDropdown
-                          ? Icons.keyboard_arrow_up
-                          : Icons.keyboard_arrow_down,
-                    ),
-                    onTap: () {
-                      setState(() {
-                        _showFacilityDropdown = !_showFacilityDropdown;
-                      });
-                    },
-                  ),
-                  if (_showFacilityDropdown)
-                    Column(
-                      children: [
-                        _buildSubOption(context, 'Hospitals', '/admin/facilities/hospitals'),
-                        _buildSubOption(context, 'Laboratories', '/admin/facilities/laboratories'),
-                        _buildSubOption(context, 'Pharmacies', '/admin/facilities/pharmacies'),
-                        _buildSubOption(context, 'Scan Centers', '/admin/facilities/scan_centers'),
-                      ],
-                    ),
-                ],
-              ),
-            ),
-
-            // ✅ Staff List Dropdown
-            Card(
-              elevation: 3,
-              margin: const EdgeInsets.symmetric(vertical: 10),
-              child: Column(
-                children: [
-                  ListTile(
-                    leading: const Icon(Icons.people, size: 32, color: Colors.teal),
-                    title: const Text('Staff List', style: TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: const Text('Doctors, CHWs'),
-                    trailing: Icon(
-                      _showStaffDropdown
-                          ? Icons.keyboard_arrow_up
-                          : Icons.keyboard_arrow_down,
-                    ),
-                    onTap: () {
-                      setState(() {
-                        _showStaffDropdown = !_showStaffDropdown;
-                      });
-                    },
-                  ),
-                  if (_showStaffDropdown)
-                    Column(
-                      children: [
-                        _buildSubOption(context, 'Doctors', '/admin/staff/doctors'),
-                        _buildSubOption(context, 'CHWs', '/admin/staff/chws'),
-                      ],
-                    ),
-                ],
-              ),
-            ),
-
-            // ✅ Analytics
             DashboardTile(
-              icon: Icons.analytics,
-              title: 'Analytics',
-              subtitle: 'View app usage and performance metrics',
-              onTap: () => context.push('/admin/analytics'),
+              icon: Icons.local_hospital,
+              title: 'Registered Health Facilities',
+              subtitle: 'View all facilities in categorized tabs',
+              onTap: () => context.push('/admin/facility'),
+            ),
+          DashboardTile(
+  icon: Icons.add_business,
+  title: 'Register Health Facility',
+  subtitle: 'Add a new health facility to the system',
+  onTap: () => context.push('/register_facility'), 
+),
+            DashboardTile(
+              icon: Icons.people,
+              title: 'Staff List',
+              subtitle: 'Doctors and Community Health Workers',
+              onTap: () => context.push('/admin/staff'),
             ),
 
-            // ✅ Settings
+            // ✅ Updated Appointments Tile
+            DashboardTile(
+              icon: Icons.event_available, 
+              title: 'Appointments',
+              subtitle: 'View all scheduled appointments',
+              onTap: () => context.push('/admin/appointments'),
+            ),
+
+            DashboardTile(
+              icon: Icons.compare_arrows, // 🔄 More intuitive for 'referrals'
+              title: 'Referrals',
+              subtitle: 'View all patient referrals',
+              onTap: () => context.push('/admin/referrals'),
+            ),
+
+            DashboardTile(
+              icon: Icons.school,
+              title: 'Training Materials',
+              subtitle: 'View or upload training materials',
+              onTap: () => context.push('/admin/upload_training'),
+            ),
             DashboardTile(
               icon: Icons.settings,
               title: 'Settings',
               subtitle: 'Manage system and platform settings',
               onTap: () => context.push('/admin/settings'),
             ),
-
-            // ✅ Logout
             const SizedBox(height: 30),
             ElevatedButton.icon(
               icon: const Icon(Icons.logout),
@@ -167,16 +123,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildSubOption(BuildContext context, String label, String routeName) {
-    return ListTile(
-      dense: true,
-      visualDensity: VisualDensity.compact,
-      title: Text(label),
-      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-      onTap: () => context.push(routeName),
     );
   }
 }
