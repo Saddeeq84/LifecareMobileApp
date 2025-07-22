@@ -13,6 +13,66 @@ class AuthGate extends StatefulWidget {
 class _AuthGateState extends State<AuthGate> {
   bool _hasRedirected = false;
 
+  @override
+  void initState() {
+    super.initState();
+
+    FirebaseAuth.instance.authStateChanges().listen((user) async {
+      if (!mounted || _hasRedirected) return;
+
+      if (user == null) {
+        debugPrint('[AuthGate] 🔒 No user found. Redirecting to /login');
+        _safeGo('/login');
+        return;
+      }
+
+      try {
+        debugPrint('[AuthGate] 🔐 User signed in: ${user.email} (${user.uid})');
+
+        final snapshot = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+
+        if (!snapshot.exists) {
+          debugPrint('[AuthGate] ❌ No Firestore document found for user: ${user.uid}');
+          _safeGo('/login'); // or create fallback screen
+          return;
+        }
+
+        final data = snapshot.data();
+        final role = data?['role'];
+
+        debugPrint('[AuthGate] 🧾 Firestore user role: $role');
+
+        switch (role) {
+          case 'doctor':
+            _safeGo('/doctor_dashboard');
+            break;
+          case 'patient':
+            _safeGo('/patient_dashboard');
+            break;
+          case 'admin':
+            _safeGo('/admin_dashboard');
+            break;
+          case 'chw':
+            _safeGo('/chw_dashboard');
+            break;
+          case 'facility':
+            _safeGo('/facility_dashboard');
+            break;
+          default:
+            debugPrint('[AuthGate] ❗ Unknown role: $role');
+            _safeGo('/login'); // fallback if role is not recognized
+        }
+      } catch (e, stack) {
+        debugPrint('[AuthGate] ⚠️ Error fetching Firestore user data: $e');
+        debugPrint(stack.toString());
+        _safeGo('/login');
+      }
+    });
+  }
+
   void _safeGo(String route) {
     if (!_hasRedirected && mounted) {
       _hasRedirected = true;
@@ -22,75 +82,8 @@ class _AuthGateState extends State<AuthGate> {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
-        }
-
-        final user = snapshot.data;
-
-        // ❌ Not signed in — redirect to login
-        if (user == null) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            final currentPath = GoRouter.of(context)
-                .routerDelegate
-                .currentConfiguration
-                .uri
-                .toString();
-
-            if (currentPath != '/login') {
-              _safeGo('/login');
-            }
-          });
-          return const SizedBox.shrink();
-        }
-
-        // ✅ Signed in — check Firestore for role
-        return FutureBuilder<DocumentSnapshot>(
-          future: FirebaseFirestore.instance.collection('users').doc(user.uid).get(),
-          builder: (context, roleSnapshot) {
-            if (roleSnapshot.connectionState == ConnectionState.waiting) {
-              return const Scaffold(body: Center(child: CircularProgressIndicator()));
-            }
-
-            if (roleSnapshot.hasError || !roleSnapshot.hasData || roleSnapshot.data?.data() == null) {
-              WidgetsBinding.instance.addPostFrameCallback((_) => _safeGo('/login'));
-              return const Scaffold(
-                body: Center(child: Text('Error: Unable to fetch user role.')),
-              );
-            }
-
-            final data = roleSnapshot.data!.data() as Map<String, dynamic>;
-            final role = data['role'];
-
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              switch (role) {
-                case 'doctor':
-                  _safeGo('/doctor_dashboard');
-                  break;
-                case 'patient':
-                  _safeGo('/patient_dashboard');
-                  break;
-                case 'admin':
-                  _safeGo('/admin_dashboard');
-                  break;
-                case 'chw':
-                  _safeGo('/chw_dashboard');
-                  break;
-                case 'facility':
-                  _safeGo('/facility_dashboard');
-                  break;
-                default:
-                  _safeGo('/login');
-              }
-            });
-
-            return const SizedBox.shrink(); // While redirecting
-          },
-        );
-      },
+    return const Scaffold(
+      body: Center(child: CircularProgressIndicator()),
     );
   }
 }

@@ -1,5 +1,8 @@
+// ignore_for_file: use_build_context_synchronously, prefer_const_constructors, prefer_const_literals_to_create_immutables
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 
 class AdminDashboard extends StatefulWidget {
@@ -10,23 +13,80 @@ class AdminDashboard extends StatefulWidget {
 }
 
 class _AdminDashboardState extends State<AdminDashboard> {
+  String _adminName = 'Admin';
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAdminDocument();
+      _fetchAdminName();
+    });
+  }
+
+  Future<void> _checkAdminDocument() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+    if (!userDoc.exists) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("⚠️ Admin user exists but no Firestore document was found."),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
+  }
+
+  Future<void> _fetchAdminName() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+    if (userDoc.exists && userDoc.data() != null) {
+      final data = userDoc.data()!;
+      setState(() {
+        _adminName = data['name'] ?? 'Admin';
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Admin Dashboard'),
+        title: Text('Admin Dashboard'),
         backgroundColor: Colors.teal,
+        actions: [
+          PopupMenuButton<String>(
+            icon: Icon(Icons.more_vert),
+            onSelected: (value) {
+              switch (value) {
+                case 'settings':
+                  context.push('/admin/settings');
+                  break;
+                case 'logout':
+                  _confirmLogout(context);
+                  break;
+              }
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem(value: 'settings', child: Text('Settings')),
+              PopupMenuItem(value: 'logout', child: Text('Logout')),
+            ],
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: ListView(
           children: [
-            const Text(
-              'Welcome, Admin!',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            Text(
+              'Welcome, $_adminName!',
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 20),
-
             DashboardTile(
               icon: Icons.person,
               title: 'Approve Accounts',
@@ -45,34 +105,30 @@ class _AdminDashboardState extends State<AdminDashboard> {
               subtitle: 'View all facilities in categorized tabs',
               onTap: () => context.push('/admin/facility'),
             ),
-          DashboardTile(
-  icon: Icons.add_business,
-  title: 'Register Health Facility',
-  subtitle: 'Add a new health facility to the system',
-  onTap: () => context.push('/register_facility'), 
-),
+            DashboardTile(
+              icon: Icons.add_business,
+              title: 'Register Health Facility',
+              subtitle: 'Add a new health facility to the system',
+              onTap: () => context.push('/register_facility'),
+            ),
             DashboardTile(
               icon: Icons.people,
               title: 'Staff List',
               subtitle: 'Doctors and Community Health Workers',
               onTap: () => context.push('/admin/staff'),
             ),
-
-            // ✅ Updated Appointments Tile
             DashboardTile(
-              icon: Icons.event_available, 
+              icon: Icons.event_available,
               title: 'Appointments',
               subtitle: 'View all scheduled appointments',
               onTap: () => context.push('/admin/appointments'),
             ),
-
             DashboardTile(
-              icon: Icons.compare_arrows, // 🔄 More intuitive for 'referrals'
+              icon: Icons.compare_arrows,
               title: 'Referrals',
               subtitle: 'View all patient referrals',
               onTap: () => context.push('/admin/referrals'),
             ),
-
             DashboardTile(
               icon: Icons.school,
               title: 'Training Materials',
@@ -80,48 +136,78 @@ class _AdminDashboardState extends State<AdminDashboard> {
               onTap: () => context.push('/admin/upload_training'),
             ),
             DashboardTile(
-              icon: Icons.settings,
-              title: 'Settings',
-              subtitle: 'Manage system and platform settings',
-              onTap: () => context.push('/admin/settings'),
+              icon: Icons.message,
+              title: 'Messages',
+              subtitle: 'View and manage messages',
+              onTap: () => context.push('/admin/messages'),
+            ),
+            DashboardTile(
+              icon: Icons.analytics,
+              title: 'Analytics',
+              subtitle: 'View system analytics and insights',
+              onTap: () => context.push('/admin/analytics'),
+            ),
+            DashboardTile(
+              icon: Icons.account_balance,
+              title: 'Finance',
+              subtitle: 'Manage financial transactions',
+              onTap: () => _showComingSoonDialog(context, 'Finance'),
             ),
             const SizedBox(height: 30),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.logout),
-              label: const Text("Logout"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                padding: const EdgeInsets.symmetric(vertical: 15),
-              ),
-              onPressed: () async {
-                final shouldLogout = await showDialog<bool>(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text("Confirm Logout"),
-                    content: const Text("Are you sure you want to logout?"),
-                    actions: [
-                      TextButton(
-                        child: const Text("Cancel"),
-                        onPressed: () => Navigator.of(context).pop(false),
-                      ),
-                      TextButton(
-                        child: const Text("Logout"),
-                        onPressed: () => Navigator.of(context).pop(true),
-                      ),
-                    ],
-                  ),
-                );
-
-                if (shouldLogout == true) {
-                  await FirebaseAuth.instance.signOut();
-                  if (context.mounted) {
-                    context.go('/login');
-                  }
-                }
-              },
-            ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _confirmLogout(BuildContext context) async {
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Confirm Logout"),
+        content: const Text("Are you sure you want to logout?"),
+        actions: [
+          TextButton(
+            child: const Text("Cancel"),
+            onPressed: () => Navigator.of(context).pop(false),
+          ),
+          TextButton(
+            child: const Text("Logout"),
+            onPressed: () => Navigator.of(context).pop(true),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldLogout == true) {
+      await FirebaseAuth.instance.signOut();
+      if (context.mounted) {
+        context.go('/login');
+      }
+    }
+  }
+
+  void _showComingSoonDialog(BuildContext context, String feature) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.upcoming, color: Colors.teal),
+            SizedBox(width: 8),
+            Text('Coming Soon'),
+          ],
+        ),
+        content: Text(
+          '$feature feature is under development and will be available in a future update.',
+          style: TextStyle(fontSize: 16),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('OK', style: TextStyle(color: Colors.teal)),
+          ),
+        ],
       ),
     );
   }

@@ -1,10 +1,10 @@
-// ignore_for_file: avoid_print, use_rethrow_when_possible, use_build_context_synchronously
+// ignore_for_file: avoid_print, use_build_context_synchronously
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-class UserService {
+class UserService extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -18,70 +18,144 @@ class UserService {
     final user = _auth.currentUser;
     if (user == null) {
       _cachedUserRole = null;
+      notifyListeners(); // 🔁 Trigger router refresh
       return null;
     }
 
     try {
       final doc = await _firestore.collection('users').doc(user.uid).get();
       if (doc.exists) {
-        _cachedUserRole = doc.data()?['role'] as String?;
-        return _cachedUserRole;
+        _cachedUserRole = doc.data()?['role']?.toString().toLowerCase();
+        print("✅ User role fetched: $_cachedUserRole");
       } else {
-        _cachedUserRole = null;
-        return null;
+        // Fallback: Check custom claims if Firestore doc doesn't exist
+        final idTokenResult = await user.getIdTokenResult(true);
+        _cachedUserRole = idTokenResult.claims?['role']?.toString().toLowerCase();
+        print("⚠️ Firestore doc missing. Role from claims: $_cachedUserRole");
       }
     } catch (e) {
-      print('Error fetching user role: $e');
+      print('❌ Error fetching user role: $e');
       _cachedUserRole = null;
-      return null;
     }
+
+    notifyListeners(); // 🔁 Notify GoRouter
+    return _cachedUserRole;
   }
 
   /// Saves the user's role to Firestore and updates the cache
   Future<void> saveUserRole(String role) async {
     final user = _auth.currentUser;
-    if (user == null) {
-      throw Exception('No authenticated user found');
-    }
+    if (user == null) throw Exception('No authenticated user found');
 
     try {
       await _firestore.collection('users').doc(user.uid).update({
         'role': role,
       });
-      _cachedUserRole = role;
+      _cachedUserRole = role.toLowerCase();
+      notifyListeners(); // Keep state in sync
     } catch (e) {
-      print('Error saving user role: $e');
-      throw e;
+      print('❌ Error saving user role: $e');
+      rethrow;
     }
   }
 
-  /// Navigates to the appropriate screen based on user role
+  /// Ensures the user document exists in Firestore. Creates if missing.
+  Future<void> ensureUserDocument({required String role}) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    final userDoc = _firestore.collection('users').doc(user.uid);
+    final snapshot = await userDoc.get();
+
+    if (!snapshot.exists) {
+      await userDoc.set({
+        'uid': user.uid,
+        'email': user.email,
+        'role': role,
+        'isApproved': false,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      print('🆕 User document created in Firestore.');
+    } else {
+      print('✅ User document already exists.');
+    }
+  }
+
+  /// Navigate user based on role and approval status
   Future<void> navigateBasedOnRole(BuildContext context) async {
-    final role = _cachedUserRole ?? await fetchUserRole();
-    
-    if (role == null) {
-      // Handle case where role is not found
+    final user = _auth.currentUser;
+    if (user == null) {
       Navigator.of(context).pushReplacementNamed('/login');
       return;
     }
 
-    switch (role.toLowerCase()) {
+    final doc = await _firestore.collection('users').doc(user.uid).get();
+    String? role;
+    bool isApproved = false;
+
+    if (doc.exists) {
+      final data = doc.data();
+      role = data?['role']?.toString().toLowerCase();
+      isApproved = data?['isApproved'] == true;
+    } else {
+      
+      // Fallback for admin using custom claims
+      final idTokenResult = await user.getIdTokenResult(true);
+      role = idTokenResult.claims?['role']?.toString().toLowerCase();
+      print('📌 Role from claims: $role');
+    }
+
+    if (role == null) {
+      Navigator.of(context).pushReplacementNamed('/role_selection');
+      return;
+    }
+
+    if (role == 'chw' && !isApproved) {
+      print('⛔ CHW user not approved.');
+      Navigator.of(context).pushReplacementNamed('/approval_pending');
+      return;
+    }
+
+    switch (role) {
       case 'admin':
         Navigator.of(context).pushReplacementNamed('/admin_dashboard');
         break;
       case 'doctor':
         Navigator.of(context).pushReplacementNamed('/doctor_dashboard');
         break;
+      case 'chw':
+        Navigator.of(context).pushReplacementNamed('/chw_dashboard');
+        break;
+      case 'facility':
+        Navigator.of(context).pushReplacementNamed('/facility_dashboard');
+        break;
       case 'patient':
         Navigator.of(context).pushReplacementNamed('/patient_dashboard');
         break;
-      case 'nurse':
-        Navigator.of(context).pushReplacementNamed('/nurse_dashboard');
-        break;
       default:
-        // Handle unknown role
         Navigator.of(context).pushReplacementNamed('/role_selection');
         break;
+    }
+  }
+
+  /// Fetch full user profile data from Firestore
+  Future<Map<String, dynamic>?> fetchUserProfile() async {
+    final user = _auth.currentUser;
+    if (user == null) return null;
+
+    final doc = await _firestore.collection('users').doc(user.uid).get();
+    return doc.data();
+  }
+
+  /// Approve a user (admin use)
+  Future<void> approveUser(String userId) async {
+    try {
+      await _firestore.collection('users').doc(userId).update({
+        'isApproved': true,
+      });
+      print('✅ User approved successfully.');
+    } catch (e) {
+      print('❌ Error approving user: $e');
     }
   }
 }

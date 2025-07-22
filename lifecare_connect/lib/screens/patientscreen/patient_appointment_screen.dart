@@ -8,6 +8,8 @@ import 'package:intl/intl.dart';
 // Add this import to use isSameDay
 import 'package:table_calendar/table_calendar.dart';
 // Import isSameDay utility function
+import '../sharedscreen/Shared_Referral_Widget.dart' as referral_widget;
+import 'patient_start_consultation_screen.dart';
 
 class PatientAppointmentsScreen extends StatefulWidget {
   const PatientAppointmentsScreen({super.key});
@@ -23,7 +25,7 @@ class _PatientAppointmentsScreenState extends State<PatientAppointmentsScreen> w
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this); // Added 4th tab
+    _tabController = TabController(length: 5, vsync: this); // Added referrals tab
     _userId = FirebaseAuth.instance.currentUser?.uid ?? '';
     print("📅 PatientAppointmentsScreen loaded for UID: $_userId");
   }
@@ -42,15 +44,17 @@ class _PatientAppointmentsScreenState extends State<PatientAppointmentsScreen> w
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Appointments'),
+        title: const Text('My Appointments & Referrals'),
         backgroundColor: Colors.green.shade700,
         bottom: TabBar(
           controller: _tabController,
+          isScrollable: true, // Make tabs scrollable to fit all
           tabs: const [
             Tab(text: 'Pending'),
             Tab(text: 'Upcoming'),
             Tab(text: 'History'),
-            Tab(text: 'Calendar'), // New calendar tab
+            Tab(text: 'Calendar'),
+            Tab(text: 'Referrals'), // New referrals tab
           ],
         ),
       ),
@@ -60,7 +64,8 @@ class _PatientAppointmentsScreenState extends State<PatientAppointmentsScreen> w
           _AppointmentsList(statusFilter: 'pending', userId: _userId),
           _AppointmentsList(statusFilter: 'booked', userId: _userId),
           _AppointmentsList(statusFilter: 'completed', userId: _userId),
-          _AppointmentsCalendar(userId: _userId), // New calendar view
+          _AppointmentsCalendar(userId: _userId),
+          const referral_widget.SharedReferralWidget(role: 'patient'), // New referrals tab content
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -128,13 +133,30 @@ class _AppointmentsList extends StatelessWidget {
                   'Date: $dateStr\nDoctor: ${data['doctor'] ?? 'N/A'}\nStatus: ${data['status']}',
                 ),
                 isThreeLine: true,
-                trailing: statusFilter != 'completed'
-                    ? IconButton(
-                        icon: const Icon(Icons.cancel, color: Colors.red),
-                        tooltip: 'Cancel Appointment',
-                        onPressed: () => _cancelAppointment(context, doc.id),
+                trailing: statusFilter == 'booked'
+                    ? Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ElevatedButton.icon(
+                            icon: const Icon(Icons.video_call, size: 16),
+                            label: const Text('Start', style: TextStyle(fontSize: 12)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green.shade600,
+                              foregroundColor: Colors.white,
+                              minimumSize: const Size(80, 32),
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            ),
+                            onPressed: () => _startConsultation(context, doc.id, data),
+                          ),
+                        ],
                       )
-                    : null,
+                    : statusFilter != 'completed'
+                        ? IconButton(
+                            icon: const Icon(Icons.cancel, color: Colors.red),
+                            tooltip: 'Cancel Appointment',
+                            onPressed: () => _cancelAppointment(context, doc.id),
+                          )
+                        : null,
               ),
             );
           },
@@ -150,6 +172,21 @@ class _AppointmentsList extends StatelessWidget {
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
+  }
+
+  void _startConsultation(BuildContext context, String appointmentId, Map<String, dynamic> appointmentData) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PatientStartConsultationScreen(
+          appointmentId: appointmentId,
+          doctorName: appointmentData['doctor'] ?? 'Unknown Doctor',
+          doctorId: appointmentData['doctorId'] ?? '',
+          chwName: appointmentData['chw'],
+          chwId: appointmentData['chwId'],
+        ),
+      ),
+    );
   }
 }
 

@@ -1,0 +1,222 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 🔁 Reusable functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function getUser() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function getUserRole() {
+      return getUser().data.role;
+    }
+
+    function isApproved() {
+      return getUser().data.isApproved == true;
+    }
+
+    function isRole(role) {
+      return isAuthenticated() && getUserRole() == role && isApproved();
+    }
+
+    function isAdmin() {
+      return isRole("admin");
+    }
+
+    function isDoctor() {
+      return isRole("doctor");
+    }
+
+    function isFacility() {
+      return isRole("facility");
+    }
+
+    function isPatient() {
+      return isRole("patient");
+    }
+
+    // CHW can act without needing isApproved
+    function isCHWWithoutApproval() {
+      return isAuthenticated() && getUserRole() == "chw";
+    }
+
+    function isCHW() {
+      return isRole("chw");
+    }
+
+    // ✅ Doctors: Public read access
+    match /doctors/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ✅ Patients - UPDATED TO SUPPORT CHW HEALTH RECORD INTERACTIONS
+    match /patients/{docId} {
+      allow read: if isAdmin() || isCHWWithoutApproval() || (
+        isAuthenticated() && isApproved() &&
+        (request.auth.uid == resource.data.chwId || request.auth.uid == resource.data.userId)
+      );
+      
+      // 🆕 NEW: Allow CHWs to read patients they've created health records for
+      allow read: if isCHWWithoutApproval() && 
+        exists(/databases/$(database)/documents/health_records/$(request.auth.uid + '_' + docId));
+      
+      allow update, delete: if isAuthenticated() && isApproved() &&
+        (request.auth.uid == resource.data.chwId || request.auth.uid == resource.data.userId);
+      allow create: if isCHWWithoutApproval() && request.resource.data.chwId == request.auth.uid;
+    }
+
+    // ✅ ANC Visits
+    match /patients/{patientId}/anc_visits/{visitId} {
+      allow read, write: if isCHWWithoutApproval() &&
+        get(/databases/$(database)/documents/patients/$(patientId)).data.chwId == request.auth.uid;
+    }
+
+    // ✅ Messages
+    match /messages/{docId} {
+      allow read, write: if isAuthenticated() && isApproved();
+    }
+
+    // ✅ Appointments
+    match /appointments/{docId} {
+      allow read, write: if isAuthenticated() && isApproved();
+    }
+
+    // ✅ Referrals (Doctors & CHWs can create; Doctors can approve; Admin can read & delete)
+    match /referrals/{referralId} {
+      function isReferredBy() {
+        return request.auth.uid == resource.data.referredById;
+      }
+
+      function isReferredTo() {
+        return request.auth.uid == resource.data.referredToId;
+      }
+
+      function isApprovingReferral() {
+        return request.resource.data.status == 'approved' &&
+               request.resource.data.approvedBy == request.auth.uid;
+      }
+
+      allow read: if isAdmin() || isReferredBy() || isReferredTo();
+
+      allow create: if (isCHWWithoutApproval() || isDoctor()) &&
+                    request.resource.data.referredById == request.auth.uid;
+
+      allow update: if isDoctor() && isReferredTo() && isApprovingReferral();
+
+      allow delete: if isAdmin();
+    }
+
+    // ✅ Admin Messages
+    match /adminMessages/{docId} {
+      allow read: if isAuthenticated() && isApproved();
+      allow create, delete: if isAdmin();
+    }
+
+    // ✅ Training Materials
+    match /training_materials/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ✅ Users - UPDATED FOR ANC CHECKLIST
+    match /users/{userId} {
+      // Existing rules
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow write: if isAuthenticated() && request.auth.uid == userId;
+
+      allow update: if isAdmin() &&
+                    !(request.auth.uid == userId) &&
+                    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isApproved']);
+
+      // 🔄 New rule: Allow CHW to create patient records
+      allow create: if isAuthenticated() || request.auth.token.role == 'chw';
+      
+      // 🆕 CRITICAL: Allow CHWs to read patient users they created (fixes ANC checklist loading)
+      allow read: if isCHWWithoutApproval() && 
+        resource.data.role == 'patient' && 
+        resource.data.createdBy == request.auth.uid;
+      
+      // 🆕 Allow CHWs to create patient accounts with createdBy field
+      allow create: if isCHWWithoutApproval() && 
+        request.resource.data.role == 'patient' &&
+        request.resource.data.createdBy == request.auth.uid;
+      
+      // 🆕 Allow doctors to read patient data for health records access
+      allow read: if isDoctor() && resource.data.role == 'patient';
+
+      // 🆕 NEW: Allow CHWs to read patient users they've interacted with via health records
+      allow read: if isCHWWithoutApproval() && 
+        resource.data.role == 'patient' && 
+        exists(/databases/$(database)/documents/health_records/$(request.auth.uid + '_' + userId));
+    }
+
+    // ✅ Facilities
+    match /facilities/{facilityId} {
+      allow create: if isAuthenticated();
+      allow read, update, delete: if isAdmin();
+    }
+
+    // ✅ Staff List
+    match /staff_list/{staffId} {
+      allow read, write: if isAdmin();
+    }
+
+    // 🆕 Health Records Collection - UPDATED FOR CHW INTERACTION TRACKING
+    match /health_records/{recordId} {
+      // Patients can read their own health records
+      allow read: if isAuthenticated() && resource.data.patientUid == request.auth.uid;
+      
+      // CHWs can create and read health records for their patients
+      allow create: if isCHWWithoutApproval();
+      
+      allow read, update: if isCHWWithoutApproval() && resource.data.chwUid == request.auth.uid;
+      
+      // 🆕 NEW: Allow CHWs to query health records to find patients they've interacted with
+      allow list: if isCHWWithoutApproval();
+      
+      // Doctors can read and update health records
+      allow read, update: if isDoctor();
+      
+      // 🆕 NEW: Allow doctors to query health records for patients they've interacted with
+      allow list: if isDoctor();
+      
+      // Admins can read/write any health record
+      allow read, write: if isAdmin();
+    }
+
+    // 🔄 Referrals collection
+    match /referrals/{referralId} {
+      // Doctors can initiate referrals to facilities and CHWs, approve/reject received referrals
+      allow create: if isDoctor() && request.resource.data.fromRole == "doctor";
+      allow read, update: if isDoctor() && 
+        (resource.data.fromUserId == request.auth.uid || 
+         resource.data.toUserId == request.auth.uid);
+      allow list: if isDoctor();
+
+      // CHWs can initiate referrals to doctors and facilities, confirm receipt from doctors only
+      allow create: if isCHWWithoutApproval() && request.resource.data.fromRole == "chw";
+      allow read, update: if isCHWWithoutApproval() && 
+        (resource.data.fromUserId == request.auth.uid || 
+         (resource.data.toUserId == request.auth.uid && resource.data.fromRole == "doctor"));
+      allow list: if isCHWWithoutApproval();
+
+      // Facilities can accept/reject referrals sent to them, cannot initiate
+      allow read, update: if isFacility() && resource.data.toUserId == request.auth.uid;
+      allow list: if isFacility();
+
+      // Patients can view approved referrals involving them, can acknowledge
+      allow read, update: if isPatient() && resource.data.patientId == request.auth.uid && 
+        resource.data.status == "approved";
+      allow list: if isPatient();
+
+      // Admins can view all referrals and delete them, but cannot approve/edit/reject
+      allow read, delete: if isAdmin();
+      allow list: if isAdmin();
+    }
+  }
+}

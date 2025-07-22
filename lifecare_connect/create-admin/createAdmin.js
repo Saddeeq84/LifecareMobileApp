@@ -20,7 +20,7 @@ async function createAdmin() {
     const newUser = await admin.auth().createUser({
       email,
       password: 'admin2025',
-      emailVerified: true, // ✅ Important
+      emailVerified: true, 
     });
 
     console.log('✅ Created admin user:', newUser.uid);

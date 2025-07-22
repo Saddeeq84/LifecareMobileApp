@@ -1,4 +1,4 @@
-// ignore_for_file: use_build_context_synchronously
+// ignore_for_file: use_build_context_synchronously, prefer_const_constructors
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -10,6 +10,7 @@ import 'patient_appointment_screen.dart';
 import 'patient_education_screen.dart';
 import 'daily_health_tips_screen.dart';
 import 'patient_profile_screen.dart';
+import 'patient_consultation_screen.dart';
 import 'my_health_tab.dart';
 import 'patient_services_tab.dart';
 import '../adminScreen/admin_facility_screen.dart';
@@ -250,6 +251,21 @@ class _PatientDashboardMainViewState extends State<PatientDashboardMainView> {
           content: PatientProfileScreen(),
         ),
         const _DashboardPage(
+          title: 'Wallet',
+          icon: Icons.account_balance_wallet_outlined,
+          content: ComingSoonWidget(feature: 'Wallet'),
+        ),
+        const _DashboardPage(
+          title: 'Consultation',
+          icon: Icons.video_call_outlined,
+          content: PatientConsultationScreen(),
+        ),
+        const _DashboardPage(
+          title: 'AI Chatbot',
+          icon: Icons.smart_toy_outlined,
+          content: ComingSoonWidget(feature: 'AI Chatbot'),
+        ),
+        const _DashboardPage(
           title: 'Settings',
           icon: Icons.settings_outlined,
           content: Center(child: Text("Settings (UI only)")),
@@ -336,4 +352,53 @@ class ErrorScreen extends StatelessWidget {
   @override
   Widget build(BuildContext ctx) =>
       Scaffold(body: Center(child: Text(message, style: const TextStyle(fontSize: 16, color: Colors.red))));
+}
+
+class ComingSoonWidget extends StatelessWidget {
+  final String feature;
+  
+  const ComingSoonWidget({super.key, required this.feature});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.upcoming,
+            size: 80,
+            color: Colors.green.shade600,
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Coming Soon',
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: Colors.green.shade700,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              '$feature feature is under development and will be available in a future update.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 16,
+                color: Colors.grey,
+              ),
+            ),
+          ),
+          const SizedBox(height: 32),
+          Icon(
+            Icons.construction,
+            size: 40,
+            color: Colors.orange,
+          ),
+        ],
+      ),
+    );
+  }
 }

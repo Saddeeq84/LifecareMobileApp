@@ -40,7 +40,7 @@ class _LoginAdminScreenState extends State<LoginAdminScreen> {
       );
 
       if (user != null) {
-        // Navigate based on actual role from Firestore or claims
+        // ✅ Navigate using GoRouter based on role
         await _userService.navigateBasedOnRole(context);
       }
     } catch (e) {

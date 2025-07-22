@@ -1,6 +1,6 @@
 // lib/screens/facility/facility_dashboard.dart
 
-// ignore_for_file: use_build_context_synchronously
+// ignore_for_file: use_build_context_synchronously, prefer_const_constructors, prefer_const_literals_to_create_immutables
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart'; // Firebase authentication
@@ -21,6 +21,16 @@ class FacilityDashboard extends StatelessWidget {
           "route": "/facility_messages"
         },
         {
+          "icon": Icons.account_balance_wallet,
+          "label": "Wallet",
+          "route": "/wallet"
+        },
+        {
+          "icon": Icons.message,
+          "label": "Messages",
+          "route": "/facility_messages_chat"
+        },
+        {
           "icon": Icons.settings,
           "label": "Settings",
           "route": "/facility_settings"
@@ -39,6 +49,31 @@ class FacilityDashboard extends StatelessWidget {
         SnackBar(content: Text("Logout failed: ${e.toString()}")),
       );
     }
+  }
+
+  void _showComingSoonDialog(BuildContext context, String feature) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.upcoming, color: Colors.teal),
+            SizedBox(width: 8),
+            Text('Coming Soon'),
+          ],
+        ),
+        content: Text(
+          '$feature feature is under development and will be available in a future update.',
+          style: TextStyle(fontSize: 16),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('OK', style: TextStyle(color: Colors.teal)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -63,7 +98,15 @@ class FacilityDashboard extends StatelessWidget {
         crossAxisSpacing: 16,
         children: dashboardItems.map((item) {
           return InkWell(
-            onTap: () => Navigator.pushNamed(context, item['route']),
+            onTap: () {
+              if (item['route'] == '/wallet') {
+                _showComingSoonDialog(context, 'Wallet');
+              } else if (item['route'] == '/facility_messages_chat') {
+                _showComingSoonDialog(context, 'Messages');
+              } else {
+                Navigator.pushNamed(context, item['route']);
+              }
+            },
             child: Container(
               decoration: BoxDecoration(
                 color: Colors.teal.shade100,

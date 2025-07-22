@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:lifecare_connect/firebase_options.dart';
 
-import '../chwscreen/login_chw_screen.dart';
+import '../chwscreen/chw_login_screen.dart';
 import '../patientscreen/login_patient.dart';
 import '../adminscreen/login_admin.dart';
 import '../doctorscreen/login_doctor.dart';

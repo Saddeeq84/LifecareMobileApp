@@ -2,14 +2,19 @@
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:go_router/go_router.dart';
+import '../../services/health_records_service.dart';
 
 class ANCChecklistScreen extends StatefulWidget {
   final String? visitId;
+  final String? recordId; // For editing existing health records
   final Map<String, dynamic>? initialData;
 
   const ANCChecklistScreen({
     super.key,
     this.visitId,
+    this.recordId,
     this.initialData,
   });
 
@@ -77,64 +82,117 @@ class _ANCChecklistScreenState extends State<ANCChecklistScreen> {
 
     setState(() => _isLoading = true);
 
-    final visitData = {
-      'date': Timestamp.now(),
-      'bloodPressure': _bpController.text.trim(),
-      'weight': _weightController.text.trim(),
-      'symptoms': _symptomsController.text.trim(),
-      'medications': _medicationsController.text.trim(),
-      'nextVisitDate': _nextVisitDate != null ? Timestamp.fromDate(_nextVisitDate!) : null,
-      'notes': _notesController.text.trim(),
-      'createdAt': widget.visitId == null ? Timestamp.now() : null,
-    };
-
     try {
-      final visitsCollection = FirebaseFirestore.instance
-          .collection('patients')
-          .doc(selectedPatientId)
-          .collection('anc_visits');
-
-      if (widget.visitId == null) {
-        await visitsCollection.add(visitData);
-      } else {
-        visitData.remove('createdAt');
-        await visitsCollection.doc(widget.visitId).update(visitData);
+      // Get current CHW info
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        throw Exception('CHW not authenticated');
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(widget.visitId == null ? 'Visit added' : 'Visit updated')),
-      );
+      // Get CHW name from users collection
+      final chwDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUser.uid)
+          .get();
+      
+      final chwName = chwDoc.data()?['name'] ?? 'Unknown CHW';
 
-      Navigator.pop(context, true);
+      // Prepare ANC data
+      final ancData = {
+        'visitDate': Timestamp.now(),
+        'bloodPressure': _bpController.text.trim(),
+        'weight': _weightController.text.trim(),
+        'symptoms': _symptomsController.text.trim(),
+        'medications': _medicationsController.text.trim(),
+        'nextVisitDate': _nextVisitDate != null ? Timestamp.fromDate(_nextVisitDate!) : null,
+        'notes': _notesController.text.trim(),
+        'patientName': selectedPatientName ?? 'Unknown Patient',
+      };
+
+      if (widget.recordId != null) {
+        // Update existing health record
+        await HealthRecordsService.updateANCRecord(
+          recordId: widget.recordId!,
+          ancData: ancData,
+        );
+      } else {
+        // Create new health record
+        await HealthRecordsService.saveANCRecord(
+          patientUid: selectedPatientId!,
+          chwUid: currentUser.uid,
+          chwName: chwName,
+          ancData: ancData,
+        );
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              widget.recordId == null 
+                ? 'ANC visit saved to patient health records' 
+                : 'ANC visit updated in health records'
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        context.go('/chw_dashboard');
+      }
     } catch (e) {
       debugPrint('Error saving ANC visit: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: ${e.toString()}")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Error: ${e.toString()}"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
   Future<List<Map<String, dynamic>>> _fetchPatients() async {
-    final snapshot = await FirebaseFirestore.instance.collection('patients').get();
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return [];
+
+    // Get patients created by this CHW or all patients if admin
+    final snapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .where('role', isEqualTo: 'patient')
+        .where('createdBy', isEqualTo: currentUser.uid)
+        .get();
+    
     return snapshot.docs.map((doc) {
       final data = doc.data();
       return {
         'id': doc.id,
-        'name': data['name'] ?? 'Unnamed',
+        'name': data['name'] ?? 'Unnamed Patient',
+        'email': data['email'] ?? '',
+        'phone': data['phone'] ?? '',
       };
     }).toList();
   }
 
   @override
   Widget build(BuildContext context) {
-    final isEditing = widget.visitId != null;
+    final isEditing = widget.recordId != null;
 
     return Scaffold(
       appBar: AppBar(
         title: Text("ANC Checklist ${isEditing ? "(Edit)" : ""}"),
         backgroundColor: Colors.teal,
+        foregroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            context.go('/chw_dashboard');
+          },
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -204,9 +262,25 @@ class _ANCChecklistScreenState extends State<ANCChecklistScreen> {
                   const SizedBox(height: 24),
                   _isLoading
                       ? const Center(child: CircularProgressIndicator())
-                      : ElevatedButton(
-                          onPressed: _submitForm,
-                          child: const Text("Save Visit"),
+                      : Column(
+                          children: [
+                            ElevatedButton(
+                              onPressed: _submitForm,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.teal,
+                                foregroundColor: Colors.white,
+                                minimumSize: const Size(double.infinity, 48),
+                              ),
+                              child: const Text("Save Visit"),
+                            ),
+                            const SizedBox(height: 12),
+                            TextButton(
+                              onPressed: () {
+                                context.go('/chw_dashboard');
+                              },
+                              child: const Text("Back to Dashboard"),
+                            ),
+                          ],
                         ),
                 ],
               ),

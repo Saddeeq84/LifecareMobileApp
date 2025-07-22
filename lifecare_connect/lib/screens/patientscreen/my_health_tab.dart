@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:lifecare_connect/screens/patientScreen/my_health_record_details.dart';
+import 'package:lifecare_connect/screens/patientscreen/my_health_record_details.dart';
+import '../../services/health_records_service.dart';
 
 class MyHealthTab extends StatefulWidget {
   const MyHealthTab({super.key});
@@ -62,14 +63,47 @@ class _MyHealthTabState extends State<MyHealthTab> {
           actions: [
             TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
             ElevatedButton(
-              onPressed: () {
-                formKey.currentState?.save();
-                setState(() {
-                  selfReportedVitals = Map.from(tempVitals);
-                });
-                Navigator.pop(context);
+              onPressed: () async {
+                if (formKey.currentState!.validate()) {
+                  formKey.currentState!.save();
+                  
+                  // Filter out empty values
+                  final filteredVitals = Map<String, dynamic>.from(tempVitals)
+                    ..removeWhere((key, value) => value.isEmpty);
+                  
+                  if (filteredVitals.isNotEmpty && currentUser != null) {
+                    try {
+                      await HealthRecordsService.saveSelfReportedVitals(
+                        patientUid: currentUser!.uid,
+                        vitalsData: filteredVitals,
+                      );
+                      
+                      setState(() {
+                        selfReportedVitals = Map.from(filteredVitals);
+                      });
+                      
+                      Navigator.pop(context);
+                      
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Vitals saved to your health records'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error saving vitals: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  } else {
+                    Navigator.pop(context);
+                  }
+                }
               },
-              child: const Text('Save'),
+              child: const Text('Save to Health Records'),
             ),
           ],
         );
@@ -93,59 +127,100 @@ class _MyHealthTabState extends State<MyHealthTab> {
       return const Center(child: Text('User not logged in.'));
     }
 
-    final healthRecordsRef = FirebaseFirestore.instance
-        .collection('patients')
-        .doc(currentUser!.uid)
-        .collection('health_records')
-        .orderBy('date', descending: true);
-
-    final ancRef = FirebaseFirestore.instance
-        .collection('patients')
-        .doc(currentUser!.uid)
-        .collection('anc_visits')
-        .orderBy('date', descending: true);
-
     return Scaffold(
-      appBar: AppBar(title: const Text("My Health Dashboard")),
+      appBar: AppBar(
+        title: const Text("My Health Dashboard"),
+        backgroundColor: Colors.teal,
+        foregroundColor: Colors.white,
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
+            // Centralized Health Records
             StreamBuilder<QuerySnapshot>(
-              stream: healthRecordsRef.snapshots(),
+              stream: HealthRecordsService.getPatientHealthRecords(currentUser!.uid),
               builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) return const CircularProgressIndicator();
-                if (snapshot.hasError) return Text("Error: ${snapshot.error}");
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Text("Error: ${snapshot.error}");
+                }
+                
                 final docs = snapshot.data?.docs ?? [];
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildSectionTitle("ANC / Health Records", Icons.folder_shared),
+                    _buildSectionTitle("My Health Records", Icons.folder_shared),
                     if (docs.isEmpty)
-                      const Text("No health records found.")
+                      const Card(
+                        child: Padding(
+                          padding: EdgeInsets.all(16.0),
+                          child: Text("No health records found. Your CHW or doctor visits will appear here."),
+                        ),
+                      )
                     else
                       ...docs.map((doc) {
                         final data = doc.data() as Map<String, dynamic>;
+                        final recordType = data['type'] ?? 'Unknown';
                         final date = (data['date'] as Timestamp?)?.toDate();
-                        final description = data['description'] ?? 'No description';
-                        final value = data['value'] ?? '';
+                        final providerName = data['providerName'] ?? 'Unknown Provider';
+                        final providerType = data['providerType'] ?? '';
+                        
+                        // Get specific info based on record type
+                        String subtitle = '';
+                        IconData icon = Icons.medical_information;
+                        
+                        if (recordType == 'ANC_VISIT') {
+                          final ancData = data['data'] as Map<String, dynamic>? ?? {};
+                          final bp = ancData['bloodPressure'] ?? 'N/A';
+                          final weight = ancData['weight'] ?? 'N/A';
+                          subtitle = 'BP: $bp | Weight: ${weight}kg';
+                          icon = Icons.pregnant_woman;
+                        } else if (recordType == 'SELF_REPORTED_VITALS') {
+                          subtitle = 'Self-reported vital signs';
+                          icon = Icons.monitor_heart;
+                        }
+                        
                         return Card(
+                          margin: const EdgeInsets.only(bottom: 8.0),
                           child: ListTile(
-                            title: Text(description),
-                            subtitle: Text("Value: $value\nDate: ${date?.toLocal().toString().split(' ')[0] ?? 'Unknown'}"),
+                            leading: CircleAvatar(
+                              backgroundColor: Colors.teal.shade100,
+                              child: Icon(icon, color: Colors.teal),
+                            ),
+                            title: Text(
+                              recordType.replaceAll('_', ' '),
+                              style: const TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(subtitle),
+                                Text(
+                                  'By: $providerName ($providerType)',
+                                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                ),
+                                Text(
+                                  'Date: ${date?.toLocal().toString().split(' ')[0] ?? 'Unknown'}',
+                                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                ),
+                              ],
+                            ),
                             onTap: () {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
                                   builder: (_) => MyHealthRecordDetails(
-                                    userUid: currentUser!.uid,
                                     recordId: doc.id,
-                                    recordDescription: description,
+                                    recordType: recordType,
                                   ),
                                 ),
                               );
                             },
+                            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                           ),
                         );
                       }).toList(),
@@ -155,41 +230,11 @@ class _MyHealthTabState extends State<MyHealthTab> {
             ),
 
             const SizedBox(height: 20),
-            _buildSectionTitle("ANC Visit Records", Icons.pregnant_woman),
-            StreamBuilder<QuerySnapshot>(
-              stream: ancRef.snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) return const CircularProgressIndicator();
-                if (snapshot.hasError) return Text("Error loading ANC data: ${snapshot.error}");
-
-                final docs = snapshot.data?.docs ?? [];
-                if (docs.isEmpty) return const Text("No ANC visits found.");
-
-                return ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: docs.length,
-                  itemBuilder: (context, index) {
-                    final data = docs[index].data() as Map<String, dynamic>;
-                    final date = (data['date'] as Timestamp?)?.toDate();
-                    final bp = data['bloodPressure'] ?? '';
-                    final weight = data['weight'] ?? '';
-                    return Card(
-                      child: ListTile(
-                        title: Text("Date: ${date?.toLocal().toString().split(' ')[0] ?? 'Unknown'}"),
-                        subtitle: Text("BP: $bp | Weight: $weight"),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-
-            const SizedBox(height: 20),
             _buildSectionTitle("Self-Reported Vitals", Icons.monitor_heart),
             _buildVitalsCard(),
             _buildAddVitalsButton(context),
 
+            const SizedBox(height: 20),
             _buildSectionTitle("Local Lab Uploads", Icons.upload_file),
             _buildUploadButton(context),
             _buildListCard(uploadedLabResults),

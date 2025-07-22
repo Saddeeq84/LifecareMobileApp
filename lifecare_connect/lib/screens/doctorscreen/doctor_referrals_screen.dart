@@ -10,19 +10,49 @@ class DoctorReferralsScreen extends StatefulWidget {
   State<DoctorReferralsScreen> createState() => _DoctorReferralsScreenState();
 }
 
-class _DoctorReferralsScreenState extends State<DoctorReferralsScreen>
-    with SingleTickerProviderStateMixin {
+class _DoctorReferralsScreenState extends State<DoctorReferralsScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
   void initState() {
-    _tabController = TabController(length: 2, vsync: this);
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
   }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Review Referrals"),
+        backgroundColor: Colors.indigo,
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: "Pending"),
+            Tab(text: "Reviewed"),
+          ],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _buildReferralList(isReviewed: false),
+          _buildReferralList(isReviewed: true),
+        ],
+      ),
+    );
+  }
+}
 
   /// Handles the doctor's decision on a referral (Accept or Reject).
   Future<void> _handleReferralDecision(
-      DocumentSnapshot referralDoc, String decision) async {
+      BuildContext context, DocumentSnapshot referralDoc, String decision) async {
     try {
       await referralDoc.reference.update({
         'status': decision,
@@ -41,7 +71,7 @@ class _DoctorReferralsScreenState extends State<DoctorReferralsScreen>
 
   /// Builds each referral card item with action buttons.
   Widget _buildReferralCard(
-      Map<String, dynamic> data, DocumentSnapshot doc,
+      BuildContext context, Map<String, dynamic> data, DocumentSnapshot doc,
       {bool isReviewed = false}) {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -64,13 +94,13 @@ class _DoctorReferralsScreenState extends State<DoctorReferralsScreen>
                     icon: const Icon(Icons.check_circle, color: Colors.green),
                     tooltip: "Accept",
                     onPressed: () =>
-                        _handleReferralDecision(doc, 'Accepted'),
+                        _handleReferralDecision(context, doc, 'Accepted'),
                   ),
                   IconButton(
                     icon: const Icon(Icons.cancel, color: Colors.red),
                     tooltip: "Reject",
                     onPressed: () =>
-                        _handleReferralDecision(doc, 'Rejected'),
+                        _handleReferralDecision(context, doc, 'Rejected'),
                   ),
                 ],
               ),
@@ -110,41 +140,10 @@ class _DoctorReferralsScreenState extends State<DoctorReferralsScreen>
           itemBuilder: (context, index) {
             final doc = docs[index];
             final data = doc.data() as Map<String, dynamic>;
-            return _buildReferralCard(data, doc, isReviewed: isReviewed);
+            return _buildReferralCard(context, data, doc, isReviewed: isReviewed);
           },
         );
       },
     );
   }
 
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  /// Main UI build
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Review Referrals"),
-        backgroundColor: Colors.indigo,
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(text: "Pending"),
-            Tab(text: "Reviewed"),
-          ],
-        ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildReferralList(isReviewed: false),
-          _buildReferralList(isReviewed: true),
-        ],
-      ),
-    );
-  }
-}

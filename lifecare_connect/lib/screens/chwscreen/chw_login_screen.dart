@@ -1,7 +1,8 @@
-// ignore_for_file: use_build_context_synchronously
+// ignore_for_file: use_build_context_synchronously, avoid_print
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
 import '../../services/auth_service.dart';
 import '../../services/user_service.dart';
 import '../sharedScreen/register_role_selection.dart';
@@ -25,6 +26,20 @@ class _CHWLoginScreenState extends State<CHWLoginScreen> {
   bool obscurePassword = true;
 
   @override
+  void initState() {
+    super.initState();
+    _initializeFirebase();
+  }
+
+  Future<void> _initializeFirebase() async {
+    try {
+      await Firebase.initializeApp();
+    } catch (e) {
+      _showSnackBar('Firebase init failed: $e');
+    }
+  }
+
+  @override
   void dispose() {
     emailController.dispose();
     passwordController.dispose();
@@ -33,6 +48,7 @@ class _CHWLoginScreenState extends State<CHWLoginScreen> {
 
   Future<void> handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
+
     setState(() => isLoading = true);
 
     try {
@@ -41,44 +57,51 @@ class _CHWLoginScreenState extends State<CHWLoginScreen> {
         passwordController.text.trim(),
       );
 
-      if (user != null) {
-        if (!user.emailVerified) {
-          _showSnackBar('Please verify your email before logging in.');
-          setState(() => isLoading = false);
-          return;
-        }
-
-        final doc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .get();
-
-        if (!doc.exists) {
-          _showSnackBar('User record not found.');
-          setState(() => isLoading = false);
-          return;
-        }
-
-        final data = doc.data();
-        final role = data?['role'] ?? '';
-        final isApproved = data?['isApproved'] ?? false;
-
-        // For CHW, doctor, and facility - require approval
-        if (role == 'chw' || role == 'doctor' || role == 'facility') {
-          if (!isApproved) {
-            _showSnackBar('Your account is pending approval by the admin.');
-            setState(() => isLoading = false);
-            return;
-          }
-        }
-
-        await _userService.saveUserRole(role);
-        await _userService.navigateBasedOnRole(context);
+      if (user == null) {
+        _showSnackBar('Login failed. Try again.');
+        setState(() => isLoading = false);
+        return;
       }
+
+      if (!user.emailVerified) {
+        _showSnackBar('Please verify your email before logging in.');
+        setState(() => isLoading = false);
+        return;
+      }
+
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      if (!doc.exists || doc.data() == null) {
+        _showSnackBar('No user profile found. Contact admin.');
+        setState(() => isLoading = false);
+        return;
+      }
+
+      final data = doc.data()!;
+      final role = data['role'];
+      final isApproved = data['isApproved'] ?? false;
+
+      if (role == null || role.toString().trim().isEmpty) {
+        _showSnackBar('No role assigned to this account. Contact admin.');
+        setState(() => isLoading = false);
+        return;
+      }
+
+      if (['chw', 'doctor', 'facility'].contains(role) && !isApproved) {
+        _showSnackBar('Your account is pending admin approval.');
+        setState(() => isLoading = false);
+        return;
+      }
+
+      print('✅ CHW role detected: $role');
+      await _userService.saveUserRole(role);
+      await _userService.navigateBasedOnRole(context);
     } catch (e) {
-      _showSnackBar('Login failed: ${e.toString()}');
-    } finally {
-      if (mounted) setState(() => isLoading = false);
+      _showSnackBar('Login failed: ${_extractMessage(e)}');
+      setState(() => isLoading = false);
     }
   }
 
@@ -87,32 +110,39 @@ class _CHWLoginScreenState extends State<CHWLoginScreen> {
 
     try {
       final user = await _authService.signInWithGoogle();
-      if (user != null) {
-        final doc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .get();
-
-        final data = doc.data();
-        final role = data?['role'] ?? '';
-        final isApproved = data?['isApproved'] ?? false;
-
-        if (role == 'chw' || role == 'doctor' || role == 'facility') {
-          if (!isApproved) {
-            _showSnackBar('Your account is pending approval by the admin.');
-            await _authService.signOut();
-            setState(() => isLoading = false);
-            return;
-          }
-        }
-
-        await _userService.saveUserRole(role);
-        await _userService.navigateBasedOnRole(context);
+      if (user == null) {
+        setState(() => isLoading = false);
+        return;
       }
+
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      final data = doc.data() ?? {};
+      final role = data['role'];
+      final isApproved = data['isApproved'] ?? false;
+
+      if (role == null || role.toString().trim().isEmpty) {
+        _showSnackBar('No role assigned to this account. Contact admin.');
+        setState(() => isLoading = false);
+        return;
+      }
+
+      if (['chw', 'doctor', 'facility'].contains(role) && !isApproved) {
+        _showSnackBar('Your account is pending admin approval.');
+        await _authService.signOut();
+        setState(() => isLoading = false);
+        return;
+      }
+
+      print('✅ Google login role: $role');
+      await _userService.saveUserRole(role);
+      await _userService.navigateBasedOnRole(context);
     } catch (e) {
-      _showSnackBar('Google sign-in failed: ${e.toString()}');
-    } finally {
-      if (mounted) setState(() => isLoading = false);
+      _showSnackBar('Google sign-in failed: ${_extractMessage(e)}');
+      setState(() => isLoading = false);
     }
   }
 
@@ -127,7 +157,7 @@ class _CHWLoginScreenState extends State<CHWLoginScreen> {
       await _authService.sendPasswordReset(email);
       _showSnackBar('Password reset email sent.');
     } catch (e) {
-      _showSnackBar('Failed to send reset email: ${e.toString()}');
+      _showSnackBar('Failed to send reset email: ${_extractMessage(e)}');
     }
   }
 
@@ -138,11 +168,15 @@ class _CHWLoginScreenState extends State<CHWLoginScreen> {
         await user.sendEmailVerification();
         _showSnackBar('Verification email sent.');
       } else {
-        _showSnackBar('Email is already verified or no user signed in.');
+        _showSnackBar('Email is already verified or not signed in.');
       }
     } catch (e) {
-      _showSnackBar('Could not send verification email: ${e.toString()}');
+      _showSnackBar('Could not send verification email: ${_extractMessage(e)}');
     }
+  }
+
+  String _extractMessage(dynamic e) {
+    return e.toString().replaceFirst('Exception: ', '');
   }
 
   void _showSnackBar(String message) {
@@ -157,10 +191,7 @@ class _CHWLoginScreenState extends State<CHWLoginScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'CHW Login',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
+        title: const Text('CHW Login'),
         backgroundColor: Colors.teal,
       ),
       body: SingleChildScrollView(

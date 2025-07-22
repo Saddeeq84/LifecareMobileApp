@@ -1,7 +1,8 @@
-// ignore_for_file: prefer_const_constructors, use_build_context_synchronously
+// ignore_for_file: prefer_const_constructors, use_build_context_synchronously, prefer_const_literals_to_create_immutables
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'doctor_consultation_screen.dart';
 
 class DoctorDashboard extends StatelessWidget {
   const DoctorDashboard({super.key});
@@ -15,6 +16,31 @@ class DoctorDashboard extends StatelessWidget {
         SnackBar(content: Text('Logout failed: \$e')),
       );
     }
+  }
+
+  void _showComingSoonDialog(BuildContext context, String feature) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.upcoming, color: Colors.indigo),
+            SizedBox(width: 8),
+            Text('Coming Soon'),
+          ],
+        ),
+        content: Text(
+          '$feature feature is under development and will be available in a future update.',
+          style: TextStyle(fontSize: 16),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('OK', style: TextStyle(color: Colors.indigo)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -63,7 +89,16 @@ class DoctorDashboard extends StatelessWidget {
                     icon: item.icon,
                     label: item.label,
                     onTap: () {
-                      Navigator.pushNamed(context, item.route);
+                      if (item.route == '/wallet') {
+                        _showComingSoonDialog(context, 'Wallet');
+                      } else if (item.route == '/consultation') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const DoctorConsultationScreen()),
+                        );
+                      } else {
+                        Navigator.pushNamed(context, item.route);
+                      }
                     },
                   );
                 },
@@ -168,7 +203,16 @@ const List<DashboardItem> _doctorDashboardItems = [
     label: 'Reports & Analytics',
     route: '/doctor_reports',
   ),
-  // Removed chat/messages tab
+  DashboardItem(
+    icon: Icons.account_balance_wallet,
+    label: 'Wallet',
+    route: '/wallet',
+  ),
+  DashboardItem(
+    icon: Icons.video_call,
+    label: 'Consultation',
+    route: '/consultation',
+  ),
   DashboardItem(
     icon: Icons.person,
     label: 'Profile',
