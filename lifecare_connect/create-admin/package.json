@@ -1,14 +1,18 @@
 {
-  "name": "create-admin",
+  "name": "lifecare-admin-utils",
   "version": "1.0.0",
-  "main": "index.js",
+  "description": "Firebase admin utilities for LifeCare Connect",
+  "main": "admin-utils.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "admin": "node admin-utils.js admin",
+    "facilities": "node admin-utils.js facilities",
+    "training": "node admin-utils.js training",
+    "setup": "node admin-utils.js all",
+    "test": "echo \"No tests specified\" && exit 0"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
+  "keywords": ["firebase", "admin", "healthcare", "lifecare"],
+  "author": "LifeCare Connect Team",
+  "license": "MIT",
   "dependencies": {
     "firebase-admin": "^13.4.0"
   }

@@ -1,0 +1,124 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 🔧 UTILITY FUNCTIONS
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function getUser() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function getUserRole() {
+      return getUser().role;
+    }
+
+    function isApproved() {
+      return getUser().isApproved == true;
+    }
+
+    function isRole(role) {
+      return isAuthenticated() && getUserRole() == role && isApproved();
+    }
+
+    function isAdmin() {
+      return isRole("admin");
+    }
+
+    function isDoctor() {
+      return isRole("doctor");
+    }
+
+    function isFacility() {
+      return isRole("facility");
+    }
+
+    function isPatient() {
+      return isRole("patient");
+    }
+
+    function isCHW() {
+      return isRole("chw");
+    }
+
+    // CHW can act without needing isApproved
+    function isCHWWithoutApproval() {
+      return isAuthenticated() && getUserRole() == "chw";
+    }
+
+    function isSuperAdmin() {
+      return isAuthenticated() && getUserRole() == "superadmin";
+    }
+
+    // 👥 USERS COLLECTION
+    match /users/{userId} {
+      // Users can read and update their own data
+      allow read, update: if isAuthenticated() && request.auth.uid == userId;
+      
+      // Admin can read and write all user data
+      allow read, write: if isAdmin();
+      
+      // Only admins can create user profiles (during registration)
+      allow create: if isAdmin() || request.auth.uid == userId;
+      
+      // Healthcare providers can read other user profiles for patient management
+      allow read: if isAuthenticated() && (isDoctor() || isCHWWithoutApproval() || isFacility());
+      
+      // CHW can create patient profiles
+      allow create: if isCHWWithoutApproval() && 
+        request.resource.data.role == 'patient' &&
+        request.resource.data.createdBy == request.auth.uid;
+      
+      // Only admin can delete user profiles
+      allow delete: if isAdmin();
+      
+      // List permissions for specific user types
+      allow list: if isAuthenticated() && (isAdmin() || isDoctor() || isCHWWithoutApproval() || isFacility());
+    }
+
+    // 📚 TRAINING MATERIALS COLLECTION - RELAXED FOR DEBUGGING
+    match /training_materials/{materialId} {
+      // TEMPORARY: Allow all authenticated users to read for debugging
+      allow read, list: if isAuthenticated();
+      
+      // Admin can create, update, and delete training materials
+      allow write, delete: if isAdmin();
+      
+      // CHWs can update download count and completion status only
+      allow update: if isCHWWithoutApproval() && 
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['downloadCount', 'completionStatus', 'lastAccessedBy', 'lastAccessedAt', 'viewCount']);
+    }
+
+    // 📅 APPOINTMENTS COLLECTION
+    match /appointments/{appointmentId} {
+      // Patient access - can create and view their own appointments (more permissive)
+      allow create: if isAuthenticated() && request.resource.data.patientId == request.auth.uid;
+      allow read: if isAuthenticated() && resource.data.patientId == request.auth.uid;
+      
+      // Healthcare provider access - can view and manage appointments
+      allow read, update: if (isDoctor() || isCHWWithoutApproval() || isFacility()) && 
+        (resource.data.facilityId == request.auth.uid || 
+         resource.data.doctorId == request.auth.uid ||
+         resource.data.chwId == request.auth.uid ||
+         resource.data.providerId == request.auth.uid);
+      
+      // CHW specific access for appointments they handle
+      allow create: if isCHWWithoutApproval() && 
+        (request.resource.data.chwId == request.auth.uid ||
+         request.resource.data.providerId == request.auth.uid);
+      
+      // Admin full access
+      allow read, write, delete: if isAdmin();
+      
+      // List permissions for all authenticated users
+      allow list: if isAuthenticated();
+    }
+
+    // All other collections with basic rules...
+    match /{document=**} {
+      allow read, write: if isAuthenticated();
+    }
+  }
+}
