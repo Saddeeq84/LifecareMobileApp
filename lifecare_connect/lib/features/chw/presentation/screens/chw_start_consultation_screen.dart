@@ -2,11 +2,13 @@
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'chw_anc_pnc_consultation_screen.dart';
 
 class CHWStartConsultationScreen extends StatelessWidget {
   final String appointmentId;
   final String patientName;
   final String patientId;
+  final String appointmentType;
   final String? doctorName;
   final String? doctorId;
 
@@ -15,11 +17,28 @@ class CHWStartConsultationScreen extends StatelessWidget {
     required this.appointmentId,
     required this.patientName,
     required this.patientId,
+    required this.appointmentType,
     this.doctorName,
     this.doctorId,
   });
 
-  void _showConsultationMethodDialog(BuildContext context) {
+  void _showConsultationMethodDialog(BuildContext context, String appointmentType) {
+    // If ANC or PNC, route to guide screen, else show regular consultation options
+    final lowerType = appointmentType.toLowerCase();
+    if (lowerType.contains('anc') || lowerType.contains('antenatal') || lowerType.contains('pnc') || lowerType.contains('postnatal')) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => CHWAncPncConsultationScreen(
+            appointmentId: appointmentId,
+            patientId: patientId,
+            patientName: patientName,
+            appointmentType: appointmentType,
+          ),
+        ),
+      );
+      return;
+    }
+    // ...existing code for regular consultation method selection...
     showModalBottomSheet(
       context: context,
       shape: RoundedRectangleBorder(
@@ -59,7 +78,6 @@ class CHWStartConsultationScreen extends StatelessWidget {
                 subtitle: Text('Start a text-based consultation'),
                 onTap: () {
                   Navigator.pop(context);
-                  // Open chat for this specific patient
                   GoRouter.of(context).pushNamed(
                     'chw-messages',
                     extra: {
@@ -174,7 +192,7 @@ class CHWStartConsultationScreen extends StatelessWidget {
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
-                  onPressed: () => _showConsultationMethodDialog(context),
+                  onPressed: () => _showConsultationMethodDialog(context, appointmentType),
                 ),
               ),
               const SizedBox(height: 16),

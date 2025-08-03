@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import '../../../shared/data/services/health_records_service.dart';
+import '../../../shared/helpers/chw_message_helper.dart';
 
 class CHWConsultationDetailsScreen extends StatefulWidget {
   final String appointmentId;
@@ -214,7 +215,8 @@ class _CHWConsultationDetailsScreenState extends State<CHWConsultationDetailsScr
       final currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser == null) throw Exception('User not authenticated');
 
-      final consultationData = {
+      // Compose unified health record data
+      final healthRecordData = {
         'appointmentId': widget.appointmentId,
         'patientId': widget.patientId,
         'patientName': widget.patientName,
@@ -226,15 +228,18 @@ class _CHWConsultationDetailsScreenState extends State<CHWConsultationDetailsScr
         'notes': _notesController.text.trim(),
         'prescriptions': _prescriptions,
         'labRequests': _labRequests,
-        'consultationDate': FieldValue.serverTimestamp(),
+        'consultationDate': DateTime.now().toIso8601String(),
         'createdAt': FieldValue.serverTimestamp(),
         'status': 'completed',
       };
 
-      // Save consultation
-      await FirebaseFirestore.instance
-          .collection('consultations')
-          .add(consultationData);
+      // Save unified record to health_records only
+      await HealthRecordsService.saveCHWConsultation(
+        patientUid: widget.patientId,
+        chwUid: currentUser.uid,
+        chwName: 'Community Health Worker',
+        consultationData: healthRecordData,
+      );
 
       // Update appointment status
       await FirebaseFirestore.instance
@@ -246,54 +251,20 @@ class _CHWConsultationDetailsScreenState extends State<CHWConsultationDetailsScr
         'completedAt': FieldValue.serverTimestamp(),
       });
 
-      // Save individual prescriptions if any
-      for (final prescription in _prescriptions) {
-        await FirebaseFirestore.instance
-            .collection('prescriptions')
-            .add({
-          ...prescription,
-          'appointmentId': widget.appointmentId,
-          'patientId': widget.patientId,
-          'patientName': widget.patientName,
-          'chwId': currentUser.uid,
-          'createdAt': FieldValue.serverTimestamp(),
-          'status': 'active',
-        });
+      // Notify patient about new vitals, prescriptions, and lab requests
+      try {
+        if (_vitalsController.text.trim().isNotEmpty) {
+          await CHWMessageHelper.sendHealthRecordUpdateToPatient(widget.patientId, 'vitals', _vitalsController.text.trim());
+        }
+        if (_prescriptions.isNotEmpty) {
+          await CHWMessageHelper.sendHealthRecordUpdateToPatient(widget.patientId, 'prescription', 'New prescription(s) added.');
+        }
+        if (_labRequests.isNotEmpty) {
+          await CHWMessageHelper.sendHealthRecordUpdateToPatient(widget.patientId, 'lab', 'New lab/radiology request(s) added.');
+        }
+      } catch (e) {
+        debugPrint('Error sending health record update to patient: $e');
       }
-
-      // Save individual lab/radiology requests if any
-      for (final request in _labRequests) {
-        await FirebaseFirestore.instance
-            .collection('lab_requests')
-            .add({
-          ...request,
-          'appointmentId': widget.appointmentId,
-          'patientId': widget.patientId,
-          'patientName': widget.patientName,
-          'chwId': currentUser.uid,
-          'createdAt': FieldValue.serverTimestamp(),
-        });
-      }
-
-      // Add to patient's health records using HealthRecordsService
-      final healthRecordData = {
-        'symptoms': _symptomsController.text.trim(),
-        'diagnosis': _diagnosisController.text.trim(),
-        'treatment': _treatmentController.text.trim(),
-        'vitals': _vitalsController.text.trim(),
-        'prescriptions': _prescriptions,
-        'labRequests': _labRequests,
-        'appointmentId': widget.appointmentId,
-        'patientName': widget.patientName,
-        'consultationDate': DateTime.now().toIso8601String(),
-      };
-
-      await HealthRecordsService.saveCHWConsultation(
-        patientUid: widget.patientId,
-        chwUid: currentUser.uid,
-        chwName: 'Community Health Worker',
-        consultationData: healthRecordData,
-      );
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -434,50 +405,55 @@ class _CHWConsultationDetailsScreenState extends State<CHWConsultationDetailsScr
                     color: Colors.blue.shade50,
                     child: Padding(
                       padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      child: Row(
                         children: [
-                          Row(
-                            children: [
-                              Icon(Icons.medication, color: Colors.blue.shade700),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Prescriptions',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.blue.shade700,
+                          Icon(Icons.medication, color: Colors.blue.shade700),
+                          const SizedBox(width: 8),
+                          // Counter icon for prescriptions
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.shade100,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.format_list_numbered, color: Colors.blue.shade700, size: 18),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${_prescriptions.length}',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.blue.shade700,
+                                  ),
                                 ),
-                              ),
-                              Spacer(),
-                              Text(
-                                '${_prescriptions.length}',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.blue.shade700,
-                                ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                          SizedBox(height: 8),
-                          if (_prescriptions.isNotEmpty) ...[
-                            Text(
-                              _prescriptions[0]['medication'] ?? '',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            Text(
-                              '${_prescriptions[0]['dosage'] ?? ''} - ${_prescriptions[0]['frequency'] ?? ''}',
-                              style: TextStyle(fontSize: 13),
-                            ),
-                            if ((_prescriptions[0]['instructions'] ?? '').isNotEmpty)
-                              Text(
-                                'Note: ${_prescriptions[0]['instructions']}',
-                                style: TextStyle(fontSize: 12, color: Colors.black54),
-                              ),
-                          ] else ...[
-                            Text('No prescriptions added', style: TextStyle(fontSize: 13, color: Colors.black54)),
-                          ],
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _prescriptions.isNotEmpty
+                              ? Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _prescriptions[0]['medication'] ?? '',
+                                      style: TextStyle(fontWeight: FontWeight.bold),
+                                    ),
+                                    Text(
+                                      '${_prescriptions[0]['dosage'] ?? ''} - ${_prescriptions[0]['frequency'] ?? ''}',
+                                      style: TextStyle(fontSize: 13),
+                                    ),
+                                    if ((_prescriptions[0]['instructions'] ?? '').isNotEmpty)
+                                      Text(
+                                        'Note: ${_prescriptions[0]['instructions']}',
+                                        style: TextStyle(fontSize: 12, color: Colors.black54),
+                                      ),
+                                  ],
+                                )
+                              : Text('No prescriptions added', style: TextStyle(fontSize: 13, color: Colors.black54)),
+                          ),
                         ],
                       ),
                     ),
@@ -489,50 +465,55 @@ class _CHWConsultationDetailsScreenState extends State<CHWConsultationDetailsScr
                     color: Colors.orange.shade50,
                     child: Padding(
                       padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      child: Row(
                         children: [
-                          Row(
-                            children: [
-                              Icon(Icons.science, color: Colors.orange.shade700),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Lab/Radiology',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.orange.shade700,
+                          Icon(Icons.science, color: Colors.orange.shade700),
+                          const SizedBox(width: 8),
+                          // Counter icon for lab/radiology
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.shade100,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.format_list_numbered, color: Colors.orange.shade700, size: 18),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${_labRequests.length}',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.orange.shade700,
+                                  ),
                                 ),
-                              ),
-                              Spacer(),
-                              Text(
-                                '${_labRequests.length}',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.orange.shade700,
-                                ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                          SizedBox(height: 8),
-                          if (_labRequests.isNotEmpty) ...[
-                            Text(
-                              _labRequests[0]['requestType'] ?? '',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            Text(
-                              'Indication: ${_labRequests[0]['reason'] ?? ''}',
-                              style: TextStyle(fontSize: 13),
-                            ),
-                            if ((_labRequests[0]['facility'] ?? '').isNotEmpty)
-                              Text(
-                                'Facility: ${_labRequests[0]['facility']}',
-                                style: TextStyle(fontSize: 12, color: Colors.black54),
-                              ),
-                          ] else ...[
-                            Text('No lab/radiology requests', style: TextStyle(fontSize: 13, color: Colors.black54)),
-                          ],
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _labRequests.isNotEmpty
+                              ? Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _labRequests[0]['requestType'] ?? '',
+                                      style: TextStyle(fontWeight: FontWeight.bold),
+                                    ),
+                                    Text(
+                                      'Indication: ${_labRequests[0]['reason'] ?? ''}',
+                                      style: TextStyle(fontSize: 13),
+                                    ),
+                                    if ((_labRequests[0]['facility'] ?? '').isNotEmpty)
+                                      Text(
+                                        'Facility: ${_labRequests[0]['facility']}',
+                                        style: TextStyle(fontSize: 12, color: Colors.black54),
+                                      ),
+                                  ],
+                                )
+                              : Text('No lab/radiology requests', style: TextStyle(fontSize: 13, color: Colors.black54)),
+                          ),
                         ],
                       ),
                     ),

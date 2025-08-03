@@ -20,13 +20,14 @@ class _PatientServiceRequestMainScreenState extends State<PatientServiceRequestM
 
   final categories = [
     {'type': 'hospital', 'label': 'Hospitals', 'icon': Icons.local_hospital},
+    {'type': 'clinic', 'label': 'Clinics', 'icon': Icons.local_hospital},
     {'type': 'laboratory', 'label': 'Laboratories', 'icon': Icons.science},
     {'type': 'pharmacy', 'label': 'Pharmacies', 'icon': Icons.local_pharmacy},
-    {'type': 'scan_center', 'label': 'Scan Centers', 'icon': Icons.monitor_heart},
-    {'type': 'physiotherapy_center', 'label': 'Physiotherapy Centers', 'icon': Icons.accessibility},
     {'type': 'dental_clinic', 'label': 'Dental Clinics', 'icon': Icons.medical_information},
+    {'type': 'scan_center', 'label': 'Scan Centers', 'icon': Icons.monitor_heart},
     {'type': 'eye_clinic', 'label': 'Eye Clinics', 'icon': Icons.visibility},
     {'type': 'mental_health_center', 'label': 'Mental Health Centers', 'icon': Icons.psychology},
+    {'type': 'physiotherapy_center', 'label': 'Physiotherapy Centers', 'icon': Icons.accessibility},
   ];
 
   @override
@@ -53,73 +54,41 @@ class _PatientServiceRequestMainScreenState extends State<PatientServiceRequestM
       );
     }
 
-    // Show the category grid
+    // Show the category list (vertical)
     return Scaffold(
       appBar: AppBar(
         title: const Text('Healthcare Services'),
         backgroundColor: Colors.green.shade700,
       ),
-      body: Padding(
+      body: ListView.separated(
         padding: const EdgeInsets.all(16),
-        child: GridView.builder(
-          itemCount: categories.length,
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisSpacing: 16,
-            crossAxisSpacing: 16,
-            childAspectRatio: 1.0,
-          ),
-          itemBuilder: (context, index) {
-            final category = categories[index];
-            return InkWell(
+        itemCount: categories.length,
+        separatorBuilder: (context, index) => const SizedBox(height: 12),
+        itemBuilder: (context, index) {
+          final category = categories[index];
+          return Card(
+            elevation: 1,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: ListTile(
+              leading: Icon(
+                category['icon'] as IconData,
+                size: 36,
+                color: Colors.teal,
+              ),
+              title: Text(
+                category['label'] as String,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              trailing: const Icon(Icons.arrow_forward_ios, size: 18),
               onTap: () {
                 setState(() {
                   selectedCategoryType = category['type'] as String;
                   selectedCategoryLabel = category['label'] as String;
                 });
               },
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: Colors.grey.shade300,
-                    width: 1,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withOpacity(0.2),
-                      spreadRadius: 1,
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      category['icon'] as IconData,
-                      size: 48,
-                      color: Colors.teal,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      category['label'] as String,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey.shade800,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
+            ),
+          );
+        },
       ),
     );
   }

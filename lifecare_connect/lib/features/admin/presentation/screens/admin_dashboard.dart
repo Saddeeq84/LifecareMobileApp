@@ -59,22 +59,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
         title: Text('Admin Dashboard'),
         backgroundColor: Colors.teal,
         actions: [
-          PopupMenuButton<String>(
-            icon: Icon(Icons.more_vert),
-            onSelected: (value) {
-              switch (value) {
-                case 'settings':
-                  context.push('/admin/settings');
-                  break;
-                case 'logout':
-                  _confirmLogout(context);
-                  break;
-              }
-            },
-            itemBuilder: (context) => [
-              PopupMenuItem(value: 'settings', child: Text('Settings')),
-              PopupMenuItem(value: 'logout', child: Text('Logout')),
-            ],
+          IconButton(
+            icon: Icon(Icons.settings),
+            tooltip: 'Settings',
+            onPressed: () => context.goNamed('admin-settings'),
+          ),
+          IconButton(
+            icon: Icon(Icons.logout),
+            tooltip: 'Logout',
+            onPressed: () => _confirmLogout(context),
           ),
         ],
       ),
@@ -91,31 +84,31 @@ class _AdminDashboardState extends State<AdminDashboard> {
               icon: Icons.person,
               title: 'Approve Accounts',
               subtitle: 'Review all pending account requests',
-              onTap: () => context.push('/admin/approvals_screen'),
+              onTap: () => context.push('/admin_dashboard/approvals'),
             ),
             DashboardTile(
               icon: Icons.add_business,
               title: 'Register Health Facility',
               subtitle: 'Add a new health facility to the system',
-              onTap: () => context.push('/register_facility'),
+              onTap: () => context.push('/admin_dashboard/register_facility'),
             ),
             DashboardTile(
               icon: Icons.school,
               title: 'Training Materials',
               subtitle: 'View or upload training materials',
-              onTap: () => context.push('/admin/upload_training'),
+              onTap: () => context.push('/admin_dashboard/upload_training'),
             ),
             DashboardTile(
               icon: Icons.message,
               title: 'Messages',
               subtitle: 'View and manage messages',
-              onTap: () => context.push('/admin/messages'),
+              onTap: () => context.push('/admin_dashboard/messages'),
             ),
             DashboardTile(
               icon: Icons.analytics,
               title: 'Reports & Analytics',
               subtitle: 'Comprehensive system analytics and reporting',
-              onTap: () => context.push('/admin/reports_analytics'),
+              onTap: () => context.push('/admin_dashboard/reports_analytics'),
             ),
             DashboardTile(
               icon: Icons.account_balance,

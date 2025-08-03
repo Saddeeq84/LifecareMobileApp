@@ -906,13 +906,63 @@ class _FacilityServicesScreenState extends State<FacilityServicesScreen> with Ti
     }
   }
 
-  void _handleRequestAction(QueryDocumentSnapshot request, String action) {
+  void _handleRequestAction(QueryDocumentSnapshot request, String action) async {
     switch (action) {
       case 'approve':
         _updateRequestStatus(request, 'approved');
         break;
       case 'reject':
-        _updateRequestStatus(request, 'rejected');
+        String reason = '';
+        final confirmed = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) {
+            return AlertDialog(
+              title: const Text('Reject Service Request'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('Please provide a reason for rejecting this request:'),
+                  const SizedBox(height: 12),
+                  TextField(
+                    autofocus: true,
+                    maxLines: 3,
+                    onChanged: (val) => reason = val,
+                    decoration: const InputDecoration(
+                      hintText: 'Enter reason...',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    if (reason.trim().isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Please provide a reason for rejection'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                      return;
+                    }
+                    Navigator.pop(context, true);
+                  },
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                  child: const Text('Reject'),
+                ),
+              ],
+            );
+          },
+        );
+        if (confirmed == true && reason.trim().isNotEmpty) {
+          _updateRequestStatus(request, 'rejected', rejectionReason: reason.trim());
+        }
         break;
       case 'complete':
         _updateRequestStatus(request, 'completed');
@@ -1234,13 +1284,17 @@ class _FacilityServicesScreenState extends State<FacilityServicesScreen> with Ti
     );
   }
 
-  Future<void> _updateRequestStatus(QueryDocumentSnapshot request, String status) async {
+  Future<void> _updateRequestStatus(QueryDocumentSnapshot request, String status, {String? rejectionReason}) async {
     try {
-      await request.reference.update({
+      final updateData = {
         'status': status,
         'statusUpdatedAt': FieldValue.serverTimestamp(),
         'statusUpdatedBy': currentFacilityId,
-      });
+      };
+      if (status == 'rejected' && rejectionReason != null && rejectionReason.isNotEmpty) {
+        updateData['rejectionReason'] = rejectionReason;
+      }
+      await request.reference.update(updateData);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

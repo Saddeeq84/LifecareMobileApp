@@ -2,7 +2,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
 import 'doctor_create_account.dart'; // Importing DoctorCreateAccountScreen
+import 'package:go_router/go_router.dart';
 
 // // import '.*services/.*'; // Broken import - use core/services // Broken import - use core/services
 // // import '.*sharedScreen.*'; // Broken import // Broken import
@@ -46,7 +48,8 @@ class _LoginDoctorScreenState extends State<LoginDoctorScreen> {
       
       // For now, navigate to doctor dashboard directly
       if (mounted) {
-        Navigator.pushReplacementNamed(context, '/doctor_dashboard');
+        // Use GoRouter for navigation to avoid null router issues
+        context.go('/doctor_dashboard');
       }
 
     } catch (e) {

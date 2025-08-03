@@ -125,7 +125,13 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _sendMessage() async {
     final content = _messageController.text.trim();
-    if (content.isEmpty || _isSending || _currentUserId == null) return;
+    if (content.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Message cannot be empty.')),
+      );
+      return;
+    }
+    if (_isSending || _currentUserId == null) return;
 
     setState(() {
       _isSending = true;
@@ -134,10 +140,25 @@ class _ChatScreenState extends State<ChatScreen> {
     try {
       // Get conversation to find receiver details
       final conversation = await MessageService.getConversationById(widget.conversationId);
-      if (conversation == null) return;
+      if (conversation == null || conversation.participantIds.length < 2) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Conversation not found or participants missing.')),
+          );
+        }
+        return;
+      }
 
       final receiverId = conversation.participantIds
-          .firstWhere((id) => id != _currentUserId);
+          .firstWhere((id) => id != _currentUserId, orElse: () => '');
+      if (receiverId.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Receiver not found.')),
+          );
+        }
+        return;
+      }
       final receiverName = conversation.participantNames[receiverId] ?? '';
       final receiverRole = conversation.participantRoles[receiverId] ?? '';
 
@@ -153,6 +174,11 @@ class _ChatScreenState extends State<ChatScreen> {
       );
 
       _messageController.clear();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Message sent.')),
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

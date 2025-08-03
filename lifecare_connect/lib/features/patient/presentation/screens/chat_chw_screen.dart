@@ -39,7 +39,7 @@ class _ChatCHWScreenState extends State<ChatCHWScreen> {
     final timestamp = Timestamp.now();
 
     final messageRef = FirebaseFirestore.instance
-        .collection('chats')
+        .collection('messages')
         .doc(chatId)
         .collection('messages')
         .doc();
@@ -51,13 +51,7 @@ class _ChatCHWScreenState extends State<ChatCHWScreen> {
       'read': false,
     });
 
-    // Update chat metadata including participantsRead
-    await FirebaseFirestore.instance.collection('chats').doc(chatId).set({
-      'participants': [patientUid, widget.chwUid],
-      'lastMessage': text.trim(),
-      'lastTimestamp': timestamp,
-      'participantsRead': {patientUid: true, widget.chwUid: false},
-    }, SetOptions(merge: true));
+    // No chat metadata update needed; all messages are in 'messages' collection only.
 
     _controller.clear();
   }
@@ -65,7 +59,7 @@ class _ChatCHWScreenState extends State<ChatCHWScreen> {
   @override
   Widget build(BuildContext context) {
     final messagesRef = FirebaseFirestore.instance
-        .collection('chats')
+        .collection('messages')
         .doc(chatId)
         .collection('messages')
         .orderBy('timestamp', descending: true);
@@ -86,10 +80,7 @@ class _ChatCHWScreenState extends State<ChatCHWScreen> {
                 }
 
                 if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
-                  // ✅ Mark messages as read
-                  FirebaseFirestore.instance.collection('chats').doc(chatId).set({
-                    'participantsRead': {patientUid: true, widget.chwUid: false},
-                  }, SetOptions(merge: true));
+                  // ✅ Mark messages as read (no chat metadata update needed)
                 }
 
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {

@@ -170,32 +170,50 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
             ),
             const SizedBox(height: 16),
             Expanded(
-              child: GridView.builder(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 20,
-                  mainAxisSpacing: 20,
-                ),
+              child: ListView.separated(
                 itemCount: _doctorDashboardItems.length,
+                separatorBuilder: (context, index) => Divider(height: 1),
                 itemBuilder: (context, index) {
                   final item = _doctorDashboardItems[index];
-                  return DashboardTile(
-                    icon: item.icon,
-                    label: item.label,
+                  return ListTile(
+                    leading: Icon(item.icon, color: Colors.indigo.shade800, size: 28),
+                    title: Text(
+                      item.label,
+                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                    ),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 18, color: Colors.grey),
                     onTap: () {
-                      if (item.route == '/wallet') {
-                        _showComingSoonDialog(context, 'Wallet');
-                      } else if (item.route == '/doctor_analytics') {
-                        // Navigate to analytics screen
-                        context.push('/doctor_analytics');
-                      } else if (item.route == '/doctor_messages') {
-                        // Navigate to messages screen
-                        context.push('/doctor_messages');
-                      } else {
-                        // Use GoRouter for all other routes
-                        context.push(item.route);
+                      switch (item.route) {
+                        case '/doctor_patients':
+                          context.push('/doctor_dashboard/patients');
+                          break;
+                        case '/doctor_appointments':
+                          context.push('/doctor_dashboard/appointments');
+                          break;
+                        case '/doctor_messages':
+                          context.push('/doctor_dashboard/messages');
+                          break;
+                        case '/doctor_referrals':
+                          context.push('/doctor_dashboard/referrals');
+                          break;
+                        case '/doctor_resources':
+                          context.push('/doctor_resources');
+                          break;
+                        case '/doctor_analytics':
+                          context.push('/doctor_dashboard/analytics');
+                          break;
+                        case '/consultation':
+                          context.push('/doctor_dashboard/consultation');
+                          break;
+                        case '/wallet':
+                          _showComingSoonDialog(context, 'Wallet');
+                          break;
+                        default:
+                          context.push(item.route);
                       }
                     },
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   );
                 },
               ),
@@ -277,7 +295,7 @@ const List<DashboardItem> _doctorDashboardItems = [
   DashboardItem(
     icon: Icons.calendar_today,
     label: 'Appointments',
-    route: '/doctor_appointments',
+    route: '/doctor_dashboard/appointments',
   ),
   DashboardItem(
     icon: Icons.message,
@@ -302,7 +320,7 @@ const List<DashboardItem> _doctorDashboardItems = [
   DashboardItem(
     icon: Icons.video_call,
     label: 'Consultation',
-    route: '/consultation',
+    route: '/doctor_dashboard/consultation',
   ),
   DashboardItem(
     icon: Icons.account_balance_wallet,

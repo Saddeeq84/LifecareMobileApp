@@ -303,7 +303,7 @@ class DoctorMessagesTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
-          .collection('conversations')
+          .collection('messages')
           .where('participants', arrayContains: currentUserId)
           .where('type', isEqualTo: 'chw_doctor')
           .orderBy('lastMessageTime', descending: true)
@@ -441,7 +441,7 @@ class PatientMessagesTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
-          .collection('conversations')
+          .collection('messages')
           .where('participants', arrayContains: currentUserId)
           .where('type', isEqualTo: 'chw_patient')
           .orderBy('lastMessageTime', descending: true)
@@ -594,7 +594,7 @@ class FacilityMessagesTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
-          .collection('conversations')
+          .collection('messages')
           .where('participants', arrayContains: currentUserId)
           .where('type', isEqualTo: 'chw_facility')
           .orderBy('lastMessageTime', descending: true)
@@ -1022,7 +1022,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
-                  .collection('conversations')
+                  .collection('messages')
                   .doc(widget.conversationId)
                   .collection('messages')
                   .orderBy('timestamp', descending: false)
@@ -1233,7 +1233,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
     // Add message to conversation
     FirebaseFirestore.instance
-        .collection('conversations')
+        .collection('messages')
         .doc(widget.conversationId)
         .collection('messages')
         .add({
@@ -1244,7 +1244,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
     // Update conversation metadata
     FirebaseFirestore.instance
-        .collection('conversations')
+        .collection('messages')
         .doc(widget.conversationId)
         .update({
       'lastMessage': message,

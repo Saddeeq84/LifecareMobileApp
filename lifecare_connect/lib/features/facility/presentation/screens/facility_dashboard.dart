@@ -321,68 +321,24 @@ class FacilityDashboard extends StatelessWidget {
           ),
         ],
       ),
-      body: GridView.count(
-        crossAxisCount: 2,
-        padding: const EdgeInsets.all(16),
-        mainAxisSpacing: 16,
-        crossAxisSpacing: 16,
-        children: dashboardItems.map((item) {
-          return InkWell(
-            onTap: () => _handleDashboardItemTap(context, item['action']),
-            borderRadius: BorderRadius.circular(12),
-            child: AnimatedContainer(
-              duration: Duration(milliseconds: 200),
-              decoration: BoxDecoration(
-                color: Colors.teal.shade100,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.2),
-                    spreadRadius: 1,
-                    blurRadius: 4,
-                    offset: Offset(0, 2),
-                  ),
-                ],
-              ),
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    padding: EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.teal.withOpacity(0.2),
-                          spreadRadius: 1,
-                          blurRadius: 3,
-                          offset: Offset(0, 1),
-                        ),
-                      ],
-                    ),
-                    child: Icon(
-                      item["icon"],
-                      size: 32,
-                      color: Colors.teal.shade800,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    item["label"],
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: Colors.teal.shade800,
-                    ),
-                  ),
-                ],
-              ),
+      body: ListView.separated(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        itemCount: dashboardItems.length,
+        separatorBuilder: (context, index) => Divider(height: 1),
+        itemBuilder: (context, index) {
+          final item = dashboardItems[index];
+          return ListTile(
+            leading: Icon(item["icon"], color: Colors.teal.shade800, size: 28),
+            title: Text(
+              item["label"],
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
             ),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 18, color: Colors.grey),
+            onTap: () => _handleDashboardItemTap(context, item['action']),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           );
-        }).toList(),
+        },
       ),
     );
   }

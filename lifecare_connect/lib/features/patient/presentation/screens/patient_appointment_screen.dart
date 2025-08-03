@@ -9,8 +9,9 @@ import '../../../shared/data/services/appointment_service.dart';
 // Add this import to use isSameDay
 import 'package:table_calendar/table_calendar.dart';
 // Import isSameDay utility function
-import 'patient_consultation_tabbed_screen.dart';
 import 'patient_staff_selection_screen.dart';
+import 'patient_referrals_screen.dart';
+import 'patient_consultations_screen.dart';
 
 class PatientAppointmentsScreen extends StatefulWidget {
   const PatientAppointmentsScreen({super.key});
@@ -26,7 +27,7 @@ class _PatientAppointmentsScreenState extends State<PatientAppointmentsScreen> w
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this); // Reduced from 5 to 3 tabs
+    _tabController = TabController(length: 4, vsync: this); // Now 4 tabs: Pending, Upcoming, History, Referrals
     _userId = FirebaseAuth.instance.currentUser?.uid ?? '';
     print("📅 PatientAppointmentsScreen loaded for UID: $_userId");
   }
@@ -57,7 +58,7 @@ class _PatientAppointmentsScreenState extends State<PatientAppointmentsScreen> w
           tabs: const [
             Tab(text: 'Pending'),
             Tab(text: 'Upcoming'),
-            Tab(text: 'History'),
+            Tab(text: 'Referrals'),
           ],
         ),
       ),
@@ -66,7 +67,7 @@ class _PatientAppointmentsScreenState extends State<PatientAppointmentsScreen> w
         children: [
           _AppointmentsList(statusFilter: 'pending', userId: _userId),
           _AppointmentsList(statusFilter: 'approved', userId: _userId),
-          _AppointmentsList(statusFilter: 'completed', userId: _userId),
+          const PatientReferralsScreen(),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -516,7 +517,7 @@ class _AppointmentsList extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => PatientConsultationTabbedScreen(),
+                builder: (context) => PatientConsultationsScreen(),
       ),
     );
   }

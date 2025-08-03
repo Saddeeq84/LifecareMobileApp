@@ -26,7 +26,7 @@ class MessageService {
 
       // Check if conversation already exists
       final existingConversation = await _firestore
-          .collection('conversations')
+          .collection('messages')
           .doc(conversationId)
           .get();
 
@@ -61,7 +61,7 @@ class MessageService {
       };
 
       await _firestore
-          .collection('conversations')
+          .collection('messages')
           .doc(conversationId)
           .set(conversationData);
 
@@ -117,7 +117,7 @@ class MessageService {
 
       // Update conversation with last message info
       await _firestore
-          .collection('conversations')
+          .collection('messages')
           .doc(conversationId)
           .update({
         'lastMessageId': messageRef.id,
@@ -180,7 +180,7 @@ class MessageService {
 
       // Reset unread count for this user in conversation
       batch.update(
-        _firestore.collection('conversations').doc(conversationId),
+        _firestore.collection('messages').doc(conversationId),
         {'unreadCounts.$userId': 0},
       );
 
@@ -212,7 +212,7 @@ class MessageService {
     required String userId,
   }) {
     return _firestore
-        .collection('conversations')
+        .collection('messages')
         .where('participantIds', arrayContains: userId)
         .where('isActive', isEqualTo: true)
         .orderBy('updatedAt', descending: true)
@@ -226,7 +226,7 @@ class MessageService {
   }) async {
     try {
       final snapshot = await _firestore
-          .collection('conversations')
+          .collection('messages')
           .where('participantIds', arrayContains: userId)
           .where('isActive', isEqualTo: true)
           .get();
@@ -409,7 +409,7 @@ class MessageService {
   static Future<Conversation?> getConversationById(String conversationId) async {
     try {
       final doc = await _firestore
-          .collection('conversations')
+          .collection('messages')
           .doc(conversationId)
           .get();
 

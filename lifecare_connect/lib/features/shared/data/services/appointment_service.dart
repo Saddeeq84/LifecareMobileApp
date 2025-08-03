@@ -1,3 +1,4 @@
+import 'query_snapshot_fake.dart';
 // ignore_for_file: avoid_print
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -103,10 +104,11 @@ class AppointmentService {
       
       print('🏥 Creating consultation for approved appointment with provider type: ${appointmentData['providerType']}');
 
-      // Check if consultation already exists for this appointment
+      // Check if consultation already exists for this appointment in health_records
       final existingConsultation = await _firestore
-          .collection('consultations')
+          .collection('health_records')
           .where('appointmentId', isEqualTo: appointmentId)
+          .where('type', isEqualTo: 'DOCTOR_CONSULTATION')
           .get();
 
       if (existingConsultation.docs.isNotEmpty) return; // Consultation already exists
@@ -256,17 +258,32 @@ class AppointmentService {
     required String doctorId,
     String? status,
   }) {
-    Query query = _firestore
-        .collection('appointments')
-        .where('doctorId', isEqualTo: doctorId);
-    
+    final collection = _firestore.collection('appointments');
+    Query query = collection.where('doctorId', isEqualTo: doctorId);
+    Query altQuery = collection.where('providerId', isEqualTo: doctorId);
+
     if (status != null) {
       query = query.where('status', isEqualTo: status);
+      altQuery = altQuery.where('status', isEqualTo: status);
     }
-    
-    return query
-        .orderBy('appointmentDate', descending: false)
-        .snapshots();
+
+    // Combine both queries using snapshots and merge results
+    final doctorStream = query.orderBy('appointmentDate', descending: false).snapshots();
+    final providerStream = altQuery.orderBy('appointmentDate', descending: false).snapshots();
+
+    return doctorStream.asyncMap((doctorSnap) async {
+      final providerSnap = await providerStream.first;
+      // Merge docs, avoiding duplicates
+      final allDocs = <String, QueryDocumentSnapshot>{};
+      for (var doc in doctorSnap.docs) {
+        allDocs[doc.id] = doc;
+      }
+      for (var doc in providerSnap.docs) {
+        allDocs[doc.id] = doc;
+      }
+      // Return a QuerySnapshot-like object
+      return QuerySnapshotFake(allDocs.values.toList());
+    });
   }
 
   /// Get appointments for facility

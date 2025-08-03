@@ -6,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import '../../../shared/data/services/referral_service.dart';
 import '../../../shared/data/services/appointment_service.dart';
+import '../../../shared/helpers/chw_message_helper.dart';
 import '../../../shared/presentation/widgets/searchable_patient_selector.dart';
 
 class CHWCreateReferralScreen extends StatefulWidget {
@@ -74,6 +75,7 @@ class _CHWCreateReferralScreenState extends State<CHWCreateReferralScreen> {
           .collection('users')
           .where('role', isEqualTo: 'doctor')
           .where('isActive', isEqualTo: true)
+          .where('isApproved', isEqualTo: true)
           .get();
 
       // 2. Fetch interacted doctor IDs (from referrals, appointments, health_records)
@@ -117,16 +119,18 @@ class _CHWCreateReferralScreenState extends State<CHWCreateReferralScreen> {
       }
 
       // 3. Build doctor list, marking interacted ones
+      // Only include doctors that actually exist in the current snapshot
+      final validDoctorIds = allDoctorsSnapshot.docs.map((doc) => doc.id).toSet();
       List<Map<String, dynamic>> allDoctors = allDoctorsSnapshot.docs.map((doc) {
         final data = doc.data();
         return {
           'id': doc.id,
-          'name': data['name'] ?? 'Unknown Doctor',
+          'name': data['fullName'] ?? data['name'] ?? '${data['firstName'] ?? ''} ${data['lastName'] ?? ''}'.trim(),
           'specialization': data['specialization'] ?? 'General Practice',
           'facility': data['facility'] ?? 'Unknown Facility',
           'interacted': interactedDoctorIds.contains(doc.id),
         };
-      }).toList();
+      }).where((doc) => validDoctorIds.contains(doc['id'])).toList();
 
       // 4. Sort: interacted doctors first, then by name
       allDoctors.sort((a, b) {
@@ -256,7 +260,8 @@ class _CHWCreateReferralScreenState extends State<CHWCreateReferralScreen> {
 
 
 
-      // Automated notification to doctor and patient about referral
+
+      // Automated notification to doctor, patient, and CHW about referral, using names
       final patientId = selectedPatientId!;
       final doctorId = selectedDoctorId!;
       final chwId = currentUser.uid;
@@ -266,7 +271,6 @@ class _CHWCreateReferralScreenState extends State<CHWCreateReferralScreen> {
       // Defensive: ensure selectedDoctorName is set
       String doctorNameForMessage = selectedDoctorName ?? '';
       if (doctorNameForMessage.isEmpty) {
-        // Try to get from _doctors list
         final docObj = _doctors.firstWhere(
           (d) => d['id'] == doctorId,
           orElse: () => {'name': doctorId},
@@ -274,11 +278,20 @@ class _CHWCreateReferralScreenState extends State<CHWCreateReferralScreen> {
         doctorNameForMessage = docObj['name'] ?? doctorId;
       }
 
-      // Debug output
-      debugPrint('DEBUG: Sending referral notification. patientId=$patientId, doctorId=$doctorId, doctorName=$doctorNameForMessage, patientName=$selectedPatientName');
+      // Defensive: ensure selectedPatientName is set
+      String patientNameForMessage = selectedPatientName ?? '';
+      if (patientNameForMessage.isEmpty) {
+        patientNameForMessage = patientId;
+      }
 
-      // Message to doctor
-      final doctorMessage = 'You have received a new referral for patient $selectedPatientName. Please review and act.';
+      // Defensive: ensure CHW name is set
+      String chwNameForMessage = chwData['name'] ?? chwData['fullName'] ?? chwData['firstName'] ?? chwId;
+
+      // Debug output
+      debugPrint('DEBUG: Sending referral notification. patientId=$patientId, doctorId=$doctorId, doctorName=$doctorNameForMessage, patientName=$patientNameForMessage, chwName=$chwNameForMessage');
+
+      // Message to doctor (personalized)
+      final doctorMessage = 'Dr. $doctorNameForMessage, you have received a new referral for patient $patientNameForMessage from $chwNameForMessage. Please review and act.';
       await firestore.collection('messages').add({
         'to': doctorId,
         'from': chwId,
@@ -289,16 +302,26 @@ class _CHWCreateReferralScreenState extends State<CHWCreateReferralScreen> {
         'doctorId': doctorId,
       });
 
-      // Message to patient
-      final patientMessage = 'You have been referred to Dr. $doctorNameForMessage for further care. Please await further instructions.';
-      await firestore.collection('messages').add({
-        'to': patientId,
-        'from': chwId,
-        'message': patientMessage,
-        'timestamp': now,
-        'type': 'referral',
-        'doctorId': doctorId,
-      });
+      // Message to patient (personalized)
+      final patientMessage = '$patientNameForMessage, you have been referred to Dr. $doctorNameForMessage for further care by $chwNameForMessage. Please await further instructions.';
+      try {
+        await CHWMessageHelper.sendReferralMessageToPatient(patientId, patientMessage);
+      } catch (e) {
+        debugPrint('Error sending referral message to patient: $e');
+      }
+
+      // Message to CHW (self, confirmation, optional)
+      // Optionally, you can uncomment to send a confirmation to CHW
+      // final chwMessage = '$chwNameForMessage, you have successfully referred $patientNameForMessage to Dr. $doctorNameForMessage.';
+      // await firestore.collection('messages').add({
+      //   'to': chwId,
+      //   'from': chwId,
+      //   'message': chwMessage,
+      //   'timestamp': now,
+      //   'type': 'referral_confirmation',
+      //   'patientId': patientId,
+      //   'doctorId': doctorId,
+      // });
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

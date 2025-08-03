@@ -7,7 +7,7 @@ import '../models/appointment.dart';
 class ConsultationService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  /// Create a new consultation
+  /// Create a new consultation (now saves to health_records)
   static Future<String> createConsultation({
     required String patientId,
     required String patientName,
@@ -49,9 +49,24 @@ class ConsultationService {
         'createdBy': createdBy,
       };
 
+      // Save to health_records instead of consultations
       final docRef = await _firestore
-          .collection('consultations')
-          .add(consultationData);
+          .collection('health_records')
+          .add({
+        'type': 'DOCTOR_CONSULTATION',
+        'patientUid': patientId,
+        'providerId': doctorId,
+        'doctorUid': doctorId,
+        'providerName': doctorName,
+        'providerType': 'DOCTOR',
+        'date': FieldValue.serverTimestamp(),
+        'data': consultationData,
+        'accessibleBy': ['patient', 'doctor', 'chw'],
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+        'isEditable': false,
+        'isDeletable': false,
+      });
 
       return docRef.id;
     } catch (e) {
@@ -93,10 +108,11 @@ class ConsultationService {
       if (cancelledBy != null) updateData['cancelledBy'] = cancelledBy;
       if (cancellationReason != null) updateData['cancellationReason'] = cancellationReason;
 
+      // Update in health_records instead of consultations
       await _firestore
-          .collection('consultations')
+          .collection('health_records')
           .doc(consultationId)
-          .update(updateData);
+          .update({'data': updateData});
     } catch (e) {
       throw Exception('Failed to update consultation: $e');
     }
@@ -167,14 +183,16 @@ class ConsultationService {
     DateTime? endDate,
   }) {
     Query query = _firestore
-        .collection('consultations')
-        .where('doctorId', isEqualTo: doctorId)
-        .orderBy('scheduledDateTime', descending: false);
+        .collection('health_records')
+        .where('providerId', isEqualTo: doctorId)
+        .where('type', isEqualTo: 'DOCTOR_CONSULTATION')
+        .orderBy('date', descending: false);
 
+    // Filtering by status if needed
     if (status != null) {
-      query = query.where('status', isEqualTo: status);
+      query = query.where('data.status', isEqualTo: status);
     } else if (statusList != null && statusList.isNotEmpty) {
-      query = query.where('status', whereIn: statusList);
+      query = query.where('data.status', whereIn: statusList);
     }
 
     return query.snapshots();
@@ -189,14 +207,15 @@ class ConsultationService {
     DateTime? endDate,
   }) {
     Query query = _firestore
-        .collection('consultations')
-        .where('patientId', isEqualTo: patientId)
-        .orderBy('scheduledDateTime', descending: true);
+        .collection('health_records')
+        .where('patientUid', isEqualTo: patientId)
+        .where('type', isEqualTo: 'DOCTOR_CONSULTATION')
+        .orderBy('date', descending: true);
 
     if (status != null) {
-      query = query.where('status', isEqualTo: status);
+      query = query.where('data.status', isEqualTo: status);
     } else if (statusList != null && statusList.isNotEmpty) {
-      query = query.where('status', whereIn: statusList);
+      query = query.where('data.status', whereIn: statusList);
     }
 
     return query.snapshots();

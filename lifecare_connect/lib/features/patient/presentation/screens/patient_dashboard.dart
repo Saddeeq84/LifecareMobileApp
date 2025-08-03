@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 import 'patient_appointment_screen.dart';
 import 'patient_education_screen.dart';
 import 'my_health_tab.dart';
-import './patient_consultation_tabbed_screen.dart';
+import 'patient_consultations_screen.dart';
+import 'patient_referrals_screen.dart';
 import 'package:lifecare_connect/features/shared/presentation/screens/messages_screen.dart';
 import 'patient_profile_screen.dart';
 import 'patient_settings_screen.dart';
@@ -53,6 +54,12 @@ class _PatientDashboardMainViewState extends State<PatientDashboardMainView> {
       'color': Colors.teal,
     },
     {
+      'icon': Icons.send,
+      'label': 'Referrals',
+      'action': 'referrals',
+      'color': Colors.deepPurple,
+    },
+    {
       'icon': Icons.school,
       'label': 'Education',
       'action': 'education',
@@ -71,12 +78,7 @@ class _PatientDashboardMainViewState extends State<PatientDashboardMainView> {
       'action': 'wallet',
       'color': Colors.amber,
     },
-    {
-      'icon': Icons.smart_toy,
-      'label': 'AI Chatbot',
-      'action': 'chatbot',
-      'color': Colors.cyan,
-    },
+    // AI Chatbot icon removed
   ];
 
   void _handleDashboardItemTap(BuildContext context, String action) {
@@ -89,7 +91,10 @@ class _PatientDashboardMainViewState extends State<PatientDashboardMainView> {
         Navigator.push(context, MaterialPageRoute(builder: (context) => const PatientAppointmentsScreen()));
         break;
       case 'consultations':
-        Navigator.push(context, MaterialPageRoute(builder: (context) => const PatientConsultationTabbedScreen()));
+        Navigator.push(context, MaterialPageRoute(builder: (context) => const PatientConsultationsScreen()));
+        break;
+      case 'referrals':
+        Navigator.push(context, MaterialPageRoute(builder: (context) => const PatientReferralsScreen()));
         break;
       case 'education':
         Navigator.push(context, MaterialPageRoute(builder: (context) => const PatientEducationScreen()));

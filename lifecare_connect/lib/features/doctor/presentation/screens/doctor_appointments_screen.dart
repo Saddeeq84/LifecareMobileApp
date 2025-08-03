@@ -1,11 +1,47 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-// import 'package:lifecare_connect/core/utils/message_service.dart'; // Uncomment if needed and file exists
 
-// Completed Appointments Tab
-class DoctorCompletedAppointmentsTab extends StatelessWidget {
+
+class DoctorAppointmentsTabView extends StatelessWidget {
   final String userId;
-  const DoctorCompletedAppointmentsTab({super.key, required this.userId});
+  const DoctorAppointmentsTabView({super.key, required this.userId});
+
+  @override
+  Widget build(BuildContext context) {
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Appointments'),
+          bottom: const TabBar(
+            tabs: [
+              Tab(text: 'Pending Approval'),
+              Tab(text: 'Approved Appointments'),
+            ],
+          ),
+        ),
+        body: TabBarView(
+          children: [
+            // Only show 'pending' in Pending Approval
+            DoctorAppointmentsList(userId: userId, status: 'pending'),
+            // Only show 'approved' in Approved Appointments
+            DoctorAppointmentsList(userId: userId, status: 'approved'),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class DoctorAppointmentsList extends StatelessWidget {
+  // Constructor (if any) remains here
+
+  final String userId;
+  final String status;
+  const DoctorAppointmentsList({super.key, required this.userId, required this.status});
+
 
   void _showPreConsultationDetails(BuildContext context, Map<String, dynamic> checklistData) {
     showDialog(
@@ -35,21 +71,147 @@ class DoctorCompletedAppointmentsTab extends StatelessWidget {
     );
   }
 
+  Future<void> _handleApprove(BuildContext context, DocumentSnapshot appointmentDoc) async {
+    final data = appointmentDoc.data() as Map<String, dynamic>;
+    try {
+      await appointmentDoc.reference.update(<String, dynamic>{
+        'status': 'approved',
+        'reviewedAt': FieldValue.serverTimestamp(),
+        'reviewedBy': userId
+      });
+
+      // Create a consultation document for the doctor
+      final consultationsCollection = FirebaseFirestore.instance.collection('consultations');
+      await consultationsCollection.add({
+        'appointmentId': appointmentDoc.id,
+        'patientUid': data['patientUid'],
+        'patientName': data['patientName'] ?? 'Patient',
+        'providerId': userId,
+        'providerName': data['providerName'] ?? 'Doctor',
+        'status': 'approved',
+        'createdAt': FieldValue.serverTimestamp(),
+        'type': data['type'] ?? 'general',
+        'reason': data['reason'] ?? '',
+        // Add any other relevant fields from the appointment as needed
+      });
+
+      await _sendPatientMessage(
+        patientId: data['patientUid'],
+        patientName: data['patientName'] ?? 'Patient',
+        content: 'Your appointment request has been approved by the doctor. Please check your app for details.',
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Appointment approved and patient notified.')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to approve appointment: $e')),
+      );
+    }
+  }
+
+  Future<void> _handleDeny(BuildContext context, DocumentSnapshot appointmentDoc) async {
+    final data = appointmentDoc.data() as Map<String, dynamic>;
+    String? reason = await _showDenyReasonDialog(context);
+    if (reason == null || reason.trim().isEmpty) return;
+    try {
+      await appointmentDoc.reference.update(<String, dynamic>{
+        'status': 'denied',
+        'reviewedAt': FieldValue.serverTimestamp(),
+        'reviewedBy': userId,
+        'denialReason': reason.trim()
+      });
+      await _sendPatientMessage(
+        patientId: data['patientUid'],
+        patientName: data['patientName'] ?? 'Patient',
+        content: 'Your appointment request was denied by the doctor. Reason: $reason',
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Appointment denied and patient notified.')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to deny appointment: $e')),
+      );
+    }
+  }
+
+  Future<String?> _showDenyReasonDialog(BuildContext context) async {
+    String reason = '';
+    return showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Reason for Denial'),
+          content: TextField(
+            autofocus: true,
+            maxLines: 3,
+            onChanged: (val) => reason = val,
+            decoration: const InputDecoration(
+              hintText: 'Enter reason for denial...',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (reason.trim().isNotEmpty) {
+                  Navigator.of(context).pop(reason.trim());
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please provide a reason for denial'), backgroundColor: Colors.red),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text('Deny'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _sendPatientMessage({required String patientId, required String patientName, required String content}) async {
+    // Try to send a message using set with merge:true to avoid NOT_FOUND error
+    final messagesCollection = FirebaseFirestore.instance.collection('messages');
+    final docRef = messagesCollection.doc(); // auto-generated ID
+    await docRef.set({
+      'conversationId': patientId, // Or use a real conversation id logic
+      'senderId': userId,
+      'senderName': 'Doctor',
+      'senderRole': 'doctor',
+      'receiverId': patientId,
+      'receiverName': patientName,
+      'receiverRole': 'patient',
+      'content': content,
+      'type': 'appointment_notification',
+      'priority': 'high',
+      'timestamp': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+
   @override
   Widget build(BuildContext context) {
+    // Always filter by doctorId and status for both tabs
+    final appointmentStream = FirebaseFirestore.instance
+        .collection('appointments')
+        .where('providerId', isEqualTo: userId)
+        .where('status', isEqualTo: status)
+        .snapshots();
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('appointments')
-          .where('doctorId', isEqualTo: userId)
-          .where('status', isEqualTo: 'completed')
-          .orderBy('completedAt', descending: true)
-          .snapshots(),
+      stream: appointmentStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
-          return Center(child: Text("Error: ${snapshot.error}"));
+          return Center(child: Text("Error: \\${snapshot.error}"));
         }
         final appointments = snapshot.data?.docs ?? [];
         if (appointments.isEmpty) {
@@ -58,11 +220,12 @@ class DoctorCompletedAppointmentsTab extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(Icons.history, size: 64, color: Colors.grey),
+                SizedBox(height: 16),
+                Text('No appointments found'),
               ],
             ),
           );
         }
-        // Add your widget for non-empty appointments here, or a placeholder
         return ListView.builder(
           itemCount: appointments.length,
           itemBuilder: (context, index) {
@@ -91,7 +254,7 @@ class DoctorCompletedAppointmentsTab extends StatelessWidget {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            'COMPLETED',
+                            status.toUpperCase(),
                             style: TextStyle(
                               color: Colors.grey.shade800,
                               fontSize: 12,
@@ -204,13 +367,37 @@ class DoctorCompletedAppointmentsTab extends StatelessWidget {
                         ],
                       ),
                     ),
+                    // --- Approval, Deny, and Mark as Completed Buttons ---
+                    if (status == 'pending')
+                      Row(
+                        children: [
+                          ElevatedButton.icon(
+                            icon: const Icon(Icons.check, size: 16),
+                            label: const Text('Approve'),
+                            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                            onPressed: () async {
+                              await _handleApprove(context, appointments[index]);
+                            },
+                          ),
+                          const SizedBox(width: 12),
+                          ElevatedButton.icon(
+                            icon: const Icon(Icons.cancel, size: 16),
+                            label: const Text('Deny'),
+                            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                            onPressed: () async {
+                              await _handleDeny(context, appointments[index]);
+                            },
+                          ),
+                        ],
+                      ),
+                    // No action buttons for approved appointments in this screen
                   ],
                 ),
               ),
             );
           },
         );
-      }
+      },
     );
   }
 }

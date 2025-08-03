@@ -26,22 +26,10 @@ class PatientHealthRecordsScreen extends StatelessWidget {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            context.go('/chw_dashboard/patients');
+            Navigator.pop(context);
           },
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () {
-              // Navigate to ANC checklist to add new record
-              context.push('/chw_dashboard/anc-checklist', extra: {
-                'patientId': patientId,
-                'patientName': patientName,
-              });
-            },
-            tooltip: 'Add New Health Record',
-          ),
-        ],
+        // Remove CHW-specific add record button. You may add a generic add record button here if needed.
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: _getHealthRecordsStream(),
@@ -130,12 +118,10 @@ class PatientHealthRecordsScreen extends StatelessWidget {
       throw Exception('User not authenticated');
     }
 
-    // Query for records where CHW is the provider or where CHW has access
-    // This covers ANC consultations, CHW consultations, and approved pre-consultations
+    // Query all health records for the patient, regardless of role
     return FirebaseFirestore.instance
         .collection('health_records')
         .where('patientUid', isEqualTo: patientId)
-        .where('accessibleBy', arrayContains: 'chw')
         .orderBy('createdAt', descending: true)
         .snapshots();
   }

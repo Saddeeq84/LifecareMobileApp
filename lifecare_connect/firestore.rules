@@ -1,3 +1,22 @@
+    // MESSAGES COLLECTION - Unified messaging
+    match /messages/{messageId} {
+      // Allow authenticated users to read and write messages
+      allow read, write: if isAuthenticated();
+      // Admin can delete any message
+      allow delete: if isAdmin();
+      // List: allow for authenticated users
+      allow list: if isAuthenticated();
+    }
+
+    // BLOCK WRITES TO OLD MESSAGING COLLECTIONS
+    match /chats/{docId} {
+      allow read: if isAuthenticated();
+      allow write, delete: if false;
+    }
+    match /conversations/{docId} {
+      allow read: if isAuthenticated();
+      allow write, delete: if false;
+    }
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -114,6 +133,38 @@ service cloud.firestore {
       
       // List permissions for all authenticated users
       allow list: if isAuthenticated();
+    }
+
+    // HEALTH RECORDS COLLECTION - Unified access
+    match /health_records/{recordId} {
+      // Patients can read their own health records
+      allow read: if isAuthenticated() && resource.data.patientId == request.auth.uid;
+      // Doctors can read records where they are the provider (support both providerId and doctorId)
+      allow read: if isDoctor() && (resource.data.providerId == request.auth.uid || resource.data.doctorId == request.auth.uid);
+      // CHWs and Facilities can read/write if they are assigned to the record
+      allow read, write: if isAuthenticated() && (
+        isCHWWithoutApproval() || isFacility()
+      );
+      // Doctors, CHWs, and Facilities can write if they are assigned
+      allow write: if isDoctor() || isCHWWithoutApproval() || isFacility();
+      // Admin can do anything
+      allow read, write, delete: if isAdmin();
+      // List: allow for authenticated users (filtered by security rules above)
+      allow list: if isAuthenticated();
+    }
+
+    // BLOCK WRITES TO OLD COLLECTIONS
+    match /consultations/{docId} {
+      allow read: if isAuthenticated();
+      allow write, delete: if false;
+    }
+    match /lab_request/{docId} {
+      allow read: if isAuthenticated();
+      allow write, delete: if false;
+    }
+    match /prescriptions/{docId} {
+      allow read: if isAuthenticated();
+      allow write, delete: if false;
     }
 
     // All other collections with basic rules...

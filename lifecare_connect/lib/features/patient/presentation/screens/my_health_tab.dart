@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_const_literals_to_create_immutables
+
 import 'emergency_care_screen.dart';
 import 'patient_referrals_screen.dart';
 // ignore_for_file: use_build_context_synchronously, avoid_print, duplicate_ignore, prefer_const_constructors, deprecated_member_use, no_leading_underscores_for_local_identifiers, use_function_type_syntax_for_parameters, non_constant_identifier_names, sort_child_properties_last
@@ -113,6 +115,9 @@ class _MyHealthTabState extends State<MyHealthTab> with SingleTickerProviderStat
                 },
               ),
             ),
+
+            // ...existing cards...
+            // Ask AI Card/Button (moved to last)
             // My Referrals Card/Button
             Card(
               color: Colors.deepPurple.shade50,
@@ -155,7 +160,38 @@ class _MyHealthTabState extends State<MyHealthTab> with SingleTickerProviderStat
                 },
               ),
             ),
-            // ...other content if needed...
+            // Ask AI Card/Button (always last)
+            Card(
+              color: Colors.cyan.shade50,
+              margin: const EdgeInsets.only(bottom: 0),
+              child: ListTile(
+                leading: Icon(Icons.smart_toy, color: Colors.cyan),
+                title: Text('Ask AI', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.cyan)),
+                subtitle: Text('Get instant health advice from AI'),
+                trailing: Icon(Icons.chevron_right, color: Colors.cyan),
+                onTap: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: Row(
+                        children: [
+                          Icon(Icons.smart_toy, color: Colors.cyan),
+                          SizedBox(width: 8),
+                          Text('Ask AI'),
+                        ],
+                      ),
+                      content: Text('AI Chatbot feature is under development.'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: Text('OK', style: TextStyle(color: Colors.cyan)),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
           ],
         ),
       ),
@@ -186,6 +222,7 @@ class _MyHealthTabState extends State<MyHealthTab> with SingleTickerProviderStat
                   .where(Filter.or(
                     Filter('userId', isEqualTo: currentUser!.uid),
                     Filter('patientUid', isEqualTo: currentUser!.uid),
+                    Filter('patientId', isEqualTo: currentUser!.uid),
                   ))
                   .orderBy('timestamp', descending: true)
                   .snapshots(),
@@ -208,46 +245,132 @@ class _MyHealthTabState extends State<MyHealthTab> with SingleTickerProviderStat
                     // DEBUG: Print each health record to console
                     print('Health Record [{record.id}]: $data');
                     final type = data['type'] ?? '';
-                    if (type == 'vital_signs') {
+          final normalizedType = type.toString().toLowerCase();
+          if (normalizedType == 'vital_signs') {
+            // ...existing code...
+            return Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              child: ListTile(
+                title: const Text('Self-Reported Vital Signs'),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Heart Rate: ${data['heartRate'] ?? 'N/A'} bpm'),
+                    Text('Blood Pressure: ${data['bloodPressure'] ?? 'N/A'}'),
+                    Text('Temperature: ${data['temperature'] ?? 'N/A'} °C'),
+                    Text('Blood Sugar: ${data['bloodSugar'] ?? 'N/A'} mg/dL'),
+                    Text('Weight: ${data['weight'] ?? 'N/A'} kg'),
+                    Text('Height: ${data['height'] ?? 'N/A'} cm'),
+                    Text('BMI: ${data['bmi'] ?? 'N/A'}'),
+                    Text('Recorded: ${(data['timestamp'] as Timestamp?)?.toDate().toString().split(' ')[0] ?? ''}'),
+                  ],
+                ),
+              ),
+            );
+          } else if (normalizedType == 'preconsultation_checklist' || normalizedType == 'pre_consultation') {
+            // ...existing code...
+            return Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              child: ListTile(
+                title: const Text('Pre-Consultation Checklist'),
+                subtitle: Text(
+                  data['data'] != null
+                    ? _formatPreConsultationData(data['data'])
+                    : 'No checklist data'
+                ),
+                trailing: Text('Submitted: ${(data['timestamp'] as Timestamp?)?.toDate().toString().split(' ')[0] ?? ''}'),
+              ),
+            );
+          } else if (normalizedType == 'consultation_note' || normalizedType == 'doctor_consultation' || normalizedType == 'doctor_consultation') {
+            // Doctor consultation details (show all fields as in Completed tab in Consultations)
+            return Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              child: ListTile(
+                title: Text('Doctor Consultation', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (data['clinicalNotes'] != null && (data['clinicalNotes'] as String).trim().isNotEmpty)
+                      Text('Clinical Notes: ${data['clinicalNotes']}'),
+                    if (data['diagnosis'] != null && (data['diagnosis'] as String).trim().isNotEmpty)
+                      Text('Diagnosis: ${data['diagnosis']}'),
+                    if (data['prescriptions'] != null && (data['prescriptions'] as List).isNotEmpty)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 8),
+                          const Text('Prescriptions:', style: TextStyle(fontWeight: FontWeight.bold)),
+                          ...List<String>.from(data['prescriptions']).map((med) => Padding(
+                            padding: const EdgeInsets.only(left: 8.0, top: 2.0),
+                            child: Text(med),
+                          )),
+                        ],
+                      ),
+                    if (data['labRequests'] != null && (data['labRequests'] as List).isNotEmpty)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 8),
+                          const Text('Lab Requests:', style: TextStyle(fontWeight: FontWeight.bold)),
+                          ...List<String>.from(data['labRequests']).map((lab) => Padding(
+                            padding: const EdgeInsets.only(left: 8.0, top: 2.0),
+                            child: Text(lab),
+                          )),
+                        ],
+                      ),
+                    if (data['radiologyRequests'] != null && (data['radiologyRequests'] as List).isNotEmpty)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 8),
+                          const Text('Radiology Requests:', style: TextStyle(fontWeight: FontWeight.bold)),
+                          ...List<String>.from(data['radiologyRequests']).map((rad) => Padding(
+                            padding: const EdgeInsets.only(left: 8.0, top: 2.0),
+                            child: Text(rad),
+                          )),
+                        ],
+                      ),
+                    if (data['followUp'] != null && (data['followUp'] as String).trim().isNotEmpty)
+                      Text('Follow-up: ${data['followUp']}'),
+                    if (data['notes'] != null && (data['notes'] as String).trim().isNotEmpty)
+                      Text('Other Notes: ${data['notes']}'),
+                    Text('Saved: ${(data['timestamp'] as Timestamp?)?.toDate().toString().split(' ')[0] ?? ''}'),
+                  ],
+                ),
+              ),
+            );
+                    } else if (type == 'chw_consultation') {
+                      // CHW consultation details
                       return Card(
                         margin: const EdgeInsets.only(bottom: 12),
                         child: ListTile(
-                          title: const Text('Self-Reported Vital Signs'),
+                          title: const Text('CHW Consultation'),
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Heart Rate: ${data['heartRate'] ?? 'N/A'} bpm'),
-                              Text('Blood Pressure: ${data['bloodPressure'] ?? 'N/A'}'),
-                              Text('Temperature: ${data['temperature'] ?? 'N/A'} °C'),
-                              Text('Blood Sugar: ${data['bloodSugar'] ?? 'N/A'} mg/dL'),
-                              Text('Weight: ${data['weight'] ?? 'N/A'} kg'),
-                              Text('Height: ${data['height'] ?? 'N/A'} cm'),
-                              Text('BMI: ${data['bmi'] ?? 'N/A'}'),
-                              Text('Recorded: ${(data['timestamp'] as Timestamp?)?.toDate().toString().split(' ')[0] ?? ''}'),
+                              Text('Provider: ${data['providerName'] ?? data['chwName'] ?? 'N/A'}'),
+                              Text('Notes: ${data['notes'] ?? 'N/A'}'),
+                              Text('Diagnosis: ${data['diagnosis'] ?? 'N/A'}'),
+                              Text('Saved: ${(data['timestamp'] as Timestamp?)?.toDate().toString().split(' ')[0] ?? ''}'),
                             ],
                           ),
                         ),
                       );
-                    } else if (type == 'preconsultation_checklist' || type == 'pre_consultation') {
+                    } else if (type == 'anc_record' || type == 'anc_consultation') {
+                      // ANC details
                       return Card(
                         margin: const EdgeInsets.only(bottom: 12),
                         child: ListTile(
-                          title: const Text('Pre-Consultation Checklist'),
-                          subtitle: Text(
-                            data['data'] != null
-                              ? _formatPreConsultationData(data['data'])
-                              : 'No checklist data'
+                          title: const Text('ANC Record'),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Provider: ${data['providerName'] ?? 'N/A'}'),
+                              Text('Gestational Age: ${data['gestationalAge'] ?? 'N/A'}'),
+                              Text('ANC Notes: ${data['notes'] ?? 'N/A'}'),
+                              Text('Saved: ${(data['timestamp'] as Timestamp?)?.toDate().toString().split(' ')[0] ?? ''}'),
+                            ],
                           ),
-                          trailing: Text('Submitted: ${(data['timestamp'] as Timestamp?)?.toDate().toString().split(' ')[0] ?? ''}'),
-                        ),
-                      );
-                    } else if (type == 'consultation_note') {
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        child: ListTile(
-                          title: Text('Consultation Notes (${data['providerRole'] ?? 'Doctor/CHW'})'),
-                          subtitle: Text(data['notes'] ?? 'No notes'),
-                          trailing: Text('Saved: ${(data['timestamp'] as Timestamp?)?.toDate().toString().split(' ')[0] ?? ''}'),
                         ),
                       );
                     } else {
@@ -383,11 +506,22 @@ class _MyHealthTabState extends State<MyHealthTab> with SingleTickerProviderStat
                   const SizedBox(height: 8),
                   Align(
                     alignment: Alignment.centerLeft,
-                    child: Text(
-                      'BMI: ${_calculateBMI(_weightController.text, _heightController.text)}',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    child: Row(
+                      children: [
+                        Text(
+                          'BMI: ${_calculateBMI(_weightController.text, _heightController.text)}',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          _bmiInterpretation(_calculateBMI(_weightController.text, _heightController.text)),
+                          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey),
+                        ),
+                      ],
                     ),
                   ),
+
+
                   const SizedBox(height: 16),
                   Row(
                     children: [
@@ -446,6 +580,15 @@ class _MyHealthTabState extends State<MyHealthTab> with SingleTickerProviderStat
       }
     } catch (_) {}
     return '';
+  }
+
+  String _bmiInterpretation(String bmiStr) {
+    final bmi = double.tryParse(bmiStr);
+    if (bmi == null) return '';
+    if (bmi < 18.5) return 'Underweight';
+    if (bmi < 25) return 'Normal';
+    if (bmi < 30) return 'Overweight';
+    return 'Obese';
   }
 
   void _uploadLabResult() async {

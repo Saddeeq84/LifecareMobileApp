@@ -1,3 +1,9 @@
+import '../../features/admin/presentation/screens/admin_settings_screen.dart';
+import '../../features/admin/presentation/screens/approvals_screen.dart';
+import '../../features/admin/presentation/screens/admin_register_facility_screen.dart';
+import '../../features/admin/presentation/screens/admin_training_upload_screen.dart';
+import '../../features/admin/presentation/screens/admin_reports_analytics_screen.dart';
+import '../../features/admin/presentation/screens/admin_analytics_screen.dart';
 // ignore_for_file: prefer_const_literals_to_create_immutables, prefer_const_constructors
 
 import 'package:flutter/material.dart';
@@ -8,7 +14,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../features/chw/presentation/screens/chw_regular_consultations_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/admin/presentation/screens/admin_dashboard.dart';
+import '../../features/doctor/presentation/screens/doctor_patient_list_screen.dart';
+import '../../features/doctor/presentation/screens/doctor_referrals_screen.dart';
+import '../../features/doctor/presentation/screens/doctor_analytics_screen.dart';
+import '../../features/doctor/presentation/screens/doctor_consultation_screen.dart';
+import '../../features/doctor/presentation/screens/doctor_clinical_resources_screen.dart';
 import '../../features/doctor/presentation/screens/doctor_dashboard.dart';
+import '../../features/doctor/presentation/doctor_appointments_exports.dart';
 import '../../features/chw/presentation/screens/chw_dashboard.dart'; // Ensure this import is present and CHWDashboard is defined as a class
 import '../../features/chw/presentation/screens/patient_registration_screen.dart';
 // Removed: ANCChecklistScreen (no longer exists)
@@ -16,10 +28,10 @@ import '../../features/chw/presentation/screens/patient_list_screen.dart';
 import '../../features/chw/presentation/screens/patient_health_records_screen.dart';
 import '../../features/chw/presentation/screens/chw_referrals_screen.dart';
 import '../../features/chw/presentation/screens/chw_create_referral_screen.dart';
-import '../../features/chw/presentation/screens/chw_consultation_screen.dart';
+// Removed: '../../features/chw/presentation/screens/chw_consultation_screen.dart' (file does not exist)
 import '../../features/chw/presentation/screens/chw_consultation_details_screen.dart';
 // import '../../features/chw/presentation/screens/clinical_documentation_screen.dart';
-import '../../features/patient/presentation/screens/patient_consultation_tabbed_screen.dart';
+import '../../features/patient/presentation/screens/patient_consultations_screen.dart';
 import '../../features/patient/presentation/screens/patient_referrals_screen.dart';
 import '../../features/patient/presentation/screens/patient_dashboard.dart';
 import '../../features/patient/presentation/screens/patient_appointment_screen.dart';
@@ -43,6 +55,47 @@ class AppRouter {
     redirect: _redirect,
     routes: [
       // Custom routes for CHW consultation flows
+      // Doctor dashboard subroutes
+      GoRoute(
+        path: '/doctor_dashboard/patients',
+        name: 'doctor-patients',
+       builder: (context, state) => const DoctorPatientListScreen(),
+      ),
+      GoRoute(
+        path: '/doctor_dashboard/messages',
+        name: 'doctor-messages',
+        builder: (context, state) => const MessagesScreen(),
+      ),
+      GoRoute(
+        path: '/doctor_dashboard/appointments',
+        name: 'doctor-appointments',
+        builder: (context, state) {
+          final user = FirebaseAuth.instance.currentUser;
+          final userId = user?.uid ?? '';
+          return DoctorAppointmentsTabView(userId: userId);
+        },
+      ),
+      GoRoute(
+        path: '/doctor_dashboard/referrals',
+        name: 'doctor-referrals',
+       builder: (context, state) => const DoctorReferralsScreen(),
+      ),
+      GoRoute(
+        path: '/doctor_dashboard/analytics',
+        name: 'doctor-analytics',
+       builder: (context, state) => const DoctorAnalyticsScreen(),
+      ),
+      GoRoute(
+        path: '/doctor_dashboard/consultation',
+        builder: (context, state) {
+          return const DoctorConsultationScreen();
+        },
+      ),
+      GoRoute(
+        path: '/doctor_resources',
+        name: 'doctor-resources',
+       builder: (context, state) => const DoctorClinicalResourcesScreen(),
+      ),
       GoRoute(
         path: '/chw_anc_consultation_details',
         name: 'chw-anc-consultation-details',
@@ -82,36 +135,46 @@ class AppRouter {
         name: 'admin-dashboard',
         builder: (context, state) => const AdminDashboard(),
         routes: [
-          GoRoute(
-            path: 'approvals',
-            name: 'admin-approvals',
-            builder: (context, state) => const SizedBox.shrink(),
-          ),
-          GoRoute(
-            path: 'facilities',
-            name: 'admin-facilities',
-            builder: (context, state) => Container(),
-          ),
-          GoRoute(
-            path: 'doctors',
-            name: 'admin-doctors',
-            builder: (context, state) => Container(),
-          ),
-          GoRoute(
-            path: 'analytics',
-            name: 'admin-analytics',
-            builder: (context, state) => Container(),
-          ),
-          GoRoute(
-            path: 'training',
-            name: 'admin-training',
-            builder: (context, state) => const AdminTrainingScreen(),
-          ),
-          GoRoute(
-            path: 'settings',
-            name: 'admin-settings',
-            builder: (context, state) => Container(),
-          ),
+              GoRoute(
+                path: 'approvals',
+                name: 'admin-approvals',
+                builder: (context, state) => const ApprovalsScreen(),
+              ),
+              GoRoute(
+                path: 'register_facility',
+                name: 'admin-register-facility',
+                builder: (context, state) => const AdminRegisterFacilityScreen(),
+              ),
+              GoRoute(
+                path: 'upload_training',
+                name: 'admin-upload-training',
+                builder: (context, state) => const AdminTrainingUploadScreen(),
+              ),
+              GoRoute(
+                path: 'messages',
+                name: 'admin-messages',
+                builder: (context, state) => const MessagesScreen(),
+              ),
+              GoRoute(
+                path: 'reports_analytics',
+                name: 'admin-reports-analytics',
+                builder: (context, state) => const AdminReportsAnalyticsScreen(),
+              ),
+              GoRoute(
+                path: 'analytics',
+                name: 'admin-analytics',
+                builder: (context, state) => const AdminAnalyticsScreen(),
+              ),
+              GoRoute(
+                path: 'training',
+                name: 'admin-training',
+                builder: (context, state) => const AdminTrainingScreen(),
+              ),
+              GoRoute(
+                path: 'settings',
+                name: 'admin-settings',
+                builder: (context, state) => const AdminSettingsScreen(),
+              ),
         ],
       ),
       
@@ -120,63 +183,7 @@ class AppRouter {
         path: '/doctor_dashboard',
         name: 'doctor-dashboard',
         builder: (context, state) => const DoctorDashboard(),
-        routes: [
-          GoRoute(
-            path: 'patients',
-            name: 'doctor-patients',
-            builder: (context, state) => Container(),
-          ),
-          GoRoute(
-            path: 'appointments',
-            name: 'doctor-appointments',
-            builder: (context, state) => Container(),
-          ),
-          GoRoute(
-            path: 'consultation',
-            name: 'doctor-consultation',
-            builder: (context, state) => Container(),
-          ),
-          GoRoute(
-            path: 'referrals',
-            name: 'doctor-referrals',
-            builder: (context, state) => Container(),
-          ),
-          GoRoute(
-            path: 'messages',
-            name: 'doctor-messages',
-            builder: (context, state) => const MessagesScreen(),
-            routes: [
-              GoRoute(
-                path: 'new',
-                name: 'doctor-new-conversation',
-                builder: (context, state) => const NewConversationScreen(),
-              ),
-              GoRoute(
-                path: 'chat/:conversationId',
-                name: 'doctor-chat',
-                builder: (context, state) {
-                  final conversationId = state.pathParameters['conversationId']!;
-                  final extra = state.extra as Map<String, dynamic>?;
-                  return ChatScreen(
-                    conversationId: conversationId,
-                    otherParticipantName: extra?['otherParticipantName'] ?? 'Unknown',
-                    otherParticipantRole: extra?['otherParticipantRole'] ?? 'USER',
-                  );
-                },
-              ),
-            ],
-          ),
-          GoRoute(
-            path: 'analytics',
-            name: 'doctor-analytics',
-            builder: (context, state) => Container(),
-          ),
-          GoRoute(
-            path: 'profile',
-            name: 'doctor-profile',
-            builder: (context, state) => Container(),
-          ),
-        ],
+        // Removed duplicate subroutes for doctor dashboard features
       ),
       
       // CHW Routes
@@ -308,7 +315,7 @@ class AppRouter {
           GoRoute(
             path: 'consultations',
             name: 'patient-consultations',
-            builder: (context, state) => const PatientConsultationTabbedScreen(),
+            builder: (context, state) => const PatientConsultationsScreen(),
           ),
           GoRoute(
             path: 'referrals',
@@ -392,39 +399,9 @@ class AppRouter {
           return TrainingMaterialsScreen(userRole: userRole);
         },
       ),
-      
-      GoRoute(
-        path: '/messages',
-        name: 'messages',
-        builder: (context, state) => const MessagesScreen(),
-        routes: [
-          GoRoute(
-            path: 'new',
-            name: 'new-conversation',
-            builder: (context, state) => const NewConversationScreen(),
-          ),
-          GoRoute(
-            path: 'chat/:conversationId',
-            name: 'chat',
-            builder: (context, state) {
-              final conversationId = state.pathParameters['conversationId']!;
-              final extra = state.extra as Map<String, dynamic>?;
-              return ChatScreen(
-                conversationId: conversationId,
-                otherParticipantName: extra?['otherParticipantName'] ?? 'Unknown',
-                otherParticipantRole: extra?['otherParticipantRole'] ?? 'USER',
-              );
-            },
-          ),
-        ],
-      ),
 
       // Consultation Routes
-      GoRoute(
-        path: '/chw_consultation',
-        name: 'chw-consultation-standalone',
-        builder: (context, state) => const CHWConsultationScreen(),
-      ),
+      // Removed: GoRoute for CHWConsultationScreen (screen does not exist)
     ],
   );
   
@@ -470,9 +447,7 @@ class AppRouter {
              email.contains('clinic') || email.startsWith('facility@')) {
       return '/facility_dashboard';
     }
-    // Default to patient dashboard
-    else {
-      return '/patient_dashboard';
-    }
+    // Fallback: always return a non-null route
+    return '/login';
   }
 }

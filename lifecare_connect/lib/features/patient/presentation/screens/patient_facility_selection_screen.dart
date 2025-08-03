@@ -158,6 +158,7 @@ class PatientFacilitySelectionScreen extends StatelessWidget {
         .collection('users')
         .where('role', isEqualTo: 'facility')
         .where('isActive', isEqualTo: true)
+        .where('isApproved', isEqualTo: true)
         .where(Filter.or(
           Filter('type', isEqualTo: categoryType),
           Filter('facilityType', isEqualTo: categoryType),

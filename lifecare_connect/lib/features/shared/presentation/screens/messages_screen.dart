@@ -1,4 +1,4 @@
-// ignore_for_file: prefer_const_constructors, deprecated_member_use, avoid_print
+// ignore_for_file: prefer_const_constructors, deprecated_member_use, avoid_print, use_build_context_synchronously
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -29,6 +29,24 @@ class _MessagesScreenState extends State<MessagesScreen> {
   void initState() {
     super.initState();
     _currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final route = ModalRoute.of(context);
+      if (route != null && route.settings.arguments != null) {
+        final extra = route.settings.arguments as Map<String, dynamic>?;
+        final conversationId = extra?['conversationId'] as String?;
+        if (conversationId != null && conversationId.isNotEmpty) {
+          MessageService.getConversationById(conversationId).then((conversation) {
+            if (conversation != null) {
+              _openChat(conversation);
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Conversation not found.')),
+              );
+            }
+          });
+        }
+      }
+    });
     _loadConversations();
     _checkAdminRole();
   }

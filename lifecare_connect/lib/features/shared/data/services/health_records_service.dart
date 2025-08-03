@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print, prefer_interpolation_to_compose_strings
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class HealthRecordsService {
@@ -84,6 +86,7 @@ class HealthRecordsService {
         'patientUid': patientUid,
         'providerId': chwUid,
         'chwUid': chwUid,
+        'chwId': chwUid,
         'providerName': chwName,
         'providerType': 'CHW',
         'date': FieldValue.serverTimestamp(),
@@ -94,13 +97,15 @@ class HealthRecordsService {
         'isEditable': false, // Cannot be edited after submission
         'isDeletable': false, // Cannot be deleted after submission
       };
-
+      print('[DEBUG] Saving CHW consultation health record for patientUid=$patientUid chwUid=$chwUid chwName=$chwName');
+      print('[DEBUG] Record data: ' + recordData.toString());
       final docRef = await _firestore
           .collection('health_records')
           .add(recordData);
-
+      print('[DEBUG] CHW consultation health record saved with id: ${docRef.id}');
       return docRef.id;
     } catch (e) {
+      print('[ERROR] Failed to save CHW consultation: $e');
       throw Exception('Failed to save CHW consultation: $e');
     }
   }

@@ -124,7 +124,7 @@ class _MessagesList extends StatelessWidget {
     
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
-          .collection('conversations')
+          .collection('messages')
           .where('participants', arrayContains: currentUserId)
           .where('recipientType', isEqualTo: recipientType)
           .orderBy('lastMessageTime', descending: true)
@@ -491,7 +491,7 @@ class _StartConversationDialogState extends State<_StartConversationDialog> {
       
       // Check if conversation already exists
       final existingConversation = await FirebaseFirestore.instance
-          .collection('conversations')
+          .collection('messages')
           .where('participants', arrayContains: currentUserId)
           .get();
       
@@ -507,7 +507,7 @@ class _StartConversationDialogState extends State<_StartConversationDialog> {
       
       // Create new conversation if none exists
       if (conversationId == null) {
-        final docRef = await FirebaseFirestore.instance.collection('conversations').add({
+        final docRef = await FirebaseFirestore.instance.collection('messages').add({
           'participants': [currentUserId, recipientId],
           'recipientType': widget.recipientType,
           'createdAt': FieldValue.serverTimestamp(),
@@ -601,9 +601,8 @@ class _ChatScreenState extends State<_ChatScreen> {
   Widget _buildMessagesList() {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
-          .collection('conversations')
-          .doc(widget.conversationId)
           .collection('messages')
+          .where('conversationId', isEqualTo: widget.conversationId)
           .orderBy('timestamp', descending: true)
           .snapshots(),
       builder: (context, snapshot) {
@@ -682,10 +681,9 @@ class _ChatScreenState extends State<_ChatScreen> {
       final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
       
       await FirebaseFirestore.instance
-          .collection('conversations')
-          .doc(widget.conversationId)
           .collection('messages')
           .add({
+        'conversationId': widget.conversationId,
         'senderId': currentUserId,
         'message': messageText,
         'timestamp': FieldValue.serverTimestamp(),
@@ -694,7 +692,7 @@ class _ChatScreenState extends State<_ChatScreen> {
 
       // Update conversation last message
       await FirebaseFirestore.instance
-          .collection('conversations')
+          .collection('messages')
           .doc(widget.conversationId)
           .update({
         'lastMessage': messageText,

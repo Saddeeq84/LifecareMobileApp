@@ -2,12 +2,14 @@
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:async';
 import 'package:go_router/go_router.dart';
 import '../../../shared/data/models/appointment.dart';
 import '../../../shared/data/services/appointment_service.dart';
 import '../../../shared/data/services/consultation_service.dart';
 import 'chw_consultation_details_screen.dart';
+import 'chw_anc_pnc_consultation_screen.dart';
 import '../../../shared/data/services/message_service.dart';
 import '../../../shared/presentation/screens/chat_screen.dart';
 
@@ -58,7 +60,7 @@ class _CHWRegularConsultationsScreenState extends State<CHWRegularConsultationsS
     _completedSub?.cancel();
 
 
-    // Pending Consultations: approved, non-ANC appointments, not referred
+    // Pending Consultations: approved appointments, not referred (include ANC/PNC and regular)
     _pendingSub = AppointmentService.getCHWAppointments(
       chwId: _currentUserId,
       statusList: ['approved']
@@ -67,37 +69,49 @@ class _CHWRegularConsultationsScreenState extends State<CHWRegularConsultationsS
           .map((doc) => Appointment.fromFirestore(doc))
           .toList();
 
-      // Debug: Print all appointment statuses for this CHW
-      for (final a in allAppointments) {
-        debugPrint('DEBUG: Appointment ${a.id} status: ${a.status}');
-      }
-
       setState(() {
         _pendingAppointments = allAppointments.where((appointment) =>
           appointment.isApproved &&
-          appointment.status != 'referred' &&
-          !appointment.appointmentType.toLowerCase().contains('anc') &&
-          !appointment.appointmentType.toLowerCase().contains('antenatal')
+          appointment.status != 'referred'
         ).toList();
         _pendingLoaded = true;
       });
       _checkLoadingComplete();
     });
 
-    // Completed Consultations: completed, non-ANC appointments
-    _completedSub = AppointmentService.getCHWAppointments(
-      chwId: _currentUserId,
-      statusList: ['completed']
-    ).listen((snapshot) {
-      final allAppointments = snapshot.docs
-          .map((doc) => Appointment.fromFirestore(doc))
-          .toList();
+    // Completed Consultations: query health_records for statusFlag: 'completed'
+    _completedSub = FirebaseFirestore.instance
+        .collection('health_records')
+        .where('chwId', isEqualTo: _currentUserId)
+        .where('statusFlag', isEqualTo: 'completed')
+        .snapshots()
+        .listen((snapshot) {
+      final allRecords = snapshot.docs.map((doc) => doc.data()).toList();
       setState(() {
-        _completedAppointments = allAppointments.where((appointment) =>
-          appointment.isCompleted &&
-          !appointment.appointmentType.toLowerCase().contains('anc') &&
-          !appointment.appointmentType.toLowerCase().contains('antenatal')
-        ).toList();
+        _completedAppointments = allRecords.map((data) {
+          final record = data['data'] ?? {};
+          return Appointment(
+            id: record['appointmentId'] ?? data['appointmentId'] ?? '',
+            patientId: record['patientId'] ?? data['patientId'] ?? '',
+            patientName: record['patientName'] ?? data['patientName'] ?? '',
+            providerId: data['chwId'] ?? record['chwId'] ?? '',
+            providerName: data['providerName'] ?? 'Community Health Worker',
+            providerType: data['providerType'] ?? 'CHW',
+            appointmentDate: record['createdAt'] != null && record['createdAt'] is Timestamp ? (record['createdAt'] as Timestamp).toDate() : (data['createdAt'] != null && data['createdAt'] is Timestamp ? (data['createdAt'] as Timestamp).toDate() : DateTime.now()),
+            reason: record['reason'] ?? record['notes'] ?? data['reason'] ?? data['notes'] ?? '',
+            notes: record['notes'] ?? data['notes'] ?? '',
+            status: 'completed',
+            facilityId: null,
+            facilityName: null,
+            appointmentType: record['consultationType'] ?? record['type'] ?? data['consultationType'] ?? data['type'] ?? 'Consultation',
+            createdAt: record['createdAt'] != null && record['createdAt'] is Timestamp ? (record['createdAt'] as Timestamp).toDate() : (data['createdAt'] != null && data['createdAt'] is Timestamp ? (data['createdAt'] as Timestamp).toDate() : DateTime.now()),
+            updatedAt: record['updatedAt'] != null && record['updatedAt'] is Timestamp ? (record['updatedAt'] as Timestamp).toDate() : (data['updatedAt'] != null && data['updatedAt'] is Timestamp ? (data['updatedAt'] as Timestamp).toDate() : DateTime.now()),
+            completedAt: data['completedAt'] != null && data['completedAt'] is Timestamp ? (data['completedAt'] as Timestamp).toDate() : null,
+            statusNotes: null,
+            rescheduleNotes: null,
+            cancellationReason: null,
+          );
+        }).toList();
         _completedLoaded = true;
       });
       _checkLoadingComplete();
@@ -163,7 +177,7 @@ class _CHWRegularConsultationsScreenState extends State<CHWRegularConsultationsS
             ),
             const SizedBox(height: 8),
             Text(
-              'All your approved, non-ANC appointments will appear here.',
+              'All your approved appointments (including ANC/PNC) will appear here.',
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.grey[600]),
             ),
@@ -196,7 +210,7 @@ class _CHWRegularConsultationsScreenState extends State<CHWRegularConsultationsS
             ),
             const SizedBox(height: 8),
             Text(
-              'Completed non-ANC consultations will appear here.',
+              'Completed consultations will appear here.',
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.grey[600]),
             ),
@@ -209,7 +223,7 @@ class _CHWRegularConsultationsScreenState extends State<CHWRegularConsultationsS
       itemCount: _completedAppointments.length,
       separatorBuilder: (context, index) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
-        final appointment = _completedAppointments[index];
+        final appointment = _completedAppointments.reversed.toList()[index];
         return Card(
           elevation: 3,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -564,19 +578,32 @@ class _CHWRegularConsultationsScreenState extends State<CHWRegularConsultationsS
       );
 
       if (consultation != null) {
-        // Navigate to consultation details screen (or appropriate screen)
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => CHWConsultationDetailsScreen(
-              appointmentId: appointment.id,
-              patientId: appointment.patientId,
-              patientName: appointment.patientName,
-              appointmentData: appointment.toFirestore(),
+        final type = appointment.appointmentType.toLowerCase();
+        if (type.contains('anc') || type.contains('antenatal') || type.contains('pnc') || type.contains('postnatal')) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => CHWAncPncConsultationScreen(
+                appointmentId: appointment.id,
+                patientId: appointment.patientId,
+                patientName: appointment.patientName,
+                appointmentType: appointment.appointmentType,
+              ),
             ),
-          ),
-        );
-        
+          );
+        } else {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => CHWConsultationDetailsScreen(
+                appointmentId: appointment.id,
+                patientId: appointment.patientId,
+                patientName: appointment.patientName,
+                appointmentData: appointment.toFirestore(),
+              ),
+            ),
+          );
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Consultation started successfully'),

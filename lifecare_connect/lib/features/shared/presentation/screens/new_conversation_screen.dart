@@ -14,6 +14,7 @@ class NewConversationScreen extends StatefulWidget {
 }
 
 class _NewConversationScreenState extends State<NewConversationScreen> {
+  String _selectedRoleFilter = 'all';
   final _searchController = TextEditingController();
   List<Map<String, dynamic>> _users = [];
   bool _isLoading = false;
@@ -57,7 +58,7 @@ class _NewConversationScreenState extends State<NewConversationScreen> {
 
   Future<void> _searchUsers() async {
     final searchTerm = _searchController.text.trim();
-    if (searchTerm.isEmpty || _currentUserId == null) {
+    if (_currentUserId == null) {
       setState(() {
         _users = [];
       });
@@ -72,8 +73,8 @@ class _NewConversationScreenState extends State<NewConversationScreen> {
       final users = await MessageService.searchUsers(
         searchTerm: searchTerm,
         currentUserId: _currentUserId!,
+        roleFilter: _selectedRoleFilter == 'all' ? null : [_selectedRoleFilter],
       );
-      
       setState(() {
         _users = users;
         _isLoading = false;
@@ -252,6 +253,8 @@ class _NewConversationScreenState extends State<NewConversationScreen> {
                 scrollDirection: Axis.horizontal,
                 padding: EdgeInsets.symmetric(horizontal: 16),
                 children: [
+                  _buildQuickFilter('All', 'all'),
+                  SizedBox(width: 8),
                   _buildQuickFilter('Doctors', 'doctor'),
                   SizedBox(width: 8),
                   _buildQuickFilter('CHWs', 'chw'),
@@ -316,16 +319,19 @@ class _NewConversationScreenState extends State<NewConversationScreen> {
   }
 
   Widget _buildQuickFilter(String label, String role) {
+    final isSelected = _selectedRoleFilter == role;
     return GestureDetector(
       onTap: () {
-        _searchController.text = role;
+        setState(() {
+          _selectedRoleFilter = role;
+        });
         _searchUsers();
       },
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: _getRoleColor(role).withOpacity(0.1),
-          border: Border.all(color: _getRoleColor(role)),
+          color: isSelected ? _getRoleColor(role).withOpacity(0.3) : _getRoleColor(role).withOpacity(0.1),
+          border: Border.all(color: _getRoleColor(role), width: isSelected ? 2 : 1),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(

@@ -50,7 +50,7 @@ class _PatientConversationScreenState extends State<PatientConversationScreen> {
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
-                  .collection('conversations')
+                  .collection('messages')
                   .doc(widget.conversationId)
                   .collection('messages')
                   .orderBy('timestamp', descending: false)
@@ -291,7 +291,7 @@ class _PatientConversationScreenState extends State<PatientConversationScreen> {
 
       // Add message to conversation
       await FirebaseFirestore.instance
-          .collection('conversations')
+          .collection('messages')
           .doc(widget.conversationId)
           .collection('messages')
           .add({
@@ -303,7 +303,7 @@ class _PatientConversationScreenState extends State<PatientConversationScreen> {
 
       // Update conversation metadata
       await FirebaseFirestore.instance
-          .collection('conversations')
+          .collection('messages')
           .doc(widget.conversationId)
           .update({
         'lastMessage': message,

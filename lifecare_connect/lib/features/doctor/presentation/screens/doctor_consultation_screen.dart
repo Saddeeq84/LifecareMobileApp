@@ -1,28 +1,48 @@
-// ignore_for_file: use_build_context_synchronously, prefer_const_declarations
+// ignore_for_file: use_build_context_synchronously, prefer_interpolation_to_compose_strings
+
+// ignore_for_file: prefer_const_constructors
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-import 'package:go_router/go_router.dart';
-import 'package:lifecare_connect/features/shared/data/services/message_service.dart';
+import '../../../shared/presentation/screens/messages_screen.dart';
+import '../../../shared/data/services/message_service.dart';
+
+Widget _buildInfoRow(String label, String value) {
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 6),
+    child: RichText(
+      text: TextSpan(
+        style: const TextStyle(color: Colors.black87),
+        children: [
+          TextSpan(
+            text: '$label: ',
+            style: const TextStyle(fontWeight: FontWeight.w500),
+          ),
+          TextSpan(text: value),
+        ],
+      ),
+    ),
+  );
+}
 
 class DoctorConsultationScreen extends StatefulWidget {
-  const DoctorConsultationScreen({super.key});
+  const DoctorConsultationScreen({Key? key}) : super(key: key);
 
   @override
   State<DoctorConsultationScreen> createState() => _DoctorConsultationScreenState();
 }
 
-class _DoctorConsultationScreenState extends State<DoctorConsultationScreen> 
-    with SingleTickerProviderStateMixin {
-  final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+class _DoctorConsultationScreenState extends State<DoctorConsultationScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  late String doctorId;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    doctorId = FirebaseAuth.instance.currentUser?.uid ?? '';
   }
 
   @override
@@ -35,1056 +55,1157 @@ class _DoctorConsultationScreenState extends State<DoctorConsultationScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Consultations"),
-        backgroundColor: Colors.indigo.shade700,
+        title: const Text('Doctor Consultations'),
+        backgroundColor: Colors.indigo,
         foregroundColor: Colors.white,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
         bottom: TabBar(
           controller: _tabController,
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white70,
           indicatorColor: Colors.white,
           tabs: const [
-            Tab(text: "Pending"),
-            Tab(text: "Completed"),
+            Tab(text: 'Pending Consultation'),
+            Tab(text: 'Completed Consultation'),
           ],
         ),
       ),
       body: TabBarView(
         controller: _tabController,
         children: [
-          _buildConsultationList(isPending: true),
-          _buildConsultationList(isPending: false),
+          _PendingConsultationTab(doctorId: doctorId),
+          _CompletedConsultationTab(doctorId: doctorId),
         ],
       ),
     );
   }
+}
 
-  /// Build consultation list for pending or completed consultations
-  Widget _buildConsultationList({required bool isPending}) {
+class _PendingConsultationTab extends StatelessWidget {
+  final String doctorId;
+  const _PendingConsultationTab({required this.doctorId});
+
+  Stream<QuerySnapshot> _buildPendingQuery(String doctorId) {
+    final appointmentsQuery = FirebaseFirestore.instance
+        .collection('appointments')
+        .where('providerId', isEqualTo: doctorId)
+        .where('status', isEqualTo: 'approved');
+    return appointmentsQuery.snapshots();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
-      stream: isPending 
-          ? FirebaseFirestore.instance
-              .collection('appointments')
-              .where('doctorId', isEqualTo: currentUserId)
-              .where('status', isEqualTo: 'approved')
-              .orderBy('createdAt', descending: true)
-              .snapshots()
-          : FirebaseFirestore.instance
-              .collection('consultations')
-              .where('doctorId', isEqualTo: currentUserId)
-              .where('status', isEqualTo: 'completed')
-              .orderBy('completedAt', descending: true)
-              .snapshots(),
+      stream: _buildPendingQuery(doctorId),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
-
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return _buildEmptyView(isPending);
+          return const Center(child: Text('No pending consultations'));
         }
-
         final docs = snapshot.data!.docs;
-        
-        return ListView.builder(
+        return ListView.separated(
           padding: const EdgeInsets.all(16),
           itemCount: docs.length,
+          separatorBuilder: (context, index) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
             final doc = docs[index];
-            final data = doc.data() as Map<String, dynamic>;
-            data['id'] = doc.id;
-            
-            return isPending 
-                ? _buildPendingConsultationCard(data)
-                : _buildCompletedConsultationCard(data);
+            final appointment = doc.data() as Map<String, dynamic>;
+            appointment['id'] = doc.id;
+            return Card(
+              elevation: 3,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Wrap(
+                      spacing: 8,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Icon(Icons.person, color: Colors.indigo.shade700),
+                        const SizedBox(width: 8),
+                        Text(
+                          appointment['patientName'] ?? 'Unknown Patient',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
+                      ],
+                    ),
+                    // ...rest of children (actions, date, reason, etc.)...
+                    SizedBox(
+                      height: 40,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        shrinkWrap: true,
+                        children: [
+                          ElevatedButton.icon(
+                            icon: const Icon(Icons.play_arrow, color: Colors.white),
+                            label: const Text('Start Consultation'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.indigo,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                            onPressed: () {
+                              showModalBottomSheet(
+                                context: context,
+                                shape: const RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                                ),
+                                builder: (context) => Padding(
+                                  padding: const EdgeInsets.all(24.0),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      ListTile(
+                                        leading: const Icon(Icons.chat, color: Colors.indigo),
+                                        title: const Text('Text Chat'),
+                                        subtitle: const Text('Open messaging system'),
+                                        onTap: () async {
+                                          Navigator.pop(context);
+                                          final doctorId = FirebaseAuth.instance.currentUser?.uid ?? '';
+                                          final doctorName = FirebaseAuth.instance.currentUser?.displayName ?? 'Doctor';
+                                          final conversationId = await MessageService.createOrGetConversation(
+                                            user1Id: doctorId,
+                                            user1Name: doctorName,
+                                            user1Role: 'doctor',
+                                            user2Id: appointment['patientId'],
+                                            user2Name: appointment['patientName'] ?? 'Unknown Patient',
+                                            user2Role: 'patient',
+                                          );
+                                          Navigator.of(context).push(
+                                            MaterialPageRoute(
+                                              builder: (context) => MessagesScreen(),
+                                              settings: RouteSettings(
+                                                arguments: {
+                                                  'conversationId': conversationId,
+                                                  'patientName': appointment['patientName'],
+                                                },
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                      ListTile(
+                                        leading: const Icon(Icons.videocam, color: Colors.grey),
+                                        title: const Text('Video Call'),
+                                        subtitle: const Text('Coming soon'),
+                                        enabled: false,
+                                      ),
+                                      ListTile(
+                                        leading: const Icon(Icons.call, color: Colors.grey),
+                                        title: const Text('Audio Call'),
+                                        subtitle: const Text('Coming soon'),
+                                        enabled: false,
+                                      ),
+                                      ListTile(
+                                        leading: const Icon(Icons.local_hospital, color: Colors.teal),
+                                        title: const Text('Physical'),
+                                        subtitle: const Text('Clinic-based consultation'),
+                                        onTap: () {
+                                          Navigator.pop(context);
+                                          Navigator.of(context).push(
+                                            MaterialPageRoute(
+                                              builder: (context) => DoctorConsultationDetailScreen(appointment: appointment),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                      const SizedBox(height: 8),
+                                      ElevatedButton.icon(
+                                        icon: const Icon(Icons.note_add, color: Colors.white),
+                                        label: const Text('Add Consultation Note'),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.indigo,
+                                          foregroundColor: Colors.white,
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                        ),
+                                        onPressed: () {
+                                          Navigator.pop(context);
+                                          Navigator.of(context).push(
+                                            MaterialPageRoute(
+                                              builder: (context) => DoctorConsultationDetailScreen(appointment: appointment),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                          SizedBox(width: 0),
+                          IconButton(
+                            icon: const Icon(Icons.note_add, color: Colors.indigo, size: 22),
+                            tooltip: 'Add Clinical Note',
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => DoctorConsultationDetailScreen(appointment: appointment),
+                                ),
+                              );
+                            },
+                          ),
+                          SizedBox(width: 0),
+                          IconButton(
+                            icon: const Icon(Icons.chat, color: Colors.indigo, size: 22),
+                            tooltip: 'Chat with Patient',
+                            onPressed: () async {
+                              final doctorId = FirebaseAuth.instance.currentUser?.uid ?? '';
+                              final doctorName = FirebaseAuth.instance.currentUser?.displayName ?? 'Doctor';
+                              final conversationId = await MessageService.createOrGetConversation(
+                                user1Id: doctorId,
+                                user1Name: doctorName,
+                                user1Role: 'doctor',
+                                user2Id: appointment['patientId'],
+                                user2Name: appointment['patientName'] ?? 'Unknown Patient',
+                                user2Role: 'patient',
+                              );
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => MessagesScreen(),
+                                  settings: RouteSettings(
+                                    arguments: {
+                                      'conversationId': conversationId,
+                                      'patientName': appointment['patientName'],
+                                    },
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                          SizedBox(width: 0),
+                          IconButton(
+                            icon: const Icon(Icons.info, color: Colors.indigo, size: 28),
+                            tooltip: 'View Details',
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) {
+                                  return AlertDialog(
+                                    title: const Text('Booking/Referral Details'),
+                                    content: SingleChildScrollView(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          _buildInfoRow('Patient Name', appointment['patientName'] ?? 'Unknown'),
+                                          _buildInfoRow('Age', appointment['age']?.toString() ?? 'Not provided'),
+                                          _buildInfoRow('Sex', appointment['sex'] ?? 'Not provided'),
+                                          _buildInfoRow('Phone', appointment['phone'] ?? 'Not provided'),
+                                          _buildInfoRow('Address', appointment['address'] ?? 'Not provided'),
+                                          _buildInfoRow('Appointment Date', appointment['appointmentDate']?.toString() ?? 'Not provided'),
+                                          if (appointment['referralReason'] != null && appointment['referralReason'].toString().isNotEmpty)
+                                            _buildInfoRow('Referral Reason', appointment['referralReason']),
+                                          if (appointment['reason'] != null && appointment['reason'].toString().isNotEmpty)
+                                            _buildInfoRow('Consultation Reason', appointment['reason']),
+                                        ],
+                                      ),
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.of(context).pop(),
+                                        child: const Text('Close'),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(Icons.calendar_today, color: Colors.grey.shade600, size: 16),
+                        const SizedBox(width: 6),
+                        Text(
+                          appointment['appointmentDate'] != null
+                              ? appointment['appointmentDate'].toString().split(' ')[0]
+                              : '',
+                          style: const TextStyle(color: Colors.grey, fontSize: 13),
+                        ),
+                      ],
+                    ),
+                    if (appointment['reason'] != null && appointment['reason'].toString().isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Row(
+                          children: [
+                            Icon(Icons.info_outline, size: 16, color: Colors.grey.shade600),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                appointment['reason'],
+                                style: const TextStyle(color: Colors.grey, fontSize: 13),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            );
           },
         );
       },
     );
   }
-
-  Widget _buildEmptyView(bool isPending) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            isPending ? Icons.event_available : Icons.history,
-            size: 80,
-            color: Colors.grey,
-          ),
-          const SizedBox(height: 24),
-          Text(
-            isPending ? 'No Pending Consultations' : 'No Completed Consultations',
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            isPending 
-                ? 'You don\'t have any approved appointments\nready for consultation.'
-                : 'No completed consultations yet.\nCompleted consultations will appear here.',
-            style: const TextStyle(
-              fontSize: 16,
-              color: Colors.grey,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Build card for pending consultation (approved appointment)
-  Widget _buildPendingConsultationCard(Map<String, dynamic> appointment) {
-    // Handle different date field formats
-    DateTime? appointmentDate;
-    if (appointment['appointmentDate'] != null) {
-      appointmentDate = (appointment['appointmentDate'] as Timestamp).toDate();
-    } else if (appointment['createdAt'] != null) {
-      appointmentDate = (appointment['createdAt'] as Timestamp).toDate();
-    } else {
-      appointmentDate = DateTime.now(); // Fallback
-    }
-    
-    final isDue = appointmentDate.isBefore(DateTime.now().add(const Duration(hours: 1)));
-    
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 3,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  isDue ? Icons.access_time : Icons.schedule,
-                  color: isDue ? Colors.orange : Colors.indigo,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  isDue ? 'Due for Consultation' : 'Scheduled Consultation',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: isDue ? Colors.orange : Colors.indigo,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            
-            // Patient Details
-            _buildDetailRow('Patient:', appointment['patientName'] ?? 'Unknown'),
-            _buildDetailRow('Reason:', appointment['reason'] ?? 'General Consultation'),
-            _buildDetailRow('Date:', appointment['date'] ?? _formatDateTime(appointmentDate)),
-            if (appointment['time'] != null)
-              _buildDetailRow('Time:', appointment['time']),
-            if (appointment['referredBy'] != null)
-              _buildDetailRow('Referred by:', appointment['referredByName'] ?? 'CHW'),
-            if (appointment['priority'] != null)
-              _buildDetailRow('Priority:', appointment['priority']),
-            
-            const SizedBox(height: 16),
-            
-            // Action Buttons
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    icon: const Icon(Icons.visibility),
-                    label: const Text('View Patient Info'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                    ),
-                    onPressed: () => _viewPatientInfo(appointment),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    icon: const Icon(Icons.medical_services),
-                    label: const Text('Start Consultation'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.indigo,
-                      foregroundColor: Colors.white,
-                    ),
-                    onPressed: () => _startConsultation(appointment),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Build card for completed consultation
-  Widget _buildCompletedConsultationCard(Map<String, dynamic> consultation) {
-    final completedDate = consultation['completedAt'] != null
-        ? (consultation['completedAt'] as Timestamp).toDate()
-        : DateTime.now();
-    
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(
-                  Icons.check_circle,
-                  color: Colors.green,
-                ),
-                const SizedBox(width: 8),
-                const Text(
-                  'Completed Consultation',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.green,
-                  ),
-                ),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    'COMPLETED',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green.shade700,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            
-            // Patient Details
-            _buildDetailRow('Patient:', consultation['patientName'] ?? 'Unknown'),
-            _buildDetailRow('Completed on:', _formatDateTime(completedDate)),
-            if (consultation['diagnosis'] != null)
-              _buildDetailRow('Diagnosis:', consultation['diagnosis']),
-            if (consultation['treatment'] != null)
-              _buildDetailRow('Treatment:', consultation['treatment']),
-            if (consultation['notes'] != null)
-              _buildDetailRow('Notes:', consultation['notes']),
-            
-            const SizedBox(height: 16),
-            
-            // Action Button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                icon: const Icon(Icons.description),
-                label: const Text('View Consultation Details'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.grey[600],
-                  foregroundColor: Colors.white,
-                ),
-                onPressed: () => _viewCompletedConsultation(consultation),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDetailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 100,
-            child: Text(
-              label,
-              style: const TextStyle(
-                fontWeight: FontWeight.w500,
-                color: Colors.grey,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(fontWeight: FontWeight.w500),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _formatDateTime(DateTime dateTime) {
-    return '${dateTime.day}/${dateTime.month}/${dateTime.year} at ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
-  }
-
-  void _viewPatientInfo(Map<String, dynamic> appointment) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => DoctorPatientInfoScreen(appointment: appointment),
-      ),
-    );
-  }
-
-  void _startConsultation(Map<String, dynamic> appointment) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => DoctorConsultationSheetScreen(appointment: appointment),
-      ),
-    );
-  }
-
-  void _viewCompletedConsultation(Map<String, dynamic> consultation) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Consultation Details'),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildDetailRow('Patient:', consultation['patientName'] ?? 'Unknown'),
-              _buildDetailRow('Date:', consultation['completedAt'] != null 
-                  ? _formatDateTime((consultation['completedAt'] as Timestamp).toDate())
-                  : 'Unknown'),
-              if (consultation['diagnosis'] != null)
-                _buildDetailRow('Diagnosis:', consultation['diagnosis']),
-              if (consultation['treatment'] != null)
-                _buildDetailRow('Treatment:', consultation['treatment']),
-              if (consultation['prescription'] != null)
-                _buildDetailRow('Prescription:', consultation['prescription']),
-              if (consultation['notes'] != null)
-                _buildDetailRow('Notes:', consultation['notes']),
-              if (consultation['followUp'] != null)
-                _buildDetailRow('Follow-up:', consultation['followUp']),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
-// Doctor Patient Info Screen
-class DoctorPatientInfoScreen extends StatelessWidget {
-  final Map<String, dynamic> appointment;
+class _CompletedConsultationTab extends StatelessWidget {
+  final String doctorId;
+  const _CompletedConsultationTab({required this.doctorId});
 
-  const DoctorPatientInfoScreen({super.key, required this.appointment});
+  Stream<QuerySnapshot> _buildCompletedQuery(String doctorId) {
+    return FirebaseFirestore.instance
+        .collection('health_records')
+        .where('providerId', isEqualTo: doctorId)
+        .where('type', isEqualTo: 'DOCTOR_CONSULTATION')
+        .where('status', isEqualTo: 'completed')
+        .orderBy('date', descending: true)
+        .snapshots();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(appointment['patientName'] ?? 'Patient Info'),
-        backgroundColor: Colors.indigo.shade700,
-        foregroundColor: Colors.white,
-      ),
-      body: FutureBuilder<List<dynamic>>(
-        future: Future.wait([
-          FirebaseFirestore.instance
-              .collection('appointments')
-              .doc(appointment['id'])
-              .get(),
-          FirebaseFirestore.instance
-              .collection('patients')
-              .doc(appointment['patientId'])
-              .collection('health_records')
-              .orderBy('date', descending: true)
-              .limit(1)
-              .get()
-              .then((snapshot) => snapshot.docs.isNotEmpty ? snapshot.docs.first : null)
-        ]),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final appointmentDoc = snapshot.data![0] as DocumentSnapshot;
-          final lastRecord = snapshot.data![1] as DocumentSnapshot?;
-          
-          if (!appointmentDoc.exists) {
-            return const Center(child: Text('Patient information not found'));
-          }
-
-          final data = appointmentDoc.data() as Map<String, dynamic>;
-          final patientInfo = data['patientInfo'] as Map<String, dynamic>? ?? {};
-
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildSection('Basic Information', [
-                  _buildInfoRow('Name', patientInfo['name'] ?? appointment['patientName']),
-                  _buildInfoRow('Age', patientInfo['age']?.toString() ?? 'Not provided'),
-                  _buildInfoRow('Sex', patientInfo['sex'] ?? 'Not provided'),
-                  _buildInfoRow('Phone', patientInfo['phone'] ?? 'Not provided'),
-                  _buildInfoRow('Address', patientInfo['address'] ?? 'Not provided'),
-                ]),
-                
-                _buildSection('Current Vital Signs', [
-                  _buildInfoRow('Blood Pressure', patientInfo['bloodPressure'] ?? 'Not provided'),
-                  _buildInfoRow('Temperature', patientInfo['temperature'] ?? 'Not provided'),
-                  _buildInfoRow('Pulse Rate', patientInfo['pulseRate'] ?? 'Not provided'),
-                  _buildInfoRow('Respiratory Rate', patientInfo['respiratoryRate'] ?? 'Not provided'),
-                  _buildInfoRow('Weight', patientInfo['weight'] ?? 'Not provided'),
-                  _buildInfoRow('Height', patientInfo['height'] ?? 'Not provided'),
-                  _buildInfoRow('BMI', patientInfo['bmi'] ?? 'Not calculated'),
-                ]),
-                
-                _buildSection('Current Complaint', [
-                  _buildInfoRow('Main Complaint', patientInfo['mainComplaint'] ?? 'Not provided'),
-                  _buildInfoRow('Symptoms', patientInfo['symptoms'] ?? 'Not provided'),
-                  _buildInfoRow('Duration', patientInfo['symptomDuration'] ?? 'Not provided'),
-                  _buildInfoRow('Severity', patientInfo['painScale'] ?? 'Not provided'),
-                ]),
-                
-                if (lastRecord != null) ...[
-                  _buildSection('Previous Medical History', [
-                    const Text('Most recent consultation record available'),
-                    const SizedBox(height: 8),
-                    ElevatedButton(
-                      onPressed: () => _viewPreviousRecord(context, lastRecord),
-                      child: const Text('View Previous Record'),
-                    ),
-                  ]),
-                ],
-                
-                if (patientInfo['uploadedResults'] != null)
-                  _buildSection('Uploaded Results', [
-                    Text(
-                      'Patient has uploaded test results for review',
-                      style: TextStyle(color: Colors.blue.shade700),
-                    ),
-                    const SizedBox(height: 8),
-                    ElevatedButton(
-                      onPressed: () {
-                        // Show uploaded results
-                        _showUploadedResults(context, patientInfo['uploadedResults']);
-                      },
-                      child: const Text('View Uploaded Results'),
-                    ),
-                  ]),
-                
-                if (appointment['referredBy'] != null)
-                  _buildSection('Referral Information', [
-                    _buildInfoRow('Referred by', appointment['referredByName'] ?? 'CHW'),
-                    _buildInfoRow('Referral reason', appointment['referralReason'] ?? 'Not provided'),
-                    _buildInfoRow('Referral notes', appointment['referralNotes'] ?? 'None'),
-                  ]),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildSection(String title, List<Widget> children) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.indigo,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: children,
-            ),
-          ),
-        ),
-        const SizedBox(height: 20),
-      ],
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 140,
-            child: Text(
-              '$label:',
-              style: const TextStyle(fontWeight: FontWeight.w500),
-            ),
-          ),
-          Expanded(
-            child: Text(value),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _viewPreviousRecord(BuildContext context, DocumentSnapshot record) {
-    // Navigate to previous record details
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => PreviousRecordScreen(record: record),
-      ),
-    );
-  }
-
-  void _showUploadedResults(BuildContext context, dynamic uploadedResults) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Uploaded Test Results'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (uploadedResults is List && uploadedResults.isNotEmpty)
-                ...uploadedResults.map<Widget>((result) => Card(
-                  child: ListTile(
-                    leading: const Icon(Icons.file_present),
-                    title: Text(result['fileName'] ?? 'Test Result'),
-                    subtitle: Text(result['uploadDate'] ?? 'Date not available'),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.download),
-                      onPressed: () {
-                        // Download or view the file
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Download functionality would be implemented here')),
-                        );
-                      },
-                    ),
-                  ),
-                )).toList()
-              else
-                const Text('No uploaded results available.'),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// Previous Record Screen
-class PreviousRecordScreen extends StatelessWidget {
-  final DocumentSnapshot record;
-
-  const PreviousRecordScreen({super.key, required this.record});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Previous Medical Record'),
-        backgroundColor: Colors.indigo.shade700,
-        foregroundColor: Colors.white,
-      ),
-      body: FutureBuilder<DocumentSnapshot>(
-        future: FirebaseFirestore.instance
-            .collection('consultation_records')
-            .doc(record.id)
-            .get(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (!snapshot.hasData || !snapshot.data!.exists) {
-            return const Center(child: Text('Record not found'));
-          }
-
-          final data = snapshot.data!.data() as Map<String, dynamic>;
-
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+    return StreamBuilder<QuerySnapshot>(
+      stream: _buildCompletedQuery(doctorId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const Center(child: Text('No completed consultations'));
+        }
+        final docs = snapshot.data!.docs;
+        return ListView.separated(
+          padding: const EdgeInsets.all(16),
+          itemCount: docs.length,
+          separatorBuilder: (context, index) => const SizedBox(height: 12),
+          itemBuilder: (context, index) {
+            final record = docs[index].data() as Map<String, dynamic>;
+            return Card(
+              elevation: 3,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
+                        Icon(Icons.person, color: Colors.indigo.shade700),
+                        const SizedBox(width: 8),
                         Text(
-                          'Consultation Record',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.indigo.shade700,
-                          ),
+                          record['patientName'] ?? 'Unknown Patient',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                         ),
-                        const SizedBox(height: 16),
-                        _buildRecordRow('Date', _formatTimestamp(data['consultationDate'])),
-                        _buildRecordRow('Provider', '${data['providerName']} (${data['providerType']})'),
-                        _buildRecordRow('Chief Complaint', data['chiefComplaint'] ?? ''),
-                        _buildRecordRow('Physical Examination', data['physicalExamination'] ?? ''),
-                        _buildRecordRow('Diagnosis', data['provisionalDiagnosis'] ?? ''),
-                        if (data['finalDiagnosis'] != null && data['finalDiagnosis'].isNotEmpty)
-                          _buildRecordRow('Final Diagnosis', data['finalDiagnosis']),
-                        if (data['prescriptions'] != null && (data['prescriptions'] as List).isNotEmpty)
-                          _buildListRow('Prescriptions', List<String>.from(data['prescriptions'])),
-                        if (data['laboratoryRequests'] != null && (data['laboratoryRequests'] as List).isNotEmpty)
-                          _buildListRow('Lab Requests', List<String>.from(data['laboratoryRequests'])),
-                        _buildRecordRow('Medical Advice', data['medicalAdvice'] ?? ''),
+                        const Spacer(),
+                        ElevatedButton.icon(
+                          icon: const Icon(Icons.visibility, size: 18),
+                          label: const Text('View Details'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.indigo,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) {
+                                return AlertDialog(
+                                  title: const Text('Consultation Details'),
+                                  content: SingleChildScrollView(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        _buildInfoRow('Patient Name', record['patientName'] ?? 'Unknown'),
+                                        _buildInfoRow('Age', record['age']?.toString() ?? 'Not provided'),
+                                        _buildInfoRow('Sex', record['sex'] ?? 'Not provided'),
+                                        _buildInfoRow('Phone', record['phone'] ?? 'Not provided'),
+                                        _buildInfoRow('Address', record['address'] ?? 'Not provided'),
+                                        _buildInfoRow('Appointment Date', record['appointmentDate']?.toString() ?? 'Not provided'),
+                                        if (record['referralReason'] != null && record['referralReason'].toString().isNotEmpty)
+                                          _buildInfoRow('Referral Reason', record['referralReason']),
+                                        if (record['reason'] != null && record['reason'].toString().isNotEmpty)
+                                          _buildInfoRow('Consultation Reason', record['reason']),
+                                        const Divider(),
+                                        _buildInfoRow('Clinical Notes', record['clinicalNotes'] ?? ''),
+                                        _buildInfoRow('Diagnosis', record['diagnosis'] ?? ''),
+                                        if (record['prescriptions'] != null && (record['prescriptions'] as List).isNotEmpty)
+                                          Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              const SizedBox(height: 8),
+                                              Text('Prescriptions:', style: TextStyle(fontWeight: FontWeight.bold)),
+                                              ...List<String>.from(record['prescriptions']).map((med) => Padding(
+                                                padding: const EdgeInsets.only(left: 8.0, top: 2.0),
+                                                child: Text(med),
+                                              )),
+                                            ],
+                                          ),
+                                        if (record['labRequests'] != null && (record['labRequests'] as List).isNotEmpty)
+                                          Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              const SizedBox(height: 8),
+                                              Text('Lab Requests:', style: TextStyle(fontWeight: FontWeight.bold)),
+                                              ...List<String>.from(record['labRequests']).map((lab) => Padding(
+                                                padding: const EdgeInsets.only(left: 8.0, top: 2.0),
+                                                child: Text(lab),
+                                              )),
+                                            ],
+                                          ),
+                                        if (record['radiologyRequests'] != null && (record['radiologyRequests'] as List).isNotEmpty)
+                                          Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              const SizedBox(height: 8),
+                                              Text('Radiology Requests:', style: TextStyle(fontWeight: FontWeight.bold)),
+                                              ...List<String>.from(record['radiologyRequests']).map((rad) => Padding(
+                                                padding: const EdgeInsets.only(left: 8.0, top: 2.0),
+                                                child: Text(rad),
+                                              )),
+                                            ],
+                                          ),
+                                        _buildInfoRow('Follow-up', record['followUp'] ?? ''),
+                                        _buildInfoRow('Other Notes', record['notes'] ?? ''),
+                                        const Divider(),
+                                        _buildInfoRow('Signed by', record['providerName'] ?? ''),
+                                        _buildInfoRow('Provider ID', record['providerId'] ?? ''),
+                                        _buildInfoRow('Date', record['date']?.toString().split(' ')[0] ?? ''),
+                                      ],
+                                    ),
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context).pop(),
+                                      child: const Text('Close'),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+                          },
+                        ),
                       ],
                     ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildRecordRow(String label, String value) {
-    if (value.isEmpty) return const SizedBox.shrink();
-    
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Colors.grey,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(value),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildListRow(String label, List<String> items) {
-    if (items.isEmpty) return const SizedBox.shrink();
-    
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Colors.grey,
-            ),
-          ),
-          const SizedBox(height: 4),
-          ...items.map((item) => Padding(
-            padding: const EdgeInsets.only(left: 16, bottom: 2),
-            child: Text('• $item'),
-          )),
-        ],
-      ),
-    );
-  }
-
-  String _formatTimestamp(Timestamp? timestamp) {
-    if (timestamp == null) return 'Unknown';
-    final date = timestamp.toDate();
-    return '${date.day}/${date.month}/${date.year}';
-  }
-}
-
-// Doctor Consultation Sheet Screen
-class DoctorConsultationSheetScreen extends StatefulWidget {
-  final Map<String, dynamic> appointment;
-
-  const DoctorConsultationSheetScreen({super.key, required this.appointment});
-
-  @override
-  State<DoctorConsultationSheetScreen> createState() => _DoctorConsultationSheetScreenState();
-}
-
-class _DoctorConsultationSheetScreenState extends State<DoctorConsultationSheetScreen> {
-  final _formKey = GlobalKey<FormState>();
-  
-  // Form controllers
-  final _complaintController = TextEditingController();
-  final _medicalHistoryController = TextEditingController();
-  final _surgicalHistoryController = TextEditingController();
-  final _examinationController = TextEditingController();
-  final _provisionalDiagnosisController = TextEditingController();
-  final _finalDiagnosisController = TextEditingController();
-  final _medicalAdviceController = TextEditingController();
-  final _nextVisitController = TextEditingController();
-  final _specialNotesController = TextEditingController();
-  
-  List<String> selectedLabRequests = [];
-  List<String> selectedPrescriptions = [];
-  List<String> selectedRadiologyRequests = [];
-  
-  bool isLoading = false;
-
-  // Enhanced lists for doctors
-  final List<String> labTests = [
-    'Full Blood Count (FBC)',
-    'Comprehensive Metabolic Panel',
-    'Lipid Profile',
-    'Thyroid Function Tests',
-    'Liver Function Tests',
-    'Kidney Function Tests',
-    'Blood Sugar (Fasting & Random)',
-    'HbA1c',
-    'Malaria Test (RDT)',
-    'HIV Test',
-    'Hepatitis B & C Tests',
-    'Syphilis Test (VDRL)',
-    'Urine Analysis',
-    'Urine Culture',
-    'Stool Analysis',
-    'Stool Culture',
-    'Pregnancy Test',
-    'Blood Group & Rhesus',
-    'ESR',
-    'CRP',
-    'Procalcitonin',
-    'Troponin',
-    'D-Dimer',
-    'PT/INR',
-    'PTT',
-  ];
-
-  final List<String> medications = [
-    'Paracetamol 500mg',
-    'Ibuprofen 400mg',
-    'Aspirin 75mg',
-    'Amoxicillin 500mg',
-    'Azithromycin 500mg',
-    'Ciprofloxacin 500mg',
-    'Metronidazole 400mg',
-    'Doxycycline 100mg',
-    'Metformin 500mg',
-    'Glibenclamide 5mg',
-    'Amlodipine 5mg',
-    'Enalapril 10mg',
-    'Hydrochlorothiazide 25mg',
-    'Atorvastatin 20mg',
-    'Omeprazole 20mg',
-    'Salbutamol Inhaler',
-    'Prednisolone 5mg',
-    'Iron + Folate',
-    'Multivitamins',
-    'ORS Sachets',
-    'Zinc Tablets',
-    'Cotrimoxazole',
-    'Artemether-Lumefantrine',
-    'Artesunate Injectable',
-  ];
-
-  final List<String> radiologyTests = [
-    'Chest X-Ray',
-    'Abdominal X-Ray',
-    'Pelvic X-Ray',
-    'Spine X-Ray',
-    'Joint X-Ray',
-    'Abdominal Ultrasound',
-    'Pelvic Ultrasound',
-    'Obstetric Ultrasound',
-    'Echocardiogram',
-    'Carotid Doppler',
-    'CT Scan - Head',
-    'CT Scan - Chest',
-    'CT Scan - Abdomen/Pelvis',
-    'MRI Brain',
-    'MRI Spine',
-    'Mammography',
-    'DEXA Scan',
-    'Upper GI Series',
-    'Barium Enema',
-    'IVU (Intravenous Urogram)',
-  ];
-
-  @override
-  void dispose() {
-    _complaintController.dispose();
-    _medicalHistoryController.dispose();
-    _surgicalHistoryController.dispose();
-    _examinationController.dispose();
-    _provisionalDiagnosisController.dispose();
-    _finalDiagnosisController.dispose();
-    _medicalAdviceController.dispose();
-    _nextVisitController.dispose();
-    _specialNotesController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Doctor Consultation Sheet'),
-        backgroundColor: Colors.indigo.shade700,
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.save),
-            onPressed: _saveConsultationRecord,
-          ),
-        ],
-      ),
-      body: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Patient Basic Information (Read-only)
-              _buildPatientInfoSection(),
-              
-              const SizedBox(height: 20),
-              
-              // Consultation Form
-              _buildTextFormField(
-                controller: _complaintController,
-                label: 'Chief Complaint',
-                icon: Icons.record_voice_over,
-                required: true,
-                maxLines: 3,
-              ),
-              
-              _buildTextFormField(
-                controller: _medicalHistoryController,
-                label: 'Medical History',
-                icon: Icons.history,
-                maxLines: 4,
-              ),
-              
-              _buildTextFormField(
-                controller: _surgicalHistoryController,
-                label: 'Surgical History',
-                icon: Icons.healing,
-                maxLines: 3,
-              ),
-              
-              _buildTextFormField(
-                controller: _examinationController,
-                label: 'Physical Examination & Clinical Findings',
-                icon: Icons.search,
-                required: true,
-                maxLines: 5,
-                hint: 'Include vital signs, general appearance, system examination...',
-              ),
-              
-              _buildTextFormField(
-                controller: _provisionalDiagnosisController,
-                label: 'Provisional Diagnosis',
-                icon: Icons.assignment,
-                required: true,
-                maxLines: 3,
-              ),
-              
-              _buildTextFormField(
-                controller: _finalDiagnosisController,
-                label: 'Final Diagnosis',
-                icon: Icons.assignment_turned_in,
-                maxLines: 3,
-                hint: 'Can be updated after investigations',
-              ),
-              
-              // Laboratory Requests
-              _buildMultiSelectSection(
-                'Laboratory Investigations',
-                Icons.biotech,
-                labTests,
-                selectedLabRequests,
-              ),
-              
-              // Medical Prescriptions
-              _buildMultiSelectSection(
-                'Medical Prescriptions',
-                Icons.medication,
-                medications,
-                selectedPrescriptions,
-              ),
-              
-              // Radiology Requests
-              _buildMultiSelectSection(
-                'Radiology Investigations',
-                Icons.camera_alt,
-                radiologyTests,
-                selectedRadiologyRequests,
-              ),
-              
-              _buildTextFormField(
-                controller: _medicalAdviceController,
-                label: 'Medical Advice & Patient Education',
-                icon: Icons.lightbulb,
-                maxLines: 4,
-                hint: 'Include lifestyle advice, diet, follow-up instructions...',
-              ),
-              
-              _buildTextFormField(
-                controller: _specialNotesController,
-                label: 'Special Notes/Observations',
-                icon: Icons.note,
-                maxLines: 3,
-                hint: 'Any additional clinical observations or notes...',
-              ),
-              
-              _buildTextFormField(
-                controller: _nextVisitController,
-                label: 'Next Visit Schedule',
-                icon: Icons.event,
-                hint: 'e.g., Follow-up in 2 weeks, Return if symptoms worsen',
-              ),
-              
-              const SizedBox(height: 30),
-              
-              // Save Button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: isLoading ? null : _saveConsultationRecord,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.indigo,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                  child: isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text(
-                          'Save Doctor Consultation Record',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(Icons.calendar_today, color: Colors.grey.shade600, size: 16),
+                        const SizedBox(width: 6),
+                        Text(
+                          record['date'] != null
+                              ? record['date'].toString().split(' ')[0]
+                              : '',
+                          style: const TextStyle(color: Colors.grey, fontSize: 13),
                         ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPatientInfoSection() {
-    return FutureBuilder<DocumentSnapshot>(
-      future: FirebaseFirestore.instance
-          .collection('appointments')
-          .doc(widget.appointment['id'])
-          .get(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const Card(
-            child: Padding(
-              padding: EdgeInsets.all(16),
-              child: Center(child: CircularProgressIndicator()),
-            ),
-          );
-        }
-
-        final data = snapshot.data!.data() as Map<String, dynamic>;
-        final patientInfo = data['patientInfo'] as Map<String, dynamic>? ?? {};
-
-        return Card(
-          color: Colors.indigo.shade50,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Patient Information',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.indigo.shade700,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      ],
+                    ),
+                    if (record['reason'] != null && record['reason'].toString().isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Row(
                         children: [
-                          _buildPatientInfoRow('Name', patientInfo['name'] ?? widget.appointment['patientName']),
-                          _buildPatientInfoRow('Age', patientInfo['age']?.toString() ?? 'Not provided'),
-                          _buildPatientInfoRow('Sex', patientInfo['sex'] ?? 'Not provided'),
-                          _buildPatientInfoRow('Main Complaint', patientInfo['mainComplaint'] ?? 'Not provided'),
+                          Icon(Icons.info_outline, size: 16, color: Colors.grey.shade600),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              record['reason'],
+                              style: const TextStyle(color: Colors.grey, fontSize: 13),
+                            ),
+                          ),
                         ],
                       ),
-                    ),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildPatientInfoRow('BP', patientInfo['bloodPressure'] ?? 'Not recorded'),
-                          _buildPatientInfoRow('Temp', patientInfo['temperature'] ?? 'Not recorded'),
-                          _buildPatientInfoRow('Pulse', patientInfo['pulseRate'] ?? 'Not recorded'),
-                          _buildPatientInfoRow('Weight', patientInfo['weight'] ?? 'Not recorded'),
-                        ],
-                      ),
-                    ),
+                    ],
                   ],
                 ),
-                if (patientInfo['symptoms'] != null)
-                  _buildPatientInfoRow('Symptoms', patientInfo['symptoms']),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );
   }
+}
 
-  Widget _buildPatientInfoRow(String label, String value) {
+class DoctorConsultationDetailScreen extends StatefulWidget {
+  final Map<String, dynamic> appointment;
+  final bool readOnly;
+  const DoctorConsultationDetailScreen({Key? key, required this.appointment, this.readOnly = false}) : super(key: key);
+
+  @override
+  State<DoctorConsultationDetailScreen> createState() => _DoctorConsultationDetailScreenState();
+}
+
+class _DoctorConsultationDetailScreenState extends State<DoctorConsultationDetailScreen> {
+  final _formKey = GlobalKey<FormState>();
+  late TextEditingController _clinicalNotesController;
+  late TextEditingController _diagnosisController;
+  late TextEditingController _followUpController;
+  late TextEditingController _otherPrescriptionController;
+  late TextEditingController _otherLabController;
+  late TextEditingController _otherRadiologyController;
+  List<String> selectedPrescriptions = [];
+  List<String> selectedLabs = [];
+  List<String> selectedRadiology = [];
+
+  final List<String> prescriptionOptions = [
+    'Paracetamol',
+    'Amoxicillin',
+    'Ibuprofen',
+    'Metformin',
+    'Lisinopril',
+    'Ciprofloxacin',
+    'Azithromycin',
+    'Omeprazole',
+    'Amlodipine',
+    'Losartan',
+    'Atorvastatin',
+    'Cetirizine',
+    'Salbutamol',
+    'Hydrochlorothiazide',
+    'Other'
+  ];
+  final List<String> labOptions = [
+    'CBC',
+    'Blood Sugar',
+    'Lipid Profile',
+    'Malaria Test',
+    'Urinalysis',
+    'Electrolytes',
+    'Liver Function Test',
+    'Renal Function Test',
+    'HIV Test',
+    'Pregnancy Test',
+    'Thyroid Function Test',
+    'Other'
+  ];
+  final List<String> radiologyOptions = [
+    'Chest X-ray',
+    'Abdominal Ultrasound',
+    'CT Scan',
+    'MRI',
+    'Pelvic Ultrasound',
+    'Mammography',
+    'Echocardiogram',
+    'Bone X-ray',
+    'Other'
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _clinicalNotesController = TextEditingController(text: widget.appointment['clinicalNotes'] ?? '');
+    _diagnosisController = TextEditingController(text: widget.appointment['diagnosis'] ?? '');
+    _followUpController = TextEditingController(text: widget.appointment['followUp'] ?? '');
+    _otherPrescriptionController = TextEditingController();
+    _otherLabController = TextEditingController();
+    _otherRadiologyController = TextEditingController();
+    selectedPrescriptions = List<String>.from(widget.appointment['prescriptions'] ?? []);
+    selectedLabs = List<String>.from(widget.appointment['labRequests'] ?? []);
+    selectedRadiology = List<String>.from(widget.appointment['radiologyRequests'] ?? []);
+  }
+
+  @override
+  void dispose() {
+    _clinicalNotesController.dispose();
+    _diagnosisController.dispose();
+    _followUpController.dispose();
+    _otherPrescriptionController.dispose();
+    _otherLabController.dispose();
+    _otherRadiologyController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submitForm() async {
+    if (_formKey.currentState?.validate() ?? false) {
+      final doctorName = FirebaseAuth.instance.currentUser?.displayName ?? 'Doctor';
+      final doctorId = FirebaseAuth.instance.currentUser?.uid ?? '';
+      final patientId = widget.appointment['patientId'] ?? '';
+      final now = DateTime.now();
+      final recordData = {
+        'patientId': patientId,
+        'patientUid': patientId,
+        'patientName': widget.appointment['patientName'] ?? '',
+        'providerId': doctorId,
+        'providerName': doctorName,
+        'type': 'DOCTOR_CONSULTATION',
+        'date': now,
+        'timestamp': now,
+        'clinicalNotes': _clinicalNotesController.text,
+        'diagnosis': _diagnosisController.text,
+        'prescriptions': [
+          ...selectedPrescriptions.where((p) => p != 'Other'),
+          if (selectedPrescriptions.contains('Other') && _otherPrescriptionController.text.isNotEmpty)
+            _otherPrescriptionController.text,
+        ],
+        'labRequests': [
+          ...selectedLabs.where((l) => l != 'Other'),
+          if (selectedLabs.contains('Other') && _otherLabController.text.isNotEmpty)
+            _otherLabController.text,
+        ],
+        'radiologyRequests': [
+          ...selectedRadiology.where((r) => r != 'Other'),
+          if (selectedRadiology.contains('Other') && _otherRadiologyController.text.isNotEmpty)
+            _otherRadiologyController.text,
+        ],
+        'followUp': _followUpController.text,
+        'notes': widget.appointment['notes'] ?? '',
+        'status': 'completed',
+        'createdAt': now,
+        'updatedAt': now,
+      };
+      try {
+        await FirebaseFirestore.instance.collection('health_records').add(recordData);
+        // Mark appointment as completed so it disappears from pending and appears in completed tab
+        if (widget.appointment['id'] != null) {
+          await FirebaseFirestore.instance.collection('appointments').doc(widget.appointment['id']).update({'status': 'completed'});
+        } else if (widget.appointment['appointmentId'] != null) {
+          await FirebaseFirestore.instance.collection('appointments').doc(widget.appointment['appointmentId']).update({'status': 'completed'});
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Consultation note saved to health records!')),
+        );
+        Navigator.of(context).pop();
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error saving note: $e')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final doctorName = FirebaseAuth.instance.currentUser?.displayName ?? 'Doctor';
+    final readOnly = widget.readOnly;
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Consultation Details'),
+        backgroundColor: Colors.indigo,
+        foregroundColor: Colors.white,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildSection('Patient Information', [
+                _buildInfoRow('Name', widget.appointment['patientName'] ?? 'Unknown'),
+                _buildInfoRow('Age', widget.appointment['age']?.toString() ?? 'Not provided'),
+                _buildInfoRow('Sex', widget.appointment['sex'] ?? 'Not provided'),
+                _buildInfoRow('Phone', widget.appointment['phone'] ?? 'Not provided'),
+                _buildInfoRow('Address', widget.appointment['address'] ?? 'Not provided'),
+                _buildInfoRow('Appointment Date', widget.appointment['appointmentDate']?.toString() ?? 'Not provided'),
+                _buildInfoRow('Appointment Type',
+                  (widget.appointment['referralReason'] != null && widget.appointment['referralReason'].toString().isNotEmpty)
+                    ? 'Referred'
+                    : 'Regular'),
+                if (widget.appointment['referralReason'] != null && widget.appointment['referralReason'].toString().isNotEmpty)
+                  _buildInfoRow('Referral Reason', widget.appointment['referralReason']),
+              ]),
+              _buildSection('Clinical Notes', [
+                TextFormField(
+                  controller: _clinicalNotesController,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: 'Enter clinical notes',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (val) => val == null || val.isEmpty ? 'Clinical notes required' : null,
+                  enabled: !readOnly,
+                  readOnly: readOnly,
+                ),
+              ]),
+              _buildSection('Diagnosis', [
+                TextFormField(
+                  controller: _diagnosisController,
+                  maxLines: 2,
+                  decoration: const InputDecoration(
+                    labelText: 'Enter diagnosis',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (val) => val == null || val.isEmpty ? 'Diagnosis required' : null,
+                  enabled: !readOnly,
+                  readOnly: readOnly,
+                ),
+              ]),
+              _buildSection('Medical Prescriptions', [
+                if (!readOnly)
+                  DropdownButtonFormField<String>(
+                    decoration: const InputDecoration(
+                      labelText: 'Select medication',
+                      border: OutlineInputBorder(),
+                    ),
+                    value: null,
+                    items: prescriptionOptions.map((option) {
+                      return DropdownMenuItem<String>(
+                        value: option,
+                        child: Text(option),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      if (value == 'Other') {
+                        showDialog(
+                          context: context,
+                          builder: (context) {
+                            String customMed = '';
+                            return AlertDialog(
+                              title: const Text('Enter custom medication'),
+                              content: TextField(
+                                autofocus: true,
+                                decoration: const InputDecoration(labelText: 'Medication name'),
+                                onChanged: (val) => customMed = val,
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.of(context).pop(),
+                                  child: const Text('Cancel'),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    if (customMed.trim().isNotEmpty) {
+                                      setState(() {
+                                        selectedPrescriptions.add(customMed.trim());
+                                      });
+                                    }
+                                    Navigator.of(context).pop();
+                                  },
+                                  child: const Text('Add'),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+                      } else if (value != null && !selectedPrescriptions.contains(value)) {
+                        setState(() {
+                          selectedPrescriptions.add(value);
+                        });
+                      }
+                    },
+                  ),
+                if (selectedPrescriptions.isNotEmpty)
+                  Column(
+                    children: selectedPrescriptions.map((med) {
+                      // Best-practice options for each medication
+                      final Map<String, List<String>> medStrengths = {
+                        'Paracetamol': ['500mg', '1g'],
+                        'Amoxicillin': ['250mg', '500mg'],
+                        'Ibuprofen': ['200mg', '400mg'],
+                        'Metformin': ['500mg', '850mg'],
+                        'Lisinopril': ['5mg', '10mg'],
+                        'Ciprofloxacin': ['250mg', '500mg'],
+                        'Azithromycin': ['250mg', '500mg'],
+                        'Omeprazole': ['20mg', '40mg'],
+                        'Amlodipine': ['5mg', '10mg'],
+                        'Losartan': ['50mg', '100mg'],
+                        'Atorvastatin': ['10mg', '20mg'],
+                        'Cetirizine': ['10mg'],
+                        'Salbutamol': ['2mg', '4mg'],
+                        'Hydrochlorothiazide': ['12.5mg', '25mg'],
+                        'Other': ['Custom'],
+                      };
+                      final List<String> dosageOptions = ['1 tablet', '2 tablets', '5ml', '10ml', 'Custom'];
+                      final List<String> frequencyOptions = [
+                        'Once daily',
+                        'Twice daily',
+                        'Three times daily',
+                        'Four times daily',
+                        'As needed',
+                        'Custom',
+                      ];
+                      final List<String> durationOptions = [
+                        '1 day', '3 days', '5 days', '7 days', '10 days', '14 days', 'As needed', 'Custom'
+                      ];
+                      String? selectedStrength;
+                      String? selectedDosage;
+                      String? selectedFrequency;
+                      String? selectedDuration;
+                      final instructionsController = TextEditingController();
+                      final customDurationController = TextEditingController();
+                      return StatefulBuilder(
+                        builder: (context, setCardState) {
+                          return Card(
+                            margin: const EdgeInsets.symmetric(vertical: 6),
+                            elevation: 1,
+                            child: Padding(
+                              padding: const EdgeInsets.all(12.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          med,
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                        ),
+                                      ),
+                                      if (!readOnly)
+                                        IconButton(
+                                          icon: const Icon(Icons.delete, color: Colors.red),
+                                          tooltip: 'Remove',
+                                          onPressed: () {
+                                            setState(() {
+                                              selectedPrescriptions.remove(med);
+                                            });
+                                          },
+                                        ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      Flexible(
+                                        child: DropdownButtonFormField<String>(
+                                          decoration: const InputDecoration(
+                                            labelText: 'Strength',
+                                            border: OutlineInputBorder(),
+                                          ),
+                                          value: selectedStrength,
+                                          items: medStrengths[med]?.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList() ?? [],
+                                          onChanged: readOnly ? null : (val) {
+                                            setCardState(() {
+                                              selectedStrength = val;
+                                            });
+                                          },
+                                          validator: (val) => (val == null || val.isEmpty) ? 'Strength required' : null,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Flexible(
+                                        child: DropdownButtonFormField<String>(
+                                          decoration: const InputDecoration(
+                                            labelText: 'Dosage',
+                                            border: OutlineInputBorder(),
+                                          ),
+                                          value: selectedDosage,
+                                          items: dosageOptions.map((d) => DropdownMenuItem(value: d, child: Text(d))).toList(),
+                                          onChanged: readOnly ? null : (val) {
+                                            setCardState(() {
+                                              selectedDosage = val;
+                                            });
+                                          },
+                                          validator: (val) => (val == null || val.isEmpty) ? 'Dosage required' : null,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      Flexible(
+                                        child: DropdownButtonFormField<String>(
+                                          decoration: const InputDecoration(
+                                            labelText: 'Frequency',
+                                            border: OutlineInputBorder(),
+                                          ),
+                                          value: selectedFrequency,
+                                          items: frequencyOptions.map((f) => DropdownMenuItem(value: f, child: Text(f))).toList(),
+                                          onChanged: readOnly ? null : (val) {
+                                            setCardState(() {
+                                              selectedFrequency = val;
+                                            });
+                                          },
+                                          validator: (val) => (val == null || val.isEmpty) ? 'Frequency required' : null,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Flexible(
+                                        child: DropdownButtonFormField<String>(
+                                          decoration: const InputDecoration(
+                                            labelText: 'Duration',
+                                            border: OutlineInputBorder(),
+                                          ),
+                                          value: selectedDuration,
+                                          items: durationOptions.map((d) => DropdownMenuItem(value: d, child: Text(d))).toList(),
+                                          onChanged: readOnly ? null : (val) {
+                                            setCardState(() {
+                                              selectedDuration = val;
+                                            });
+                                          },
+                                          validator: (val) => (val == null || val.isEmpty) ? 'Duration required' : null,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  if (selectedDuration == 'Custom')
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 8.0),
+                                      child: TextFormField(
+                                        controller: customDurationController,
+                                        decoration: const InputDecoration(
+                                          labelText: 'Enter custom duration',
+                                          border: OutlineInputBorder(),
+                                        ),
+                                        enabled: !readOnly,
+                                        readOnly: readOnly,
+                                      ),
+                                    ),
+                                  const SizedBox(height: 8),
+                                  TextFormField(
+                                    controller: instructionsController,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Special Instructions (optional)',
+                                      border: OutlineInputBorder(),
+                                    ),
+                                    enabled: !readOnly,
+                                    readOnly: readOnly,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    }).toList(),
+                  ),
+              ]),
+              _buildSection('Laboratory Investigations', [
+                if (!readOnly)
+                  DropdownButtonFormField<String>(
+                    decoration: const InputDecoration(
+                      labelText: 'Select laboratory test',
+                      border: OutlineInputBorder(),
+                    ),
+                    value: null,
+                    items: labOptions.map((option) {
+                      return DropdownMenuItem<String>(
+                        value: option,
+                        child: Text(option),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      if (value == 'Other') {
+                        showDialog(
+                          context: context,
+                          builder: (context) {
+                            String customLab = '';
+                            return AlertDialog(
+                              title: const Text('Enter custom laboratory test'),
+                              content: TextField(
+                                autofocus: true,
+                                decoration: const InputDecoration(labelText: 'Lab test name'),
+                                onChanged: (val) => customLab = val,
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.of(context).pop(),
+                                  child: const Text('Cancel'),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    if (customLab.trim().isNotEmpty) {
+                                      setState(() {
+                                        selectedLabs.add(customLab.trim());
+                                      });
+                                    }
+                                    Navigator.of(context).pop();
+                                  },
+                                  child: const Text('Add'),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+                      } else if (value != null && !selectedLabs.contains(value)) {
+                        setState(() {
+                          selectedLabs.add(value);
+                        });
+                      }
+                    },
+                  ),
+                if (selectedLabs.contains('Other'))
+                  Padding(
+                    padding: const EdgeInsets.only(left: 0.0, bottom: 8.0, top: 8.0),
+                    child: TextFormField(
+                      controller: _otherLabController,
+                      decoration: const InputDecoration(
+                        labelText: 'Specify other lab test',
+                        border: OutlineInputBorder(),
+                      ),
+                      enabled: !readOnly,
+                      readOnly: readOnly,
+                    ),
+                  ),
+                if (selectedLabs.isNotEmpty)
+                  Wrap(
+                    spacing: 8,
+                    children: selectedLabs.map((lab) => Chip(
+                      label: Text(lab),
+                      onDeleted: !readOnly
+                          ? () {
+                              setState(() {
+                                selectedLabs.remove(lab);
+                              });
+                            }
+                          : null,
+                    )).toList(),
+                  ),
+              ]),
+              _buildSection('Radiological Investigations', [
+                if (!readOnly)
+                  DropdownButtonFormField<String>(
+                    decoration: const InputDecoration(
+                      labelText: 'Select radiology test',
+                      border: OutlineInputBorder(),
+                    ),
+                    value: null,
+                    items: radiologyOptions.map((option) {
+                      return DropdownMenuItem<String>(
+                        value: option,
+                        child: Text(option),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      if (value == 'Other') {
+                        showDialog(
+                          context: context,
+                          builder: (context) {
+                            String customRad = '';
+                            return AlertDialog(
+                              title: const Text('Enter custom radiology test'),
+                              content: TextField(
+                                autofocus: true,
+                                decoration: const InputDecoration(labelText: 'Radiology test name'),
+                                onChanged: (val) => customRad = val,
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.of(context).pop(),
+                                  child: const Text('Cancel'),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    if (customRad.trim().isNotEmpty) {
+                                      setState(() {
+                                        selectedRadiology.add(customRad.trim());
+                                      });
+                                    }
+                                    Navigator.of(context).pop();
+                                  },
+                                  child: const Text('Add'),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+                      } else if (value != null && !selectedRadiology.contains(value)) {
+                        setState(() {
+                          selectedRadiology.add(value);
+                        });
+                      }
+                    },
+                  ),
+                if (selectedRadiology.contains('Other'))
+                  Padding(
+                    padding: const EdgeInsets.only(left: 0.0, bottom: 8.0, top: 8.0),
+                    child: TextFormField(
+                      controller: _otherRadiologyController,
+                      decoration: const InputDecoration(
+                        labelText: 'Specify other radiology test',
+                        border: OutlineInputBorder(),
+                      ),
+                      enabled: !readOnly,
+                      readOnly: readOnly,
+                    ),
+                  ),
+                if (selectedRadiology.isNotEmpty)
+                  Wrap(
+                    spacing: 8,
+                    children: selectedRadiology.map((rad) => Chip(
+                      label: Text(rad),
+                      onDeleted: !readOnly
+                          ? () {
+                              setState(() {
+                                selectedRadiology.remove(rad);
+                              });
+                            }
+                          : null,
+                    )).toList(),
+                  ),
+              ]),
+              _buildSection('Follow-up & Recommendations', [
+                TextFormField(
+                  controller: _followUpController,
+                  maxLines: 2,
+                  decoration: const InputDecoration(
+                    labelText: 'Enter follow-up or recommendations',
+                    border: OutlineInputBorder(),
+                  ),
+                  enabled: !readOnly,
+                  readOnly: readOnly,
+                ),
+              ]),
+              _buildSection('Other Notes', [
+                TextFormField(
+                  initialValue: widget.appointment['notes'] ?? '',
+                  maxLines: 2,
+                  decoration: const InputDecoration(
+                    labelText: 'Other notes',
+                    border: OutlineInputBorder(),
+                  ),
+                  enabled: !readOnly,
+                  readOnly: readOnly,
+                ),
+              ]),
+              const SizedBox(height: 24),
+              Divider(),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Row(
+                  children: [
+                    Icon(Icons.verified_user, color: Colors.indigo),
+                    const SizedBox(width: 8),
+                    Text('Signed by: $doctorName', style: const TextStyle(fontWeight: FontWeight.w500)),
+                    const Spacer(),
+                    Flexible(
+                      child: Text(
+                        'Dr. $doctorName',
+                        style: const TextStyle(color: Colors.grey),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: Text('Date: ${DateTime.now().toLocal().toString().split(' ')[0]}', style: const TextStyle(color: Colors.grey)),
+              ),
+              if (!readOnly) ...[
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.save),
+                    label: const Text('Save Consultation Note'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.indigo,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    onPressed: _submitForm,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: RichText(
@@ -1102,279 +1223,25 @@ class _DoctorConsultationSheetScreenState extends State<DoctorConsultationSheetS
     );
   }
 
-  Widget _buildTextFormField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    bool required = false,
-    int maxLines = 1,
-    String? hint,
-  }) {
+  Widget _buildSection(String title, List<Widget> children) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: TextFormField(
-        controller: controller,
-        maxLines: maxLines,
-        decoration: InputDecoration(
-          labelText: label,
-          hintText: hint,
-          prefixIcon: Icon(icon, color: Colors.indigo),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: Colors.indigo.shade700, width: 2),
-          ),
-        ),
-        validator: required
-            ? (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return '$label is required';
-                }
-                return null;
-              }
-            : null,
-      ),
-    );
-  }
-
-  Widget _buildMultiSelectSection(
-    String title,
-    IconData icon,
-    List<String> options,
-    List<String> selectedItems,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.only(bottom: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(icon, color: Colors.indigo),
-              const SizedBox(width: 8),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (selectedItems.isNotEmpty)
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 4,
-                      children: selectedItems.map((item) {
-                        return Chip(
-                          label: Text(item),
-                          onDeleted: () {
-                            setState(() {
-                              selectedItems.remove(item);
-                            });
-                          },
-                          backgroundColor: Colors.indigo.shade100,
-                        );
-                      }).toList(),
-                    ),
-                  const SizedBox(height: 8),
-                  ElevatedButton(
-                    onPressed: () => _showMultiSelectDialog(title, options, selectedItems),
-                    child: Text('Add $title'),
-                  ),
-                ],
-              ),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.indigo,
             ),
           ),
+          const SizedBox(height: 8),
+          ...children,
         ],
       ),
     );
   }
 
-  void _showMultiSelectDialog(
-    String title,
-    List<String> options,
-    List<String> selectedItems,
-  ) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('Select $title'),
-          content: SizedBox(
-            width: double.maxFinite,
-            height: 400,
-            child: ListView.builder(
-              itemCount: options.length,
-              itemBuilder: (context, index) {
-                final option = options[index];
-                final isSelected = selectedItems.contains(option);
-                
-                return CheckboxListTile(
-                  title: Text(option),
-                  value: isSelected,
-                  onChanged: (value) {
-                    setState(() {
-                      if (value == true) {
-                        selectedItems.add(option);
-                      } else {
-                        selectedItems.remove(option);
-                      }
-                    });
-                    Navigator.of(context).pop();
-                    _showMultiSelectDialog(title, options, selectedItems);
-                  },
-                );
-              },
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Done'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Future<void> _saveConsultationRecord() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
-
-    setState(() => isLoading = true);
-
-    try {
-      // Get doctor name from user profile
-      final currentUser = FirebaseAuth.instance.currentUser;
-      String doctorName = 'Doctor User'; // Default fallback
-      
-      if (currentUser != null) {
-        final userDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(currentUser.uid)
-            .get();
-        
-        if (userDoc.exists) {
-          final userData = userDoc.data() as Map<String, dynamic>;
-          doctorName = userData['name'] ?? userData['displayName'] ?? 'Doctor User';
-        }
-      }
-
-      final consultationData = {
-        'appointmentId': widget.appointment['id'],
-        'patientId': widget.appointment['patientId'],
-        'patientName': widget.appointment['patientName'],
-        'doctorId': FirebaseAuth.instance.currentUser?.uid,
-        'doctorName': doctorName, // Get from user profile
-        'consultationDate': FieldValue.serverTimestamp(),
-        'chiefComplaint': _complaintController.text.trim(),
-        'medicalHistory': _medicalHistoryController.text.trim(),
-        'surgicalHistory': _surgicalHistoryController.text.trim(),
-        'physicalExamination': _examinationController.text.trim(),
-        'provisionalDiagnosis': _provisionalDiagnosisController.text.trim(),
-        'finalDiagnosis': _finalDiagnosisController.text.trim(),
-        'laboratoryRequests': selectedLabRequests,
-        'prescriptions': selectedPrescriptions,
-        'radiologyRequests': selectedRadiologyRequests,
-        'medicalAdvice': _medicalAdviceController.text.trim(),
-        'specialNotes': _specialNotesController.text.trim(),
-        'nextVisit': _nextVisitController.text.trim(),
-        'providerType': 'DOCTOR',
-        'createdAt': FieldValue.serverTimestamp(),
-      };
-
-      // Save consultation record
-      final docRef = await FirebaseFirestore.instance
-          .collection('consultation_records')
-          .add(consultationData);
-
-      // Update appointment status
-      await FirebaseFirestore.instance
-          .collection('appointments')
-          .doc(widget.appointment['id'])
-          .update({
-        'status': 'completed',
-        'consultationRecordId': docRef.id,
-        'completedAt': FieldValue.serverTimestamp(),
-      });
-
-
-      // Add to patient's health records
-      await FirebaseFirestore.instance
-          .collection('patients')
-          .doc(widget.appointment['patientId'])
-          .collection('health_records')
-          .doc(docRef.id)
-          .set({
-        'recordRef': docRef.id,
-        'type': 'DOCTOR_CONSULTATION',
-        'date': FieldValue.serverTimestamp(),
-        'providerId': FirebaseAuth.instance.currentUser?.uid,
-        'providerName': doctorName,
-        'providerType': 'DOCTOR',
-      });
-
-      // Send system message to patient notifying appointment completion
-      try {
-        final patientId = widget.appointment['patientId'];
-        final patientName = widget.appointment['patientName'] ?? '';
-        final doctorId = FirebaseAuth.instance.currentUser?.uid ?? '';
-        final messageContent = 'Your appointment has been completed by the doctor.';
-
-        // Create or get conversation and send message
-        final conversationId = await MessageService.createOrGetConversation(
-          user1Id: doctorId,
-          user1Name: doctorName,
-          user1Role: 'DOCTOR',
-          user2Id: patientId,
-          user2Name: patientName,
-          user2Role: 'PATIENT',
-          type: 'appointment_related',
-          relatedId: widget.appointment['id'],
-          title: 'Appointment Update',
-        );
-
-        await MessageService.sendMessage(
-          conversationId: conversationId,
-          senderId: doctorId,
-          senderName: doctorName,
-          senderRole: 'DOCTOR',
-          receiverId: patientId,
-          receiverName: patientName,
-          receiverRole: 'PATIENT',
-          content: messageContent,
-          type: 'system',
-        );
-      } catch (e) {
-        debugPrint('Failed to send patient message: $e');
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Doctor consultation record saved successfully')),
-      );
-
-      Navigator.of(context).pop();
-      Navigator.of(context).pop();
-
-    } catch (e) {
-      debugPrint('Error saving consultation record: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error saving record: $e')),
-      );
-    } finally {
-      setState(() => isLoading = false);
-    }
-  }
 }

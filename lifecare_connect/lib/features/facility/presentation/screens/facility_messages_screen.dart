@@ -303,7 +303,7 @@ class FacilityDoctorMessagesTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
-          .collection('conversations')
+          .collection('messages')
           .where('participants', arrayContains: currentUserId)
           .where('type', isEqualTo: 'doctor_facility')
           .orderBy('lastMessageTime', descending: true)
@@ -456,7 +456,7 @@ class FacilityCHWMessagesTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
-          .collection('conversations')
+          .collection('messages')
           .where('participants', arrayContains: currentUserId)
           .where('type', isEqualTo: 'chw_facility')
           .orderBy('lastMessageTime', descending: true)

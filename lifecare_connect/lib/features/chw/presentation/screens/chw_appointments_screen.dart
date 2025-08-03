@@ -5,7 +5,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'chw_start_consultation_screen.dart';
 import '../../../shared/data/services/consultation_service.dart';
+import '../../../shared/data/services/message_service.dart';
 import '../../../shared/data/models/appointment.dart';
+import '../../../shared/helpers/chw_message_helper.dart';
 
 class CHWAppointmentsScreen extends StatelessWidget {
   final int initialTab;
@@ -38,9 +40,418 @@ class CHWAppointmentsScreen extends StatelessWidget {
             _buildAppointmentsList(context, chwUid, 'completed'),
           ],
         ),
+        floatingActionButton: FloatingActionButton.extended(
+          icon: Icon(Icons.add),
+          label: Text('Book Appointment'),
+          backgroundColor: Colors.teal,
+          onPressed: () async {
+            // Navigate to the doctor search screen, filtered to doctors only
+            // Reuse NewConversationScreen with doctor filter, or a similar doctor selector
+            final selectedDoctor = await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => _DoctorSelectorForBooking(),
+              ),
+            );
+            if (selectedDoctor != null) {
+              // After doctor is selected, navigate to the booking flow
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => _BookAppointmentWithDoctorScreen(doctor: selectedDoctor),
+                ),
+              );
+            }
+          },
+        ),
       ),
     );
   }
+
+// ...existing code...
+}
+
+/// Widget to select a doctor for booking (reuses NewConversationScreen logic, but only for doctors)
+class _DoctorSelectorForBooking extends StatefulWidget {
+  @override
+  State<_DoctorSelectorForBooking> createState() => _DoctorSelectorForBookingState();
+}
+
+class _DoctorSelectorForBookingState extends State<_DoctorSelectorForBooking> {
+  List<Map<String, dynamic>> _doctors = [];
+  bool _isLoading = false;
+  final _searchController = TextEditingController();
+  String? _currentUserId;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    _searchDoctors();
+  }
+
+  Future<void> _searchDoctors() async {
+    setState(() { _isLoading = true; });
+    try {
+      final query = FirebaseFirestore.instance
+          .collection('users')
+          .where('role', isEqualTo: 'doctor')
+          .where('isActive', isEqualTo: true);
+      final snapshot = await query.get();
+      final searchTerm = _searchController.text.trim().toLowerCase();
+      final doctors = snapshot.docs.map((doc) {
+        final data = doc.data();
+        final isApproved = data['isApproved'] == null ? true : data['isApproved'] == true;
+        return {
+          'id': doc.id,
+          'name': data['fullName'] ?? data['name'] ?? '${data['firstName'] ?? ''} ${data['lastName'] ?? ''}'.trim(),
+          'role': data['role'] ?? 'doctor',
+          'email': data['email'] ?? '',
+          'phone': data['phone'] ?? '',
+          'isApproved': isApproved,
+        };
+      })
+      .where((doctor) => doctor['isApproved'] == true)
+      .where((doctor) {
+        if (doctor['id'] == _currentUserId) return false;
+        if (searchTerm.isEmpty) return true;
+        final name = (doctor['name'] ?? '').toLowerCase();
+        final email = (doctor['email'] ?? '').toLowerCase();
+        final phone = (doctor['phone'] ?? '').toLowerCase();
+        return name.contains(searchTerm) || email.contains(searchTerm) || phone.contains(searchTerm);
+      }).toList();
+      debugPrint('Doctor list loaded: count = [33m${doctors.length}[0m');
+      if (doctors.isEmpty) {
+        debugPrint('No doctors found. Check isActive and isApproved fields in Firestore.');
+      }
+      setState(() {
+        _doctors = doctors;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() { _isLoading = false; });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error searching doctors: $e')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Select Doctor'), backgroundColor: Colors.teal),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search doctors...',
+                prefixIcon: Icon(Icons.search),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onChanged: (_) => _searchDoctors(),
+            ),
+          ),
+          Expanded(
+            child: _isLoading
+                ? Center(child: CircularProgressIndicator())
+                : _doctors.isEmpty
+                    ? Center(child: Text('No doctors found.'))
+                    : ListView.separated(
+                        itemCount: _doctors.length,
+                        separatorBuilder: (context, index) => Divider(height: 1),
+                        itemBuilder: (context, index) {
+                          final doctor = _doctors[index];
+                          return ListTile(
+                            leading: CircleAvatar(child: Text(doctor['name'].isNotEmpty ? doctor['name'][0].toUpperCase() : '?')),
+                            title: Text(doctor['name']),
+                            subtitle: Text(doctor['role'].toString().toUpperCase()),
+                            trailing: Icon(Icons.arrow_forward_ios),
+                            onTap: () => Navigator.pop(context, doctor),
+                          );
+                        },
+                      ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Dummy booking screen to represent the booking flow with the selected doctor
+class _BookAppointmentWithDoctorScreen extends StatefulWidget {
+  final Map<String, dynamic> doctor;
+  const _BookAppointmentWithDoctorScreen({required this.doctor});
+
+  @override
+  State<_BookAppointmentWithDoctorScreen> createState() => _BookAppointmentWithDoctorScreenState();
+}
+
+class _BookAppointmentWithDoctorScreenState extends State<_BookAppointmentWithDoctorScreen> {
+  String? _selectedPatientId;
+  String? _selectedPatientName;
+  List<Map<String, dynamic>> _patients = [];
+  bool _isLoadingPatients = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPatients();
+  }
+
+  Future<void> _loadPatients() async {
+    setState(() { _isLoadingPatients = true; });
+    try {
+      final chw = FirebaseAuth.instance.currentUser;
+      if (chw == null) return;
+      final Set<String> patientIds = <String>{};
+
+      // 1. Patients registered by this CHW
+      final registered = await FirebaseFirestore.instance
+          .collection('users')
+          .where('role', isEqualTo: 'patient')
+          .where('createdBy', isEqualTo: chw.uid)
+          .get();
+      for (final doc in registered.docs) {
+        patientIds.add(doc.id);
+      }
+
+      // 2. Patients from appointments approved/consulted by this CHW
+      final appointments = await FirebaseFirestore.instance
+          .collection('appointments')
+          .where('providerId', isEqualTo: chw.uid)
+          .where('status', whereIn: ['approved', 'completed'])
+          .get();
+      for (final doc in appointments.docs) {
+        final data = doc.data();
+        if (data['relatedPatientId'] != null) patientIds.add(data['relatedPatientId']);
+        if (data['patientId'] != null) patientIds.add(data['patientId']);
+      }
+
+      // 3. Patients from referrals made by this CHW
+      final referrals = await FirebaseFirestore.instance
+          .collection('referrals')
+          .where('referredById', isEqualTo: chw.uid)
+          .get();
+      for (final doc in referrals.docs) {
+        final data = doc.data();
+        if (data['patientId'] != null) patientIds.add(data['patientId']);
+      }
+
+      // 4. Patients from consultations by this CHW
+      final consultations = await FirebaseFirestore.instance
+          .collection('consultations')
+          .where('createdBy', isEqualTo: chw.uid)
+          .get();
+      for (final doc in consultations.docs) {
+        final data = doc.data();
+        if (data['patientId'] != null) patientIds.add(data['patientId']);
+      }
+
+      // If no interactions found, return empty result
+      if (patientIds.isEmpty) {
+        setState(() {
+          _patients = [];
+          _isLoadingPatients = false;
+        });
+        return;
+      }
+
+      // Get all patients that match these IDs
+      final List<Map<String, dynamic>> patients = [];
+      const int batchSize = 10;
+      final idsList = patientIds.toList();
+      for (int i = 0; i < idsList.length; i += batchSize) {
+        final batch = idsList.sublist(i, i + batchSize > idsList.length ? idsList.length : i + batchSize);
+        final batchQuery = await FirebaseFirestore.instance
+            .collection('users')
+            .where('role', isEqualTo: 'patient')
+            .where(FieldPath.documentId, whereIn: batch)
+            .get();
+        for (final doc in batchQuery.docs) {
+          final data = doc.data();
+          patients.add({
+            'id': doc.id,
+            'name': data['fullName'] ?? data['name'] ?? '${data['firstName'] ?? ''} ${data['lastName'] ?? ''}'.trim(),
+          });
+        }
+      }
+      setState(() {
+        _patients = patients;
+        _isLoadingPatients = false;
+      });
+    } catch (e) {
+      setState(() { _isLoadingPatients = false; });
+    }
+  }
+  final _formKey = GlobalKey<FormState>();
+  final TextEditingController _reasonController = TextEditingController();
+  DateTime? _selectedDate;
+  TimeOfDay? _selectedTime;
+  bool _isSubmitting = false;
+
+  Future<void> _pickDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: now,
+      firstDate: now,
+      lastDate: now.add(Duration(days: 365)),
+    );
+    if (picked != null) {
+      setState(() => _selectedDate = picked);
+    }
+  }
+
+  Future<void> _pickTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+    );
+    if (picked != null) {
+      setState(() => _selectedTime = picked);
+    }
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    if (_selectedDate == null || _selectedTime == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please select date and time')),
+      );
+      return;
+    }
+    final chw = FirebaseAuth.instance.currentUser;
+    if (chw == null) return;
+    setState(() => _isSubmitting = true);
+    final appointmentDate = DateTime(
+      _selectedDate!.year,
+      _selectedDate!.month,
+      _selectedDate!.day,
+      _selectedTime!.hour,
+      _selectedTime!.minute,
+    );
+    try {
+      await FirebaseFirestore.instance.collection('appointments').add({
+        'patientId': chw.uid,
+        'patientName': chw.displayName ?? 'CHW',
+        'providerId': widget.doctor['id'],
+        'providerName': widget.doctor['name'],
+        'status': 'pending',
+        'appointmentDate': Timestamp.fromDate(appointmentDate),
+        'reason': _reasonController.text.trim(),
+        'createdAt': FieldValue.serverTimestamp(),
+        if (_selectedPatientId != null) ...{
+          'relatedPatientId': _selectedPatientId,
+          'relatedPatientName': _selectedPatientName,
+        },
+      });
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Appointment requested!'), backgroundColor: Colors.green),
+        );
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Book Appointment'), backgroundColor: Colors.teal),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Booking with Dr. ${widget.doctor['name']}', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              SizedBox(height: 16),
+              // Optional patient selector
+              _isLoadingPatients
+                  ? Center(child: CircularProgressIndicator())
+                  : DropdownButtonFormField<String>(
+                      value: _selectedPatientId,
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                        labelText: 'Related Patient (optional)',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: [
+                        DropdownMenuItem<String>(
+                          value: null,
+                          child: Text('None'),
+                        ),
+                        ..._patients.map((p) => DropdownMenuItem<String>(
+                              value: p['id'],
+                              child: Text(p['name'] ?? 'Unnamed'),
+                            )),
+                      ],
+                      onChanged: (val) {
+                        setState(() {
+                          _selectedPatientId = val;
+                          _selectedPatientName = _patients.firstWhere((p) => p['id'] == val, orElse: () => {'name': null})['name'];
+                        });
+                      },
+                    ),
+              SizedBox(height: 16),
+              TextFormField(
+                controller: _reasonController,
+                decoration: InputDecoration(
+                  labelText: 'Reason for appointment',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (v) => v == null || v.trim().isEmpty ? 'Please enter a reason' : null,
+                maxLines: 2,
+              ),
+              SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      icon: Icon(Icons.calendar_today),
+                      label: Text(_selectedDate == null ? 'Select Date' : '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}'),
+                      onPressed: _pickDate,
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      icon: Icon(Icons.access_time),
+                      label: Text(_selectedTime == null ? 'Select Time' : (_selectedTime != null ? _selectedTime!.format(context) : 'Select Time')),
+                      onPressed: _pickTime,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 24),
+              Center(
+                child: ElevatedButton(
+                  onPressed: _isSubmitting ? null : _submit,
+                  child: _isSubmitting ? CircularProgressIndicator(color: Colors.white) : Text('Book Appointment'),
+                  style: ElevatedButton.styleFrom(minimumSize: Size(180, 48)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
 
   Widget _buildAppointmentsList(BuildContext context, String chwUid, String status) {
     return StreamBuilder<QuerySnapshot>(
@@ -336,8 +747,8 @@ class CHWAppointmentsScreen extends StatelessWidget {
           const SnackBar(content: Text('Appointment approved'), backgroundColor: Colors.green),
         );
       }
-      // Send message to patient about approval
-      await _sendPatientMessage(appointmentId, 'Your appointment has been approved by the CHW.');
+      // Always send message to patient about approval
+      await CHWMessageHelper.sendPatientMessageToId(appointment.patientId, appointmentId, 'Your appointment has been approved by the CHW.');
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -386,8 +797,13 @@ class CHWAppointmentsScreen extends StatelessWidget {
           const SnackBar(content: Text('Appointment denied'), backgroundColor: Colors.red),
         );
       }
-      // Send message to patient with denial reason
-      await _sendPatientMessage(appointmentId, 'Your appointment was denied by the CHW. Reason: $reason');
+      // Fetch patientId for message
+      final doc = await FirebaseFirestore.instance.collection('appointments').doc(appointmentId).get();
+      final data = doc.data();
+      final patientId = data != null ? data['patientId'] : null;
+      if (patientId != null) {
+        await CHWMessageHelper.sendPatientMessageToId(patientId, appointmentId, 'Your appointment was denied by the CHW. Reason: $reason');
+      }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -395,38 +811,6 @@ class CHWAppointmentsScreen extends StatelessWidget {
         );
       }
     }
-  }
-
-  Future<void> _sendPatientMessage(String appointmentId, String message) async {
-    // Fetch patientId from appointment
-    final doc = await FirebaseFirestore.instance.collection('appointments').doc(appointmentId).get();
-    final data = doc.data();
-    if (data == null) return;
-    final patientId = data['patientId'];
-    if (patientId == null) return;
-    await FirebaseFirestore.instance.collection('messages').add({
-      'to': patientId,
-      'from': FirebaseAuth.instance.currentUser?.uid ?? '',
-      'appointmentId': appointmentId,
-      'message': message,
-      'timestamp': FieldValue.serverTimestamp(),
-      'type': 'system',
-    });
-  }
-
-  void _startConsultation(BuildContext context, String appointmentId, Map<String, dynamic> appointmentData) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => CHWStartConsultationScreen(
-          appointmentId: appointmentId,
-          patientName: appointmentData['patientName'] ?? 'Unknown Patient',
-          patientId: appointmentData['patientId'] ?? '',
-          doctorName: appointmentData['doctor'],
-          doctorId: appointmentData['doctorId'],
-        ),
-      ),
-    );
   }
 
   Color _getStatusColor(String status) {
@@ -462,4 +846,3 @@ class CHWAppointmentsScreen extends StatelessWidget {
         return Colors.orange.shade800;
     }
   }
-}
