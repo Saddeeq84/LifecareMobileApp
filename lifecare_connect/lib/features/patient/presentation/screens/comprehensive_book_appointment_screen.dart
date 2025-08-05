@@ -717,13 +717,41 @@ class _ComprehensiveBookAppointmentScreenState extends State<ComprehensiveBookAp
                 if (_currentPage > 0) const SizedBox(width: 16),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: _isLoading ? null : () {
-                      if (_currentPage < 3) {
-                        _nextPage();
-                      } else {
-                        _submitAppointment();
-                      }
-                    },
+    onPressed: _isLoading ? null : () {
+      if (_currentPage < 3) {
+        _nextPage();
+      } else {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Confirm Appointment Submission'),
+            content: const Text('Are you sure you want to submit this appointment request?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  // Show confirmation message before actual submission
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Submitting appointment request...'),
+                      backgroundColor: Colors.teal,
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                  _submitAppointment();
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
+                child: const Text('Confirm'),
+              ),
+            ],
+          ),
+        );
+      }
+    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.teal.shade700,
                       foregroundColor: Colors.white,

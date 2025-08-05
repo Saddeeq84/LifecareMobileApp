@@ -5,6 +5,33 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../models/message.dart';
 
 class MessageService {
+  /// Finds or creates a direct conversation between two users and returns the Conversation object
+  static Future<Conversation?> findOrCreateConversation({
+    required String userId,
+    required String otherUserId,
+    required String otherUserName,
+  }) async {
+    // Get current user info
+    final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+    final otherUserDoc = await FirebaseFirestore.instance.collection('users').doc(otherUserId).get();
+    if (!userDoc.exists || !otherUserDoc.exists) return null;
+    final userData = userDoc.data() as Map<String, dynamic>;
+    final otherUserData = otherUserDoc.data() as Map<String, dynamic>;
+    final userName = userData['name'] ?? 'You';
+    final userRole = userData['role'] ?? 'patient';
+    final otherUserRole = otherUserData['role'] ?? 'provider';
+    // Use createOrGetConversation to get conversationId
+    final conversationId = await createOrGetConversation(
+      user1Id: userId,
+      user1Name: userName,
+      user1Role: userRole,
+      user2Id: otherUserId,
+      user2Name: otherUserName,
+      user2Role: otherUserRole,
+    );
+    // Fetch the conversation object
+    return await getConversationById(conversationId);
+  }
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   /// Create or get existing conversation between two users
@@ -87,6 +114,7 @@ class MessageService {
     String? attachmentName,
     String? replyToMessageId,
     String priority = 'normal',
+    List<String>? participants,
   }) async {
     try {
       final messageData = {
@@ -108,6 +136,7 @@ class MessageService {
         'replyToMessageId': replyToMessageId,
         'priority': priority,
         'createdAt': FieldValue.serverTimestamp(),
+        if (participants != null) 'participants': participants,
       };
 
       // Add message to messages collection

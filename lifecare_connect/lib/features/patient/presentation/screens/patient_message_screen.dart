@@ -677,9 +677,34 @@ class _ChatScreenState extends State<_ChatScreen> {
     final messageText = _messageController.text.trim();
     if (messageText.isEmpty) return;
 
+    // If CHW is saving a consultation note, show confirmation dialog
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final isChw = currentUser != null && await _isChw(currentUser.uid);
+    final isConsultationNote = messageText.toLowerCase().contains('consultation note');
+
+    if (isChw && isConsultationNote) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Confirm Save'),
+          content: const Text('Are you sure you want to save this consultation note?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Confirm'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+    }
+
     try {
-      final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
-      
+      final currentUserId = currentUser?.uid ?? '';
       await FirebaseFirestore.instance
           .collection('messages')
           .add({
@@ -705,6 +730,12 @@ class _ChatScreenState extends State<_ChatScreen> {
         SnackBar(content: Text('Failed to send message: $e')),
       );
     }
+  }
+
+  Future<bool> _isChw(String uid) async {
+    final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    final data = userDoc.data();
+    return data != null && data['role'] == 'chw';
   }
 }
 

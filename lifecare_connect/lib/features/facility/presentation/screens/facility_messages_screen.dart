@@ -1,9 +1,155 @@
-// ignore_for_file: sort_child_properties_last
+// ignore_for_file: sort_child_properties_last, prefer_const_declarations, prefer_const_constructors
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lifecare_connect/features/shared/data/services/message_service.dart';
+
+// Top-level dialog function for user selection (only one definition)
+void showUserSelectionDialog(BuildContext context, String role) {
+  TextEditingController searchController = TextEditingController();
+  showDialog(
+    context: context,
+    builder: (context) {
+      return StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            title: Text('Select ${role[0].toUpperCase()}${role.substring(1)}'),
+            content: SizedBox(
+              width: 350,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: searchController,
+                    decoration: InputDecoration(
+                      hintText: 'Search $role...',
+                      prefixIcon: Icon(Icons.search),
+                    ),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  const SizedBox(height: 12),
+                  FutureBuilder<QuerySnapshot>(
+                    future: FirebaseFirestore.instance
+                        .collection('users')
+                        .where('role', isEqualTo: role)
+                        .get(),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      final users = snapshot.data!.docs.where((doc) {
+                        final data = doc.data() as Map<String, dynamic>;
+                        final name = (data['fullName'] ?? data['name'] ?? '').toString().toLowerCase();
+                        final email = (data['email'] ?? '').toString().toLowerCase();
+                        final query = searchController.text.toLowerCase();
+                        return name.contains(query) || email.contains(query);
+                      }).toList();
+                      if (users.isEmpty) {
+                        return const Text('No users found');
+                      }
+                      return SizedBox(
+                        height: 250,
+                        child: ListView.builder(
+                          itemCount: users.length,
+                          itemBuilder: (context, index) {
+                            final user = users[index].data() as Map<String, dynamic>;
+                            final userId = users[index].id;
+                            final userName = user['fullName'] ?? user['name'] ?? 'Unknown';
+                            final userEmail = user['email'] ?? '';
+                            return ListTile(
+                              leading: CircleAvatar(child: Text(userName[0])),
+                              title: Text(userName),
+                              subtitle: Text(userEmail),
+                              onTap: () async {
+                                Navigator.pop(context);
+                                final facilityId = FirebaseAuth.instance.currentUser?.uid ?? '';
+                                final facilityName = 'Facility';
+                                if (role == 'patient') {
+                                  // Create conversation in 'conversations' with correct patient info
+                                  final conversationDoc = await FirebaseFirestore.instance.collection('conversations').add({
+                                    'participants': [facilityId, userId],
+                                    'type': 'patient_facility',
+                                    'patientId': userId,
+                                    'patientName': userName,
+                                    'facilityId': facilityId,
+                                    'facilityName': facilityName,
+                                    'lastMessage': '',
+                                    'lastMessageTime': FieldValue.serverTimestamp(),
+                                  });
+                                  if (context.mounted) {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => FacilityConversationScreen(
+                                          conversationId: conversationDoc.id,
+                                          conversationData: {
+                                            'participantNames': {
+                                              facilityId: facilityName,
+                                              userId: userName,
+                                            },
+                                            'type': 'patient_facility',
+                                            'patientName': userName,
+                                          },
+                                          currentUserId: facilityId,
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                } else {
+                                  // ...existing code for doctor/chw...
+                                  final conversationId = await MessageService.createOrGetConversation(
+                                    user1Id: facilityId,
+                                    user1Name: facilityName,
+                                    user1Role: 'facility',
+                                    user2Id: userId,
+                                    user2Name: userName,
+                                    user2Role: role,
+                                    title: 'Private Chat',
+                                    type: 'direct',
+                                  );
+                                  if (context.mounted) {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => FacilityConversationScreen(
+                                          conversationId: conversationId,
+                                          conversationData: {
+                                            'participantNames': {
+                                              facilityId: facilityName,
+                                              userId: userName,
+                                            },
+                                            'type': 'direct',
+                                          },
+                                          currentUserId: facilityId,
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                }
+                              },
+                            );
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+            ],
+          );
+        },
+      );
+    },
+  );
+}
 
 class FacilityMessagesScreen extends StatefulWidget {
   const FacilityMessagesScreen({super.key});
@@ -184,8 +330,8 @@ class FacilityBroadcastMessagesTab extends StatelessWidget {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('messages')
-          .where('type', isEqualTo: 'broadcast')
-          .orderBy('timestamp', descending: true)
+          .where('type', whereIn: ['broadcast', 'broadcast_message', 'personal_message'])
+          .orderBy('createdAt', descending: true)
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -214,13 +360,42 @@ class FacilityBroadcastMessagesTab extends StatelessWidget {
           );
         }
 
+        // Manual filter for receiverId or participants
+        final filteredDocs = snapshot.data!.docs.where((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          final receiverId = data['receiverId'];
+          final participants = data['participants'] as List<dynamic>?;
+          return receiverId == currentUserId || (participants != null && participants.contains(currentUserId));
+        }).toList();
+
+        if (filteredDocs.isEmpty) {
+          return const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.campaign, size: 64, color: Colors.grey),
+                SizedBox(height: 16),
+                Text(
+                  'No broadcast messages yet',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Important announcements will appear here',
+                  style: TextStyle(color: Colors.grey),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          );
+        }
+
         return ListView.builder(
           padding: const EdgeInsets.all(16),
-          itemCount: snapshot.data!.docs.length,
+          itemCount: filteredDocs.length,
           itemBuilder: (context, index) {
-            final doc = snapshot.data!.docs[index];
+            final doc = filteredDocs[index];
             final data = doc.data() as Map<String, dynamic>;
-            
             return Card(
               margin: const EdgeInsets.only(bottom: 12),
               elevation: 2,
@@ -230,7 +405,7 @@ class FacilityBroadcastMessagesTab extends StatelessWidget {
                   child: const Icon(Icons.campaign, color: Colors.orange),
                 ),
                 title: Text(
-                  data['subject'] ?? 'No Subject',
+                  _getPersonalizedSubject(data, currentUserId),
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 subtitle: Column(
@@ -238,13 +413,13 @@ class FacilityBroadcastMessagesTab extends StatelessWidget {
                   children: [
                     const SizedBox(height: 4),
                     Text(
-                      data['message'] ?? '',
+                      _getBroadcastContent(data, currentUserId),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'From: Admin • ${_formatTimestamp(data['timestamp'])}',
+                      'by admin • ${_formatTimestamp(data['timestamp'])}',
                       style: TextStyle(
                         color: Colors.grey.shade600,
                         fontSize: 12,
@@ -260,6 +435,24 @@ class FacilityBroadcastMessagesTab extends StatelessWidget {
         );
       },
     );
+  }
+
+  String _getBroadcastContent(Map<String, dynamic> data, String userId) {
+    // Prefer 'message', fallback to 'content', fallback to 'content' for older messages
+    String message = data['message'] ?? '';
+    if (message.isEmpty && data['content'] != null) {
+      message = data['content'];
+    }
+    if (message.isEmpty && data['content'] == null && data['content'] != null) {
+      message = data['content'];
+    }
+    String userName = data['recipientNames'] != null && data['recipientNames'][userId] != null
+        ? data['recipientNames'][userId]
+        : '';
+    if (userName.isNotEmpty) {
+      message = message.replaceAll('{name}', userName);
+    }
+    return message.isNotEmpty ? message : (data['content'] ?? 'No message content');
   }
 
   String _formatTimestamp(Timestamp? timestamp) {
@@ -291,6 +484,19 @@ class FacilityBroadcastMessagesTab extends StatelessWidget {
       ),
     );
   }
+
+  String _getPersonalizedSubject(Map<String, dynamic> data, String userId) {
+    // If subject contains a placeholder for name, replace it
+    String subject = data['subject'] ?? 'No Subject';
+    String userName = data['recipientNames'] != null && data['recipientNames'][userId] != null
+        ? data['recipientNames'][userId]
+        : '';
+    if (userName.isNotEmpty) {
+      subject = subject.replaceAll('{name}', userName);
+    }
+    return subject;
+  }
+
 }
 
 // Facility Doctor Messages Tab
@@ -417,19 +623,7 @@ class FacilityDoctorMessagesTab extends StatelessWidget {
   }
 
   void _showDoctorSelectionDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Coming Soon'),
-        content: const Text('Doctor selection and messaging will be available in a future update.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
+    showUserSelectionDialog(context, 'doctor');
   }
 
   void _openConversation(BuildContext context, String conversationId, Map<String, dynamic> data) {
@@ -570,19 +764,7 @@ class FacilityCHWMessagesTab extends StatelessWidget {
   }
 
   void _showCHWSelectionDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Coming Soon'),
-        content: const Text('CHW selection and messaging will be available in a future update.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
+    showUserSelectionDialog(context, 'chw');
   }
 
   void _openConversation(BuildContext context, String conversationId, Map<String, dynamic> data) {
@@ -723,21 +905,8 @@ class FacilityPatientMessagesTab extends StatelessWidget {
   }
 
   void _showPatientSelectionDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Coming Soon'),
-        content: const Text('Patient selection and messaging will be available in a future update.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
+    showUserSelectionDialog(context, 'patient');
   }
-
   void _openConversation(BuildContext context, String conversationId, Map<String, dynamic> data) {
     Navigator.push(
       context,
@@ -841,7 +1010,9 @@ class _FacilityMessageDetailScreenState extends State<FacilityMessageDetailScree
                           ),
                           const SizedBox(height: 12),
                           Text(
-                            widget.messageData['message'] ?? 'No message content',
+                            (widget.messageData['message'] ?? '').isNotEmpty
+                              ? widget.messageData['message']
+                              : (widget.messageData['content'] ?? 'No message content'),
                             style: const TextStyle(fontSize: 16),
                           ),
                         ],

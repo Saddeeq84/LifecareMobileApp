@@ -1,11 +1,10 @@
 // ignore_for_file: use_build_context_synchronously, prefer_const_constructors, prefer_const_literals_to_create_immutables, deprecated_member_use
 
 import 'package:flutter/material.dart';
-// import 'package:go_router/go_router.dart';
 import 'patient_appointment_screen.dart';
 import 'patient_education_screen.dart';
 import 'my_health_tab.dart';
-import 'patient_consultations_screen.dart';
+import 'package:lifecare_connect/features/patient/presentation/screens/patient_consultations_screen.dart' as consult;
 import 'patient_referrals_screen.dart';
 import 'package:lifecare_connect/features/shared/presentation/screens/messages_screen.dart';
 import 'patient_profile_screen.dart';
@@ -54,12 +53,6 @@ class _PatientDashboardMainViewState extends State<PatientDashboardMainView> {
       'color': Colors.teal,
     },
     {
-      'icon': Icons.send,
-      'label': 'Referrals',
-      'action': 'referrals',
-      'color': Colors.deepPurple,
-    },
-    {
       'icon': Icons.school,
       'label': 'Education',
       'action': 'education',
@@ -84,14 +77,16 @@ class _PatientDashboardMainViewState extends State<PatientDashboardMainView> {
   void _handleDashboardItemTap(BuildContext context, String action) {
     switch (action) {
       case 'health':
-        Navigator.push(context, MaterialPageRoute(builder: (context) => MyHealthTab()));
+        final currentUser = FirebaseAuth.instance.currentUser;
+        final patientId = currentUser?.uid ?? '';
+        Navigator.push(context, MaterialPageRoute(builder: (context) => MyHealthTab(patientId: patientId)));
         break;
       case 'appointments':
         setState(() => _showAppointmentBadge = false);
         Navigator.push(context, MaterialPageRoute(builder: (context) => const PatientAppointmentsScreen()));
         break;
       case 'consultations':
-        Navigator.push(context, MaterialPageRoute(builder: (context) => const PatientConsultationsScreen()));
+                Navigator.push(context, MaterialPageRoute(builder: (context) => const consult.PatientConsultationsScreen()));
         break;
       case 'referrals':
         Navigator.push(context, MaterialPageRoute(builder: (context) => const PatientReferralsScreen()));

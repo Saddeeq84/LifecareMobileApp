@@ -84,18 +84,21 @@ class HealthRecordsService {
       final recordData = {
         'type': 'CHW_CONSULTATION',
         'patientUid': patientUid,
+        'patientId': patientUid,
         'providerId': chwUid,
         'chwUid': chwUid,
         'chwId': chwUid,
         'providerName': chwName,
         'providerType': 'CHW',
         'date': FieldValue.serverTimestamp(),
+        'timestamp': FieldValue.serverTimestamp(),
         'data': consultationData,
         'accessibleBy': ['patient', 'chw', 'doctor'],
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
         'isEditable': false, // Cannot be edited after submission
         'isDeletable': false, // Cannot be deleted after submission
+        'statusFlag': 'completed',
       };
       print('[DEBUG] Saving CHW consultation health record for patientUid=$patientUid chwUid=$chwUid chwName=$chwName');
       print('[DEBUG] Record data: ' + recordData.toString());

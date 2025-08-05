@@ -1,3 +1,4 @@
+import '../../features/chw/presentation/screens/chw_consultation_screen.dart';
 import '../../features/admin/presentation/screens/admin_settings_screen.dart';
 import '../../features/admin/presentation/screens/approvals_screen.dart';
 import '../../features/admin/presentation/screens/admin_register_facility_screen.dart';
@@ -11,7 +12,6 @@ import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 // Import actual screens from features
-import '../../features/chw/presentation/screens/chw_regular_consultations_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/admin/presentation/screens/admin_dashboard.dart';
 import '../../features/doctor/presentation/screens/doctor_patient_list_screen.dart';
@@ -23,15 +23,12 @@ import '../../features/doctor/presentation/screens/doctor_dashboard.dart';
 import '../../features/doctor/presentation/doctor_appointments_exports.dart';
 import '../../features/chw/presentation/screens/chw_dashboard.dart'; // Ensure this import is present and CHWDashboard is defined as a class
 import '../../features/chw/presentation/screens/patient_registration_screen.dart';
-// Removed: ANCChecklistScreen (no longer exists)
 import '../../features/chw/presentation/screens/patient_list_screen.dart';
 import '../../features/chw/presentation/screens/patient_health_records_screen.dart';
 import '../../features/chw/presentation/screens/chw_referrals_screen.dart';
 import '../../features/chw/presentation/screens/chw_create_referral_screen.dart';
-// Removed: '../../features/chw/presentation/screens/chw_consultation_screen.dart' (file does not exist)
 import '../../features/chw/presentation/screens/chw_consultation_details_screen.dart';
-// import '../../features/chw/presentation/screens/clinical_documentation_screen.dart';
-import '../../features/patient/presentation/screens/patient_consultations_screen.dart';
+// import '../../features/patient/presentation/screens/patient_consultations_screen.dart';
 import '../../features/patient/presentation/screens/patient_referrals_screen.dart';
 import '../../features/patient/presentation/screens/patient_dashboard.dart';
 import '../../features/patient/presentation/screens/patient_appointment_screen.dart';
@@ -54,6 +51,14 @@ class AppRouter {
     initialLocation: '/login',
     redirect: _redirect,
     routes: [
+      GoRoute(
+        path: '/patientMessaging',
+        name: 'patient-messaging',
+        builder: (context, state) {
+          // Link to the central/shared messaging system
+          return const MessagesScreen();
+        },
+      ),
       // Custom routes for CHW consultation flows
       // Doctor dashboard subroutes
       GoRoute(
@@ -227,14 +232,6 @@ class AppRouter {
             ],
           ),
           GoRoute(
-        path: 'consultations',
-        name: 'chw-consultations',
-        builder: (context, state) => CHWRegularConsultationsScreen(),
-        routes: [
-          // Removed: CHWCreateConsultationScreen (no longer exists)
-        ],
-      ),
-          GoRoute(
             path: 'regular-consultations',
             name: 'chw-regular-consultations',
             builder: (context, state) => CHWAppointmentsScreen(initialTab: 1),
@@ -298,6 +295,11 @@ class AppRouter {
             name: 'chw-edit-profile',
             builder: (context, state) => const CHWProfileEditScreen(),
           ),
+        GoRoute(
+          path: 'consultations',
+          name: 'chw-consultations',
+          builder: (context, state) => const CHWConsultationScreen(),
+        ),
         ],
       ),
       

@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:lifecare_connect/features/shared/data/services/message_service.dart';
 
 class FacilityBookingScreen extends StatefulWidget {
   const FacilityBookingScreen({super.key});
@@ -210,6 +211,27 @@ class _PendingBookingsTab extends StatelessWidget {
   }
 
   Future<void> _approveBooking(BuildContext context, String bookingId, Map<String, dynamic> data) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Approve Booking'),
+        content: const Text('Are you sure you want to approve this booking?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+            child: const Text('Approve'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
     try {
       await FirebaseFirestore.instance
           .collection('service_requests')
@@ -219,6 +241,43 @@ class _PendingBookingsTab extends StatelessWidget {
         'approvedAt': FieldValue.serverTimestamp(),
         'approvedBy': FirebaseAuth.instance.currentUser?.uid,
       });
+
+      // Send automatic message to patient's normal messaging system
+      try {
+        final patientId = data['patientId'] ?? '';
+        final patientName = data['patientName'] ?? 'Patient';
+        final facilityId = FirebaseAuth.instance.currentUser?.uid ?? '';
+        final facilityName = data['facilityName'] ?? 'Facility';
+        if (patientId.isNotEmpty) {
+          final conversationId = await MessageService.createOrGetConversation(
+            user1Id: facilityId,
+            user1Name: facilityName,
+            user1Role: 'facility',
+            user2Id: patientId,
+            user2Name: patientName,
+            user2Role: 'patient',
+            title: 'Facility Booking',
+            type: 'facility_booking',
+            relatedId: bookingId,
+          );
+          await MessageService.sendMessage(
+            conversationId: conversationId,
+            senderId: facilityId,
+            senderName: facilityName,
+            senderRole: 'facility',
+            receiverId: patientId,
+            receiverName: patientName,
+            receiverRole: 'patient',
+            content: 'Your booking has been approved by the facility. Please check your app for details.',
+            type: 'facility_booking_approved',
+            priority: 'high',
+          );
+        }
+      } catch (e) {
+        debugPrint('Error sending booking approval message: '
+            'Error: '
+            'Error sending booking approval message: $e');
+      }
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

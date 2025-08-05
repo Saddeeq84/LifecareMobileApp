@@ -135,7 +135,9 @@ class _CHWDashboardState extends State<CHWDashboard> {
                 title: Text(item['title'] as String, style: const TextStyle(fontWeight: FontWeight.bold)),
                 subtitle: Text(item['subtitle'] as String),
                 trailing: const Icon(Icons.arrow_forward_ios, size: 18, color: Colors.teal),
-                onTap: () => context.go(item['route'] as String),
+                onTap: () {
+                    context.go(item['route'] as String);
+                },
               ),
             );
           },

@@ -1,9 +1,8 @@
-// ignore_for_file: use_build_context_synchronously, prefer_const_constructors, prefer_const_constructors_in_immutables, prefer_final_fields, prefer_const_literals_to_create_immutables, await_only_futures
+// ignore_for_file: use_build_context_synchronously, prefer_const_constructors, prefer_const_constructors_in_immutables, prefer_final_fields, prefer_const_literals_to_create_immutables, await_only_futures, avoid_print, prefer_interpolation_to_compose_strings
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../../shared/data/services/health_records_service.dart';
 
 // If you use named routes elsewhere, ensure this screen is registered in your main router.
 // Example for go_router or Navigator:
@@ -536,6 +535,7 @@ class _CHWAncPncConsultationScreenState extends State<CHWAncPncConsultationScree
                     ),
                     onPressed: () async {
                       if (_formKey.currentState?.validate() ?? false) {
+                        final now = DateTime.now();
                         final healthRecordData = {
                           'appointmentId': widget.appointmentId,
                           'patientId': widget.patientId,
@@ -554,18 +554,36 @@ class _CHWAncPncConsultationScreenState extends State<CHWAncPncConsultationScree
                           'labTests': [..._selectedLabTests, if (_otherLabTest.isNotEmpty) _otherLabTest].join(', '),
                           'radiology': [..._selectedRadiology, if (_otherRadiology.isNotEmpty) _otherRadiology].join(', '),
                           'notes': _notesController.text.trim(),
-                          'consultationDate': DateTime.now().toIso8601String(),
-                          'createdAt': DateTime.now(),
+                          'consultationDate': now.toIso8601String(),
+                          'createdAt': now,
                           'type': widget.appointmentType,
                           'statusFlag': 'completed',
                         };
                         try {
-                          await HealthRecordsService.saveCHWConsultation(
-                            patientUid: widget.patientId,
-                            chwUid: FirebaseAuth.instance.currentUser?.uid ?? '',
-                            chwName: 'Community Health Worker',
-                            consultationData: healthRecordData,
-                          );
+                          // Save completed consultation to health_records with required top-level fields
+                          final chwUid = FirebaseAuth.instance.currentUser?.uid ?? '';
+                          print('DEBUG: Saving completed consultation to Firestore with:');
+                          print('chwId: ' + chwUid);
+                          print('statusFlag: completed');
+                          await FirebaseFirestore.instance.collection('health_records').add({
+                            'appointmentId': widget.appointmentId,
+                            'patientId': widget.patientId,
+                            'patientName': widget.patientName,
+                            'chwId': chwUid,
+                            'chwUid': chwUid,
+                            'providerName': 'Community Health Worker',
+                            'providerType': 'CHW',
+                            'consultationType': widget.appointmentType,
+                            'statusFlag': 'completed',
+                            'createdAt': now,
+                            'updatedAt': now,
+                            'completedAt': now,
+                            'timestamp': now,
+                            // Add any other top-level fields needed for display/filtering
+                            'accessibleBy': ['patient', 'doctor', 'chw'],
+                            // Consultation details
+                            'data': healthRecordData,
+                          });
                           // Update appointment status to completed in Firestore for any type
                           await Future.delayed(Duration(milliseconds: 100));
                           await FirebaseFirestore.instance
@@ -573,7 +591,7 @@ class _CHWAncPncConsultationScreenState extends State<CHWAncPncConsultationScree
                               .doc(widget.appointmentId)
                               .update({
                                 'status': 'completed',
-                                'completedAt': DateTime.now(),
+                                'completedAt': now,
                                 'statusFlag': 'completed',
                               });
                           ScaffoldMessenger.of(context).showSnackBar(

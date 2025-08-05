@@ -3,11 +3,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'chw_start_consultation_screen.dart';
 import '../../../shared/data/services/consultation_service.dart';
 import '../../../shared/data/services/message_service.dart';
 import '../../../shared/data/models/appointment.dart';
 import '../../../shared/helpers/chw_message_helper.dart';
+
 
 class CHWAppointmentsScreen extends StatelessWidget {
   final int initialTab;
@@ -17,16 +17,15 @@ class CHWAppointmentsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final chwUid = FirebaseAuth.instance.currentUser?.uid ?? '';
     return DefaultTabController(
-      length: 3,
-      initialIndex: initialTab,
+      length: 2,
+      initialIndex: initialTab > 1 ? 1 : initialTab,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('CHW Appointments'),
           bottom: const TabBar(
             tabs: [
               Tab(text: 'Pending Requests'),
-              Tab(text: 'Upcoming Visits'),
-              Tab(text: 'Completed'),
+              Tab(text: 'Approved Appointments'),
             ],
           ),
         ),
@@ -34,10 +33,8 @@ class CHWAppointmentsScreen extends StatelessWidget {
           children: [
             // Pending Requests Tab
             _buildAppointmentsList(context, chwUid, 'pending'),
-            // Upcoming Visits Tab
+            // Approved Appointments Tab
             _buildAppointmentsList(context, chwUid, 'approved'),
-            // Completed Tab
-            _buildAppointmentsList(context, chwUid, 'completed'),
           ],
         ),
         floatingActionButton: FloatingActionButton.extended(
@@ -67,11 +64,9 @@ class CHWAppointmentsScreen extends StatelessWidget {
       ),
     );
   }
-
-// ...existing code...
 }
 
-/// Widget to select a doctor for booking (reuses NewConversationScreen logic, but only for doctors)
+// Move these widget classes to top-level
 class _DoctorSelectorForBooking extends StatefulWidget {
   @override
   State<_DoctorSelectorForBooking> createState() => _DoctorSelectorForBookingState();
@@ -120,7 +115,7 @@ class _DoctorSelectorForBookingState extends State<_DoctorSelectorForBooking> {
         final phone = (doctor['phone'] ?? '').toLowerCase();
         return name.contains(searchTerm) || email.contains(searchTerm) || phone.contains(searchTerm);
       }).toList();
-      debugPrint('Doctor list loaded: count = [33m${doctors.length}[0m');
+      debugPrint('Doctor list loaded: count = ���[33m${doctors.length}���[0m');
       if (doctors.isEmpty) {
         debugPrint('No doctors found. Check isActive and isApproved fields in Firestore.');
       }
@@ -182,7 +177,6 @@ class _DoctorSelectorForBookingState extends State<_DoctorSelectorForBooking> {
   }
 }
 
-/// Dummy booking screen to represent the booking flow with the selected doctor
 class _BookAppointmentWithDoctorScreen extends StatefulWidget {
   final Map<String, dynamic> doctor;
   const _BookAppointmentWithDoctorScreen({required this.doctor});
@@ -317,7 +311,7 @@ class _BookAppointmentWithDoctorScreenState extends State<_BookAppointmentWithDo
     }
   }
 
-  Future<void> _submit() async {
+  Future<void> submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedDate == null || _selectedTime == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -440,7 +434,7 @@ class _BookAppointmentWithDoctorScreenState extends State<_BookAppointmentWithDo
               SizedBox(height: 24),
               Center(
                 child: ElevatedButton(
-                  onPressed: _isSubmitting ? null : _submit,
+                  onPressed: _isSubmitting ? null : submit,
                   child: _isSubmitting ? CircularProgressIndicator(color: Colors.white) : Text('Book Appointment'),
                   style: ElevatedButton.styleFrom(minimumSize: Size(180, 48)),
                 ),
@@ -469,7 +463,17 @@ class _BookAppointmentWithDoctorScreenState extends State<_BookAppointmentWithDo
         }
         final appointments = snapshot.data?.docs ?? [];
         if (appointments.isEmpty) {
-          return Center(child: Text('No ${status == 'pending' ? 'pending requests' : status == 'approved' ? 'upcoming visits' : 'completed appointments'}'));
+          String label;
+          if (status == 'pending') {
+            label = 'pending requests';
+          } else if (status == 'approved') {
+            label = 'approved appointments';
+          } else if (status == 'completed') {
+            label = 'completed appointments';
+          } else {
+            label = 'appointments';
+          }
+          return Center(child: Text('No $label'));
         }
         return ListView.builder(
           itemCount: appointments.length,
@@ -487,12 +491,45 @@ class _BookAppointmentWithDoctorScreenState extends State<_BookAppointmentWithDo
                   if (data['preConsultationData'] != null)
                     Padding(
                       padding: const EdgeInsets.all(8.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Pre-Consultation Checklist:', style: TextStyle(fontWeight: FontWeight.bold)),
-                          ..._buildPreConsultationDetails(data['preConsultationData']),
-                        ],
+                      child: InkWell(
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            builder: (context) {
+                              final checklist = data['preConsultationData'] as Map<String, dynamic>;
+                              return AlertDialog(
+                                title: const Text('Pre-Consultation Checklist'),
+                                content: SingleChildScrollView(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      for (final entry in checklist.entries)
+                                        if (entry.value != null && entry.value.toString().isNotEmpty)
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(vertical: 2),
+                                            child: Text('${entry.key}: ${entry.value}', style: const TextStyle(fontSize: 15)),
+                                          ),
+                                    ],
+                                  ),
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.of(context).pop(),
+                                    child: const Text('Close'),
+                                  ),
+                                ],
+                              );
+                            },
+                          );
+                        },
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Pre-Consultation Checklist:', style: TextStyle(fontWeight: FontWeight.bold)),
+                            ..._buildPreConsultationDetails(data['preConsultationData']),
+                            Text('(Tap to view details)', style: TextStyle(fontSize: 12, color: Colors.teal)),
+                          ],
+                        ),
                       ),
                     ),
                   Row(

@@ -70,6 +70,15 @@ class _CHWConsultationDetailsScreenState extends State<CHWConsultationDetailsScr
     'Salbutamol',
     'Prednisolone',
     'Doxycycline',
+    'Ciprofloxacin',
+    'Azithromycin',
+    'Amoxicillin-Clavulanate',
+    'Cetirizine',
+    'Loratadine',
+    'Hydroxychloroquine',
+    'Vitamin C',
+    'Multivitamins',
+    'Other',
   ];
   
   final List<String> _commonLabTests = [
@@ -83,6 +92,10 @@ class _CHWConsultationDetailsScreenState extends State<CHWConsultationDetailsScr
     'Hepatitis B Test',
     'Liver Function Test',
     'Kidney Function Test',
+    'Electrolytes',
+    'Widal Test',
+    'Typhoid Test',
+    'Other',
   ];
   
   final List<String> _commonRadiologyTests = [
@@ -96,6 +109,7 @@ class _CHWConsultationDetailsScreenState extends State<CHWConsultationDetailsScr
     'Mammography',
     'Bone X-ray',
     'Dental X-ray',
+    'Other',
   ];
 
   @override
@@ -211,6 +225,29 @@ class _CHWConsultationDetailsScreenState extends State<CHWConsultationDetailsScr
 
     setState(() => _isLoading = true);
 
+    // Show confirmation dialog before saving
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirm Completion'),
+        content: const Text('Are you sure you want to complete this consultation?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) {
+      setState(() => _isLoading = false);
+      return;
+    }
+
     try {
       final currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser == null) throw Exception('User not authenticated');
@@ -231,6 +268,7 @@ class _CHWConsultationDetailsScreenState extends State<CHWConsultationDetailsScr
         'consultationDate': DateTime.now().toIso8601String(),
         'createdAt': FieldValue.serverTimestamp(),
         'status': 'completed',
+        'statusFlag': 'completed',
       };
 
       // Save unified record to health_records only
@@ -1053,14 +1091,69 @@ class _CHWConsultationDetailsScreenState extends State<CHWConsultationDetailsScr
                       ),
                       child: Icon(Icons.science, color: Colors.orange.shade700),
                     ),
-                    title: Text(
-                      request['requestType'],
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    title: Row(
+                      children: [
+                        Icon(Icons.biotech, color: Colors.orange.shade700, size: 20),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            request['requestType'],
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
+                        ),
+                      ],
                     ),
-                    subtitle: Text(
-                      'Indication: ${request['reason']}\n'
-                      'Urgency: ${request['urgency']}\n'
-                      '${request['facility'].isNotEmpty ? 'Facility: ${request['facility']}' : 'No facility preference'}',
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.info_outline, size: 16, color: Colors.grey),
+                            const SizedBox(width: 4),
+                            SizedBox(
+                              width: 80,
+                              child: Text(
+                                request['reason'].length > 6 ? request['reason'].substring(0, 6) + '...' : request['reason'],
+                                style: const TextStyle(fontSize: 11),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Row(
+                          children: [
+                            Icon(Icons.timer, size: 16, color: Colors.grey),
+                            const SizedBox(width: 4),
+                            SizedBox(
+                              width: 80,
+                              child: Text(
+                                request['urgency'].length > 6 ? request['urgency'].substring(0, 6) + '...' : request['urgency'],
+                                style: const TextStyle(fontSize: 11),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Row(
+                          children: [
+                            Icon(Icons.local_hospital, size: 16, color: Colors.grey),
+                            const SizedBox(width: 4),
+                            SizedBox(
+                              width: 80,
+                              child: Text(
+                                request['facility'].isNotEmpty ? (request['facility'].length > 6 ? request['facility'].substring(0, 6) + '...' : request['facility']) : 'No facility',
+                                style: const TextStyle(fontSize: 11),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                     trailing: widget.isReadOnly ? null : IconButton(
                       icon: const Icon(Icons.delete, color: Colors.red),

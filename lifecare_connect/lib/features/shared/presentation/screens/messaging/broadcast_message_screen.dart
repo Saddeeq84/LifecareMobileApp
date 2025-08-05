@@ -1,6 +1,7 @@
 // ignore_for_file: library_private_types_in_public_api, deprecated_member_use, avoid_print, use_build_context_synchronously
 
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../data/services/message_service.dart';
@@ -13,6 +14,11 @@ class BroadcastMessageScreen extends StatefulWidget {
 }
 
 class _BroadcastMessageScreenState extends State<BroadcastMessageScreen> {
+  // Helper stream for facility admin user list
+  Stream<QuerySnapshot> _facilityAdminUserStream() {
+    // Directly query users with role 'facility' (facility admins)
+    return FirebaseFirestore.instance.collection('users').where('role', isEqualTo: 'facility').snapshots();
+  }
   final _messageController = TextEditingController();
   final _subjectController = TextEditingController();
   String _selectedCategory = 'all';
@@ -22,9 +28,9 @@ class _BroadcastMessageScreenState extends State<BroadcastMessageScreen> {
   final Map<String, String> _categories = {
     'all': 'All Users',
     'patient': 'All Patients',
-    'CHW': 'All Community Health Workers',
+    'CHW': 'All CHWs',
     'doctor': 'All Doctors',
-    'facility_admin': 'All Facility Administrators',
+    'facility_admin': 'All Facility Admins',
     'specific_facility': 'Specific Facility Users',
   };
 
@@ -352,7 +358,7 @@ class _BroadcastMessageScreenState extends State<BroadcastMessageScreen> {
         }
 
         final userCount = snapshot.data?.docs.length ?? 0;
-        
+
         return Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
@@ -380,19 +386,31 @@ class _BroadcastMessageScreenState extends State<BroadcastMessageScreen> {
 
   Stream<QuerySnapshot> _getTargetUsersStream() {
     Query query = FirebaseFirestore.instance.collection('users');
-    
     // Exclude current user
     final currentUserId = FirebaseAuth.instance.currentUser?.uid;
     if (currentUserId != null) {
       query = query.where(FieldPath.documentId, isNotEqualTo: currentUserId);
     }
-    
-    if (_selectedCategory != 'all' && _selectedCategory != 'specific_facility') {
-      query = query.where('role', isEqualTo: _selectedCategory);
+
+    // Use lowercase role values to match Firestore
+    if (_selectedCategory == 'doctor') {
+      query = query.where('role', isEqualTo: 'doctor');
+      return query.snapshots();
+    } else if (_selectedCategory == 'CHW') {
+      query = query.where('role', isEqualTo: 'chw');
+      return query.snapshots();
+    } else if (_selectedCategory == 'patient') {
+      query = query.where('role', isEqualTo: 'patient');
+      return query.snapshots();
+    } else if (_selectedCategory == 'facility_admin') {
+      // Use updated facility admin stream
+      return _facilityAdminUserStream();
     } else if (_selectedCategory == 'specific_facility' && _selectedFacilities.isNotEmpty) {
-      query = query.where('facilityId', whereIn: _selectedFacilities);
+      // Target facility user documents by their document ID
+      query = query.where('role', isEqualTo: 'facility').where(FieldPath.documentId, whereIn: _selectedFacilities);
+      return query.snapshots();
     }
-    
+    // 'all' returns all users except current
     return query.snapshots();
   }
 
@@ -435,7 +453,7 @@ class _BroadcastMessageScreenState extends State<BroadcastMessageScreen> {
       _isSending = true;
     });
 
-    try {
+    // ...existing code...
       // Get current user (admin) details
       final currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser == null) {
@@ -473,7 +491,6 @@ Subject: ${_subjectController.text.trim()}
 
 ${_messageController.text.trim()}
 
----
 This is a broadcast message from LifeCare Connect Administration.
 Category: ${_categories[_selectedCategory]}
 Sent by: $adminName
@@ -483,18 +500,19 @@ Date: ${DateTime.now().toString().split('.')[0]}
       int successCount = 0;
       int failureCount = 0;
 
-      // Send message to each user
+      // Send message to each user, including facilities
       for (final userDoc in targetUsers) {
+        final userData = userDoc.data() as Map<String, dynamic>?;
+        if (userData == null) continue;
+        final userFirstName = userData['firstName'] ?? '';
+        final userLastName = userData['lastName'] ?? '';
+        final userName = '$userFirstName $userLastName'.trim();
+        final userRole = userData['role'] ?? 'user';
+        final isFacilityUser = userRole == 'facility' || userRole == 'facility_admin';
+        final facilityId = isFacilityUser ? userDoc.id : null;
         try {
-          final userData = userDoc.data() as Map<String, dynamic>?;
-          if (userData == null) continue;
-          
-          final userFirstName = userData['firstName'] ?? '';
-          final userLastName = userData['lastName'] ?? '';
-          final userName = '$userFirstName $userLastName'.trim();
-          final userRole = userData['role'] ?? 'user';
-
-          // Create conversation
+          // Create conversation with participants array including facility user if applicable
+          final participants = [currentUser.uid, userDoc.id];
           final conversationId = await MessageService.createOrGetConversation(
             user1Id: currentUser.uid,
             user1Name: adminName.isNotEmpty ? adminName : 'Admin',
@@ -504,38 +522,30 @@ Date: ${DateTime.now().toString().split('.')[0]}
             user2Role: userRole,
             type: 'broadcast_message',
             title: 'Broadcast: ${_subjectController.text.trim()}',
+            relatedId: facilityId,
           );
 
-          // Send message
+          // Send message with participants array
           await MessageService.sendMessage(
             conversationId: conversationId,
             senderId: currentUser.uid,
             senderName: adminName.isNotEmpty ? adminName : 'Admin',
             senderRole: adminRole,
-            receiverId: userDoc.id,
+            receiverId: facilityId ?? userDoc.id,
             receiverName: userName.isNotEmpty ? userName : (userData['email'] ?? 'User'),
             receiverRole: userRole,
             content: messageContent,
             type: 'broadcast_message',
             priority: 'high',
+            attachmentType: isFacilityUser ? 'facility_broadcast' : null,
+            participants: participants,
           );
-
           successCount++;
         } catch (e) {
-          print('Failed to send to user ${userDoc.id}: $e');
           failureCount++;
+          print('Failed to send broadcast to user: $e');
         }
       }
-
-      // Show result
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Broadcast sent! Success: $successCount, Failed: $failureCount',
-          ),
-          backgroundColor: failureCount == 0 ? Colors.green : Colors.orange,
-        ),
-      );
 
       // Clear form if all successful
       if (failureCount == 0) {
@@ -545,19 +555,20 @@ Date: ${DateTime.now().toString().split('.')[0]}
           _selectedCategory = 'all';
           _selectedFacilities.clear();
         });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Broadcast sent to $successCount users successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Broadcast sent to $successCount users, but $failureCount failed.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
       }
-
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to send broadcast: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    } finally {
-      setState(() {
-        _isSending = false;
-      });
     }
-  }
-}
+      // Catch and finally blocks are already correctly placed below
+    }

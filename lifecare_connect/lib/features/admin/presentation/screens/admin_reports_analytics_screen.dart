@@ -689,9 +689,9 @@ class _AdminReportsAnalyticsScreenState extends State<AdminReportsAnalyticsScree
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               crossAxisCount: 2,
-              childAspectRatio: 2.5,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
+              childAspectRatio: 1.4, // Reduced from 2.5 to make boxes smaller
+              crossAxisSpacing: 8, // Reduced spacing
+              mainAxisSpacing: 8, // Reduced spacing
               children: [
                 _buildStatCard(
                   'Total Users',
@@ -763,9 +763,9 @@ class _AdminReportsAnalyticsScreenState extends State<AdminReportsAnalyticsScree
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               crossAxisCount: 2,
-              childAspectRatio: 2.5,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
+              childAspectRatio: 1.4, // Reduced from 2.5 to make boxes smaller
+              crossAxisSpacing: 8, // Reduced spacing
+              mainAxisSpacing: 8, // Reduced spacing
               children: [
                 _buildStatCard(
                   'Appointments',
@@ -821,59 +821,126 @@ class _AdminReportsAnalyticsScreenState extends State<AdminReportsAnalyticsScree
               ],
             ),
             const SizedBox(height: 16),
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: recentActivities.length,
-              separatorBuilder: (context, index) => const Divider(),
-              itemBuilder: (context, index) {
+            ...List.generate(
+              recentActivities.length > 3 ? 3 : recentActivities.length,
+              (index) {
                 final activity = recentActivities[index];
                 final timestamp = activity['timestamp'] as Timestamp?;
                 final timeString = timestamp != null
                     ? DateFormat('MMM dd, HH:mm').format(timestamp.toDate())
                     : 'Unknown time';
-
-                return ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: Colors.indigo.withOpacity(0.1),
-                    child: Icon(
-                      activity['icon'] as IconData,
-                      color: Colors.indigo,
-                      size: 20,
-                    ),
-                  ),
-                  title: Text(activity['title'] ?? 'Unknown Activity'),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(activity['description'] ?? 'No description'),
-                      Text(
-                        timeString,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
+                return Column(
+                  children: [
+                    ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: Colors.indigo.withOpacity(0.1),
+                        child: Icon(
+                          activity['icon'] as IconData,
+                          color: Colors.indigo,
+                          size: 20,
                         ),
                       ),
-                    ],
-                  ),
-                  trailing: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: _getStatusColor(activity['status']).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      activity['status']?.toString().toUpperCase() ?? 'UNKNOWN',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: _getStatusColor(activity['status']),
+                      title: Text(activity['title'] ?? 'Unknown Activity'),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(activity['description'] ?? 'No description'),
+                          Text(
+                            timeString,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                      trailing: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: _getStatusColor(activity['status']).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          activity['status']?.toString().toUpperCase() ?? 'UNKNOWN',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: _getStatusColor(activity['status']),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                    if (index < (recentActivities.length > 3 ? 2 : recentActivities.length - 1))
+                      const Divider(),
+                  ],
                 );
               },
             ),
+            if (recentActivities.length > 3)
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () {
+                    showModalBottomSheet(
+                      context: context,
+                      builder: (context) {
+                        return ListView.separated(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: recentActivities.length,
+                          separatorBuilder: (context, index) => const Divider(),
+                          itemBuilder: (context, index) {
+                            final activity = recentActivities[index];
+                            final timestamp = activity['timestamp'] as Timestamp?;
+                            final timeString = timestamp != null
+                                ? DateFormat('MMM dd, HH:mm').format(timestamp.toDate())
+                                : 'Unknown time';
+                            return ListTile(
+                              leading: CircleAvatar(
+                                backgroundColor: Colors.indigo.withOpacity(0.1),
+                                child: Icon(
+                                  activity['icon'] as IconData,
+                                  color: Colors.indigo,
+                                  size: 20,
+                                ),
+                              ),
+                              title: Text(activity['title'] ?? 'Unknown Activity'),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(activity['description'] ?? 'No description'),
+                                  Text(
+                                    timeString,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              trailing: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: _getStatusColor(activity['status']).withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  activity['status']?.toString().toUpperCase() ?? 'UNKNOWN',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: _getStatusColor(activity['status']),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    );
+                  },
+                  child: const Text('View More'),
+                ),
+              ),
           ],
         ),
       ),
@@ -1121,9 +1188,9 @@ class _AdminReportsAnalyticsScreenState extends State<AdminReportsAnalyticsScree
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               crossAxisCount: 2,
-              childAspectRatio: 2.5,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
+              childAspectRatio: 1.4, // Reduced from 2.5 to make boxes smaller
+              crossAxisSpacing: 8, // Reduced spacing
+              mainAxisSpacing: 8, // Reduced spacing
               children: [
                 _buildStatCard(
                   'Hospitals',

@@ -29,21 +29,25 @@ class _MessagesScreenState extends State<MessagesScreen> {
   void initState() {
     super.initState();
     _currentUserId = FirebaseAuth.instance.currentUser?.uid;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       final route = ModalRoute.of(context);
       if (route != null && route.settings.arguments != null) {
-        final extra = route.settings.arguments as Map<String, dynamic>?;
-        final conversationId = extra?['conversationId'] as String?;
-        if (conversationId != null && conversationId.isNotEmpty) {
-          MessageService.getConversationById(conversationId).then((conversation) {
-            if (conversation != null) {
-              _openChat(conversation);
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Conversation not found.')),
-              );
-            }
-          });
+        final args = route.settings.arguments as Map<String, dynamic>?;
+        final recipientId = args?['recipientId'] as String?;
+        final recipientName = args?['recipientName'] as String?;
+        if (recipientId != null && recipientId.isNotEmpty) {
+          final conversation = await MessageService.findOrCreateConversation(
+            userId: _currentUserId!,
+            otherUserId: recipientId,
+            otherUserName: recipientName ?? 'Health Worker',
+          );
+          if (conversation != null) {
+            _openChat(conversation);
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Unable to open chat with provider.')),
+            );
+          }
         }
       }
     });

@@ -1,3 +1,5 @@
+// ignore_for_file: unnecessary_brace_in_string_interps
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -674,21 +676,58 @@ class _PatientFacilityBookingScreenState extends State<PatientFacilityBookingScr
       }
     }
   }
-  // Helper: Send a system message to the chat between patient and facility
+  // Helper: Send a system message to the chat between patient and facility using the main messaging system
   Future<void> _sendFacilityMessage({required String patientId, required String facilityId, required String content}) async {
-    final chatId = patientId.compareTo(facilityId) < 0 ? '${patientId}_$facilityId' : '${facilityId}_$patientId';
-    final chatRef = FirebaseFirestore.instance.collection('chats').doc(chatId);
-    await chatRef.set({
-      'participants': [patientId, facilityId],
-      'lastMessage': content,
-      'lastUpdated': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
-    await chatRef.collection('messages').add({
-      'senderId': facilityId, // System/facility as sender
+    // Get facility name (from widget or Firestore if needed)
+    final facilityName = widget.facilityData['name'] ?? 'Facility';
+    // Get patient name from Firestore
+    final patientDoc = await FirebaseFirestore.instance.collection('users').doc(patientId).get();
+    final patientName = patientDoc.data()?['fullName'] ?? patientDoc.data()?['name'] ?? 'Patient';
+
+    // Add message directly to the central messages collection
+    final messageRef = await FirebaseFirestore.instance.collection('messages').add({
+      'conversationId': '${facilityId}_${patientId}',
+      'senderId': facilityId,
+      'senderName': facilityName,
+      'senderRole': 'facility',
       'receiverId': patientId,
-      'message': content,
+      'receiverName': patientName,
+      'receiverRole': 'patient',
+      'content': content,
+      'type': 'patient_facility',
       'timestamp': FieldValue.serverTimestamp(),
       'isSystem': true,
     });
+
+    // Update or create the conversation document
+    final conversationId = '${facilityId}_${patientId}';
+    final conversationDoc = FirebaseFirestore.instance.collection('conversations').doc(conversationId);
+    await conversationDoc.set({
+      'participantIds': [facilityId, patientId],
+      'participants': [facilityId, patientId],
+      'participantNames': {
+        facilityId: facilityName,
+        patientId: patientName,
+      },
+      'participantRoles': {
+        facilityId: 'facility',
+        patientId: 'patient',
+      },
+      'title': 'Private Chat',
+      'type': 'patient_facility',
+      'recipientType': 'patient',
+      'isActive': true,
+      'lastMessage': content,
+      'lastMessageId': messageRef.id,
+      'lastMessageTime': FieldValue.serverTimestamp(),
+      'lastSenderId': facilityId,
+      'unreadCounts': {
+        facilityId: 0,
+        patientId: 1,
+      },
+      'updatedAt': FieldValue.serverTimestamp(),
+      'createdAt': FieldValue.serverTimestamp(),
+      'relatedId': null,
+    }, SetOptions(merge: true));
   }
 }
