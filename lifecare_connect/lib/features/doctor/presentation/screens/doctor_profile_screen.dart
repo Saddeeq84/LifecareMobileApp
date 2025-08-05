@@ -1,3 +1,6 @@
+// Doctor Profile Screen
+// Displays and manages doctor's profile information, including editing and viewing details.
+
 // ignore_for_file: use_build_context_synchronously, prefer_const_constructors
 
 import 'package:flutter/material.dart';

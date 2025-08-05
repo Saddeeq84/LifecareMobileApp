@@ -1,8 +1,10 @@
+// Facility Login Screen
+// Handles authentication and navigation for facility users only.
+
 // ignore_for_file: use_build_context_synchronously
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
 import 'owner_register_facility_screen.dart';
@@ -15,23 +17,29 @@ class FacilityLoginScreen extends StatefulWidget {
 }
 
 class _FacilityLoginScreenState extends State<FacilityLoginScreen> {
+  // Firebase authentication instance
   final _auth = FirebaseAuth.instance;
 
+  // Form key for login validation
   final _formKey = GlobalKey<FormState>();
 
+  // Controllers for email and password input fields
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
 
+  // UI state variables
   bool loading = false;
   bool obscurePassword = true;
 
   @override
   void dispose() {
+    // Dispose controllers to free resources
     emailController.dispose();
     passwordController.dispose();
     super.dispose();
   }
 
+  // Handles login logic and navigation for facility users
   Future<void> handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -44,7 +52,6 @@ class _FacilityLoginScreenState extends State<FacilityLoginScreen> {
       );
 
       if (credential.user != null) {
-        // Get user role from Firestore and navigate accordingly
         await _navigateBasedOnRole(credential.user!.uid);
       }
     } catch (e) {
@@ -56,49 +63,16 @@ class _FacilityLoginScreenState extends State<FacilityLoginScreen> {
     }
   }
 
+  // Navigates facility user to the dashboard and caches role
   Future<void> _navigateBasedOnRole(String uid) async {
     try {
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .get();
+      String role = 'facility';
+      String route = '/facility_dashboard';
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('user_role', role);
 
-      if (userDoc.exists) {
-        final userData = userDoc.data()!;
-        final role = userData['role']?.toString().toLowerCase();
-        
-        // Cache role in SharedPreferences
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('user_role', role ?? 'facility');
-
-        if (mounted) {
-          switch (role) {
-            case 'admin':
-              context.go('/admin_dashboard');
-              break;
-            case 'doctor':
-              context.go('/doctor_dashboard');
-              break;
-            case 'chw':
-              context.go('/chw_dashboard');
-              break;
-            case 'patient':
-              context.go('/patient_dashboard');
-              break;
-            case 'facility':
-            default:
-              context.go('/facility_dashboard');
-              break;
-          }
-        }
-      } else {
-        // If user document doesn't exist, assume facility role
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('user_role', 'facility');
-        
-        if (mounted) {
-          context.go('/facility_dashboard');
-        }
+      if (mounted) {
+        context.go(route);
       }
     } catch (e) {
       if (mounted) {
@@ -109,6 +83,7 @@ class _FacilityLoginScreenState extends State<FacilityLoginScreen> {
     }
   }
 
+  // Sends password reset email to the entered address
   Future<void> resetPassword() async {
     final email = emailController.text.trim();
     if (email.isEmpty || !email.contains('@')) {

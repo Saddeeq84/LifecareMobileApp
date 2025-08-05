@@ -71,7 +71,9 @@ class _AdminRegisterFacilityScreenState
         docUrl = await _uploadDocument(_selectedDocument!);
       }
 
-      await FirebaseFirestore.instance.collection('facilities').add({
+
+      // Add to facilities collection
+      final facilityRef = await FirebaseFirestore.instance.collection('facilities').add({
         'name': _nameController.text.trim(),
         'location': _locationController.text.trim(),
         'type': _typeController.text.trim(),
@@ -82,6 +84,21 @@ class _AdminRegisterFacilityScreenState
         'email': _emailController.text.trim(),
         'phone': _phoneController.text.trim(),
         if (docUrl != null) 'documentUrl': docUrl,
+      });
+
+      // Also add to users collection for messaging
+      await FirebaseFirestore.instance.collection('users').doc(facilityRef.id).set({
+        'name': _nameController.text.trim(),
+        'email': _emailController.text.trim(),
+        'phone': _phoneController.text.trim(),
+        'location': _locationController.text.trim(),
+        'type': _typeController.text.trim(),
+        'role': 'facility',
+        'isActive': true,
+        'isApproved': true,
+        'createdAt': FieldValue.serverTimestamp(),
+        'facilityId': facilityRef.id,
+        if (docUrl != null) 'registrationDocUrl': docUrl,
       });
 
       if (mounted) {

@@ -1,13 +1,13 @@
+// Doctor Login Screen
+// Handles authentication and navigation for doctor users only.
+
 // ignore_for_file: use_build_context_synchronously
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-import 'doctor_create_account.dart'; // Importing DoctorCreateAccountScreen
+import 'doctor_create_account.dart';
 import 'package:go_router/go_router.dart';
-
-// // import '.*services/.*'; // Broken import - use core/services // Broken import - use core/services
-// // import '.*sharedScreen.*'; // Broken import // Broken import
 
 class LoginDoctorScreen extends StatefulWidget {
   const LoginDoctorScreen({super.key});

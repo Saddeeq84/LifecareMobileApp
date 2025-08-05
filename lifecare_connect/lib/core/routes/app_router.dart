@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import '../../features/chw/presentation/screens/chw_consultation_screen.dart';
 import '../../features/admin/presentation/screens/admin_settings_screen.dart';
 import '../../features/admin/presentation/screens/approvals_screen.dart';
@@ -429,27 +431,30 @@ class AppRouter {
   /// Helper method to determine route based on user role
   static String _getRouteForUserRole(User user) {
     // Simple email-based routing (for immediate resolution)
-    // This provides a working solution while the app can be enhanced later
-    final email = user.email?.toLowerCase() ?? '';
-    
-    // Check for admin users
-    if (email.contains('admin') || email.startsWith('admin@')) {
-      return '/admin_dashboard';
-    } 
-    // Check for doctor users  
-    else if (email.contains('doctor') || email.contains('dr.') || email.startsWith('doctor@')) {
-      return '/doctor_dashboard';
+    final rawEmail = user.email ?? '';
+    final email = rawEmail.trim().toLowerCase();
+
+    String detectedRole = 'unknown';
+    String route = '/login';
+
+    // Facility check is always first and case-insensitive
+    if (email.contains('facility') || email.contains('hospital') || 
+        email.contains('clinic') || email.startsWith('facility@')) {
+      detectedRole = 'facility';
+      route = '/facility_dashboard';
+    } else if (email == 'admin@lifecare.com' || email == 'admin@yourdomain.com') {
+      detectedRole = 'admin';
+      route = '/admin_dashboard';
+    } else if (email.contains('doctor') || email.contains('dr.') || email.startsWith('doctor@')) {
+      detectedRole = 'doctor';
+      route = '/doctor_dashboard';
+    } else if (email.contains('chw') || email.startsWith('chw@')) {
+      detectedRole = 'chw';
+      route = '/chw_dashboard';
     }
-    // Check for CHW users
-    else if (email.contains('chw') || email.startsWith('chw@')) {
-      return '/chw_dashboard';
-    }
-    // Check for facility users
-    else if (email.contains('facility') || email.contains('hospital') || 
-             email.contains('clinic') || email.startsWith('facility@')) {
-      return '/facility_dashboard';
-    }
-    // Fallback: always return a non-null route
-    return '/login';
+    // Print detected role for debugging
+    print('[AppRouter] Raw email: "$rawEmail", normalized: "$email"');
+    print('[AppRouter] Detected role: $detectedRole, routing to: $route');
+    return route;
   }
 }

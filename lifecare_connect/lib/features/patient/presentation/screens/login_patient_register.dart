@@ -37,6 +37,8 @@ class _PatientRegisterScreenState extends State<PatientRegisterScreen> {
     if (fullName.isEmpty || phone.isEmpty || phone.length < 10) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Enter valid name and phone number")),
+// Patient Register Screen
+// Handles patient registration via email or phone, including verification and form validation.
       );
       return;
     }

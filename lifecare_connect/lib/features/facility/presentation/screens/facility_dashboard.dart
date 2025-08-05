@@ -1,4 +1,5 @@
-// lib/screens/facility/facility_dashboard.dart
+// Facility Dashboard Screen
+// Main dashboard for facility users, provides navigation to facility features.
 
 // ignore_for_file: use_build_context_synchronously, prefer_const_constructors, prefer_const_literals_to_create_immutables, deprecated_member_use
 
@@ -16,7 +17,7 @@ import 'facility_services_screen.dart';
 class FacilityDashboard extends StatelessWidget {
   const FacilityDashboard({super.key});
 
-  // Define a list of dashboard items with icon, label, and navigation function
+  // Dashboard items: icon, label, and navigation callback
   List<Map<String, dynamic>> get dashboardItems => [
         {
           "icon": Icons.calendar_today,
@@ -50,7 +51,7 @@ class FacilityDashboard extends StatelessWidget {
         },
       ];
 
-  // Handle logout using Firebase Auth with confirmation dialog
+  // Handles logout with confirmation dialog and Firebase Auth
   Future<void> _handleLogout(BuildContext context) async {
     _showLogoutDialog(context);
   }
@@ -74,7 +75,7 @@ class FacilityDashboard extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () async {
-              Navigator.pop(context); // Close dialog first
+              Navigator.pop(context); // Close the dialog before logging out
               await _performLogout(context);
             },
             style: ElevatedButton.styleFrom(
@@ -301,13 +302,13 @@ class FacilityDashboard extends StatelessWidget {
         backgroundColor: Colors.teal.shade800,
         foregroundColor: Colors.white,
         actions: [
-          // Profile button
+          // Profile navigation button
           IconButton(
             onPressed: () => _navigateToProfile(context),
             icon: const Icon(Icons.person),
             tooltip: "Profile",
           ),
-          // Settings button
+          // Settings navigation button
           IconButton(
             onPressed: () => _navigateToSettings(context),
             icon: const Icon(Icons.settings),

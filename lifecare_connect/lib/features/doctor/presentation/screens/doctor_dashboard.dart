@@ -1,3 +1,6 @@
+// Doctor Dashboard Screen
+// Main dashboard for doctor users, provides navigation to doctor features and profile.
+
 // ignore_for_file: prefer_const_constructors, use_build_context_synchronously, prefer_const_literals_to_create_immutables
 
 import 'package:firebase_auth/firebase_auth.dart';
@@ -13,16 +16,18 @@ class DoctorDashboard extends StatefulWidget {
 }
 
 class _DoctorDashboardState extends State<DoctorDashboard> {
+  // Doctor's name and loading state
   String doctorName = 'Doctor';
   bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadDoctorInfo();
+    _loadDoctorInfo(); // Load doctor info from Firestore
   }
 
   Future<void> _loadDoctorInfo() async {
+    // Loads doctor info from Firestore and updates state
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
@@ -49,6 +54,7 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
   }
 
   Future<void> _logout(BuildContext context) async {
+    // Handles logout with confirmation dialog
     _showLogoutDialog(context);
   }
 
@@ -71,7 +77,7 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
           ),
           ElevatedButton(
             onPressed: () async {
-              Navigator.pop(context); // Close dialog first
+              Navigator.pop(context); // Close the dialog before logging out
               await _performLogout(context);
             },
             style: ElevatedButton.styleFrom(
