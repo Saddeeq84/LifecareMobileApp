@@ -33,7 +33,9 @@ class _CHWLoginScreenState extends State<CHWLoginScreen> {
 
   Future<void> _initializeFirebase() async {
     try {
-      await Firebase.initializeApp();
+      if (Firebase.apps.isEmpty) {
+        await Firebase.initializeApp();
+      }
     } catch (e) {
       _showSnackBar('Firebase init failed: $e');
     }

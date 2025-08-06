@@ -20,9 +20,13 @@ class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
 
   Future<FirebaseApp> _initializeFirebase() async {
-    return await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
+    if (Firebase.apps.isEmpty) {
+      return await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    } else {
+      return Firebase.apps.first;
+    }
   }
 
   void _showRegistrationOptions(BuildContext context) {

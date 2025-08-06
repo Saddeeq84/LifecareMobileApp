@@ -1,10 +1,7 @@
-// ignore_for_file: use_build_context_synchronously
+
 
 import 'package:flutter/material.dart';
 
-// 🔒 Firebase temporarily disabled
-// import 'package:firebase_auth/firebase_auth.dart';
-// import 'package:cloud_firestore/cloud_firestore.dart';
 
 class PatientRegisterScreen extends StatefulWidget {
   const PatientRegisterScreen({super.key});
@@ -37,8 +34,6 @@ class _PatientRegisterScreenState extends State<PatientRegisterScreen> {
     if (fullName.isEmpty || phone.isEmpty || phone.length < 10) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Enter valid name and phone number")),
-// Patient Register Screen
-// Handles patient registration via email or phone, including verification and form validation.
       );
       return;
     }
@@ -211,5 +206,4 @@ class _PatientRegisterScreenState extends State<PatientRegisterScreen> {
     );
   }
 }
-// This screen allows users to register as a patient using either email or phone number.
-// It includes a toggle to switch between email and phone registration modes, form fields for user details
+/// Patient registration screen supporting email and phone registration modes.

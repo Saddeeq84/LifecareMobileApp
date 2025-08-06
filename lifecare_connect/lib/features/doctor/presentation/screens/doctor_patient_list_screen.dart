@@ -1,7 +1,7 @@
 import 'package:lifecare_connect/features/chw/presentation/screens/patient_health_records_screen.dart';
-// lib/screens/doctorscreen/doctor_patient_list_screen.dart
 
-// ignore_for_file: prefer_const_constructors
+
+
 
 import 'package:flutter/material.dart';
 import 'package:lifecare_connect/features/doctor/presentation/screens/doctor_consultation_screen.dart';
@@ -59,7 +59,7 @@ class DoctorPatientListScreen extends StatelessWidget {
                     subtitle: const Text('View comprehensive health history'),
                     onTap: () {
                       Navigator.of(context, rootNavigator: true).pop();
-                      // Navigate to doctor-facing health records screen
+
                       Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -150,12 +150,12 @@ class _PatientListWidget extends StatelessWidget {
       return const Center(child: Text('Not logged in.'));
     }
 
-    // Fetch patients from both approved appointments and approved consultations
+
     return FutureBuilder<List<String>>(
       future: _getUniquePatientIds(currentUser.uid),
       builder: (context, idSnapshot) {
         if (idSnapshot.hasError) {
-          return Center(child: Text('Error loading patients'));
+          return const Center(child: Text('Error loading patients'));
         }
         if (idSnapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -174,7 +174,7 @@ class _PatientListWidget extends StatelessWidget {
               .get(),
           builder: (context, userSnapshot) {
             if (userSnapshot.hasError) {
-              return Center(child: Text('Error loading patient details'));
+              return const Center(child: Text('Error loading patient details'));
             }
             if (userSnapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());

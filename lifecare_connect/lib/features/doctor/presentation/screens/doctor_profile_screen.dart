@@ -1,7 +1,7 @@
-// Doctor Profile Screen
-// Displays and manages doctor's profile information, including editing and viewing details.
 
-// ignore_for_file: use_build_context_synchronously, prefer_const_constructors
+
+
+
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -108,7 +108,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                 MaterialPageRoute(
                   builder: (_) => const EditDoctorProfileScreen(),
                 ),
-              ).then((_) => _loadDoctorProfile()); // Refresh after edit
+              ).then((_) => _loadDoctorProfile());
             },
           ),
         ],
@@ -121,7 +121,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Profile Picture Section
+
               CircleAvatar(
                 radius: 60,
                 backgroundColor: Colors.indigo.shade100,
@@ -129,12 +129,12 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                     ? NetworkImage(profileImageUrl!)
                     : null,
                 child: profileImageUrl == null
-                    ? Icon(Icons.person, size: 60, color: Colors.indigo)
+                    ? const Icon(Icons.person, size: 60, color: Colors.indigo)
                     : null,
               ),
               const SizedBox(height: 16),
               
-              // Name and Specialty
+
               Text(
                 name,
                 style: const TextStyle(
@@ -157,7 +157,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
               
               const SizedBox(height: 32),
               
-              // Contact Information Section
+
               _buildSectionHeader('Contact Information'),
               _buildInfoCard([
                 _buildInfoTile(Icons.email, 'Email', email),
@@ -166,7 +166,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
               
               const SizedBox(height: 24),
               
-              // Professional Information Section
+
               _buildSectionHeader('Professional Information'),
               _buildInfoCard([
                 _buildInfoTile(Icons.local_hospital, 'Hospital/Clinic', hospital),
@@ -176,7 +176,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
               
               const SizedBox(height: 24),
               
-              // Bio Section
+
               if (bio.isNotEmpty && bio != 'No bio available') ...[
                 _buildSectionHeader('About'),
                 _buildInfoCard([
@@ -191,7 +191,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                 const SizedBox(height: 24),
               ],
               
-              // Action Buttons
+
               Row(
                 children: [
                   Expanded(
@@ -304,7 +304,7 @@ class _EditDoctorProfileScreenState extends State<EditDoctorProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
   
-  // Controllers
+
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _specialtyController = TextEditingController();
@@ -435,7 +435,7 @@ class _EditDoctorProfileScreenState extends State<EditDoctorProfileScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Personal Information Section
+
                     _buildSectionHeader('Personal Information'),
                     _buildTextField(
                       controller: _nameController,
@@ -452,7 +452,7 @@ class _EditDoctorProfileScreenState extends State<EditDoctorProfileScreen> {
                     
                     const SizedBox(height: 24),
                     
-                    // Professional Information Section
+
                     _buildSectionHeader('Professional Information'),
                     _buildTextField(
                       controller: _specialtyController,
@@ -479,7 +479,7 @@ class _EditDoctorProfileScreenState extends State<EditDoctorProfileScreen> {
                     
                     const SizedBox(height: 24),
                     
-                    // About Section
+
                     _buildSectionHeader('About'),
                     _buildTextField(
                       controller: _bioController,
@@ -491,7 +491,7 @@ class _EditDoctorProfileScreenState extends State<EditDoctorProfileScreen> {
                     
                     const SizedBox(height: 32),
                     
-                    // Save Button
+
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(

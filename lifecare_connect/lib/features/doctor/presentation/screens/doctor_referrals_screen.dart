@@ -1,4 +1,4 @@
-// ignore_for_file: use_build_context_synchronously, avoid_print, prefer_interpolation_to_compose_strings, prefer_const_constructors
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -12,6 +12,9 @@ class DoctorReferralsScreen extends StatefulWidget {
 }
 
 class _DoctorReferralsScreenState extends State<DoctorReferralsScreen> with SingleTickerProviderStateMixin {
+  // In-memory cache for patient names to avoid repeated Firestore calls
+  final Map<String, String> _patientNameCache = {};
+  // Avoid heavy work in UI callbacks. This dialog only displays data already fetched.
   void _showReferralDetailsDialog(BuildContext context, Map<String, dynamic> data) {
     showDialog(
       context: context,
@@ -21,7 +24,7 @@ class _DoctorReferralsScreenState extends State<DoctorReferralsScreen> with Sing
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Patient: [200b${data['patient'] ?? data['patientName'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text('Patient: ${data['patient'] ?? data['patientName'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.bold)),
               if (data['patientId'] != null) Text('Patient ID: ${data['patientId']}'),
               if (data['age'] != null) Text('Age: ${data['age']}'),
               if (data['gender'] != null) Text('Gender: ${data['gender']}'),
@@ -36,12 +39,12 @@ class _DoctorReferralsScreenState extends State<DoctorReferralsScreen> with Sing
               if (data['status'] != null) Text('Status: ${data['status']}'),
               if (data['notes'] != null && (data['notes'] as String).isNotEmpty) ...[
                 const SizedBox(height: 8),
-                Text('Notes:', style: const TextStyle(fontWeight: FontWeight.bold)),
+                const Text('Notes:', style: TextStyle(fontWeight: FontWeight.bold)),
                 Text(data['notes']),
               ],
               if (data['additionalInfo'] != null && (data['additionalInfo'] as String).isNotEmpty) ...[
                 const SizedBox(height: 8),
-                Text('Additional Info:', style: const TextStyle(fontWeight: FontWeight.bold)),
+                const Text('Additional Info:', style: TextStyle(fontWeight: FontWeight.bold)),
                 Text(data['additionalInfo']),
               ],
               if (data['attachments'] != null) ...[
@@ -114,17 +117,27 @@ class _DoctorReferralsScreenState extends State<DoctorReferralsScreen> with Sing
   }
 
   /// Builds each referral card item with action buttons.
+  // Avoid heavy work in the widget tree. Patient name is fetched async, but only when needed.
   Widget _buildReferralCard(
       BuildContext context, Map<String, dynamic> data, DocumentSnapshot doc,
       {bool isReviewed = false}) {
+    String? patientId = data['patientId'];
+    String? patientName = data['patient'];
+    if (patientName == null || patientName.trim().isEmpty) {
+      if (patientId != null && _patientNameCache.containsKey(patientId)) {
+        patientName = _patientNameCache[patientId];
+      }
+    }
     return FutureBuilder<String>(
-      future: _getPatientName(data),
+      future: (patientName != null && patientName.trim().isNotEmpty)
+          ? Future.value(patientName)
+          : _getPatientNameWithCache(data),
       builder: (context, snapshot) {
-        final patientName = snapshot.data ?? data['patient'] ?? 'Unknown Patient';
+        final displayName = snapshot.data ?? data['patient'] ?? 'Unknown Patient';
         return Card(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: ListTile(
-            title: Text(patientName),
+            title: Text(displayName),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -182,18 +195,21 @@ class _DoctorReferralsScreenState extends State<DoctorReferralsScreen> with Sing
     );
   }
 
-  // Helper to fetch patient name from users collection if only patientId is present
-  Future<String> _getPatientName(Map<String, dynamic> data) async {
-    if (data['patient'] != null && data['patient'].toString().trim().isNotEmpty) {
-      return data['patient'];
-    }
+
+  // This function is async and does not block the UI. All Firestore calls are awaited.
+  Future<String> _getPatientNameWithCache(Map<String, dynamic> data) async {
     final patientId = data['patientId'];
     if (patientId == null) return 'Unknown Patient';
+    if (_patientNameCache.containsKey(patientId)) {
+      return _patientNameCache[patientId]!;
+    }
     try {
       final doc = await FirebaseFirestore.instance.collection('users').doc(patientId).get();
       if (doc.exists) {
         final userData = doc.data() as Map<String, dynamic>;
-        return userData['fullName'] ?? userData['name'] ?? '${userData['firstName'] ?? ''} ${userData['lastName'] ?? ''}'.trim();
+        final name = userData['fullName'] ?? userData['name'] ?? '${userData['firstName'] ?? ''} ${userData['lastName'] ?? ''}'.trim();
+        _patientNameCache[patientId] = name;
+        return name;
       }
     } catch (_) {}
     return 'Unknown Patient';
@@ -234,7 +250,7 @@ class _DoctorReferralsScreenState extends State<DoctorReferralsScreen> with Sing
     if (decision == 'Rejected') {
       rejectionReason = await _showRejectionReasonDialog(context);
       if (rejectionReason == null || rejectionReason.isEmpty) {
-        return; // User cancelled
+        return;
       }
     }
     try {
@@ -249,7 +265,6 @@ class _DoctorReferralsScreenState extends State<DoctorReferralsScreen> with Sing
       await referralDoc.reference.update(updateData);
       await _sendReferralDecisionMessage(referralDoc, decision, rejectionReason);
 
-      // Send message to patient as well
       final referralData = referralDoc.data() as Map<String, dynamic>;
       final patientId = referralData['patientId'] ?? referralData['patientUid'];
       final patientName = referralData['patient'] ?? referralData['patientName'] ?? 'Patient';
@@ -277,7 +292,6 @@ class _DoctorReferralsScreenState extends State<DoctorReferralsScreen> with Sing
         });
       }
 
-      // On approval, create consultation document if not present
       if (decision == 'Accepted' && patientId != null) {
         try {
           final consultations = await FirebaseFirestore.instance
@@ -307,14 +321,9 @@ class _DoctorReferralsScreenState extends State<DoctorReferralsScreen> with Sing
                 'attachments': referralData['attachments'] ?? '',
               },
             };
-            print('[DEBUG] Creating consultation for approved referral: $consultationData');
             await FirebaseFirestore.instance.collection('consultations').add(consultationData);
-          } else {
-            print('[DEBUG] Consultation already exists for referral ${referralDoc.id}');
           }
-        } catch (e) {
-          print('[ERROR] Failed to create consultation for approved referral: $e');
-        }
+        } catch (_) {}
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -390,12 +399,12 @@ class _DoctorReferralsScreenState extends State<DoctorReferralsScreen> with Sing
       final patientName = referralData['patient'] ?? referralData['patientName'] ?? 'Patient';
       final condition = referralData['condition'] ?? referralData['reason'] ?? 'Not specified';
       if (chwId == null) {
-        print('❌ CHW ID not found in referral');
+
         return;
       }
       final currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser == null) {
-        print('❌ Current user not found');
+
         return;
       }
       final doctorDoc = await FirebaseFirestore.instance
@@ -403,7 +412,7 @@ class _DoctorReferralsScreenState extends State<DoctorReferralsScreen> with Sing
           .doc(currentUser.uid)
           .get();
       if (!doctorDoc.exists) {
-        print('❌ Doctor user data not found');
+
         return;
       }
       final doctorData = doctorDoc.data() as Map<String, dynamic>;
@@ -415,7 +424,7 @@ class _DoctorReferralsScreenState extends State<DoctorReferralsScreen> with Sing
           .doc(chwId)
           .get();
       if (!chwDoc.exists) {
-        print('❌ CHW user data not found');
+
         return;
       }
       final chwData = chwDoc.data() as Map<String, dynamic>;
@@ -486,9 +495,9 @@ $doctorSpecialization
         type: 'referral_notification',
         priority: 'high',
       );
-      print('✅ Referral decision message sent to CHW successfully');
+
     } catch (e) {
-      print('❌ Error sending referral decision message: $e');
+
     }
   }
 }

@@ -1,4 +1,4 @@
-// ignore_for_file: use_build_context_synchronously, avoid_print
+
 
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -79,7 +79,7 @@ class _DoctorCreateAccountScreenState extends State<DoctorCreateAccountScreen> {
       final uploadTask = await ref.putFile(file);
       return await uploadTask.ref.getDownloadURL();
     } catch (e) {
-      print('File upload failed: $e');
+
       return null;
     }
   }
@@ -137,7 +137,7 @@ class _DoctorCreateAccountScreenState extends State<DoctorCreateAccountScreen> {
       });
 
       final token = await FirebaseAppCheck.instance.getToken();
-      print('App Check token: $token');
+
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -147,7 +147,7 @@ class _DoctorCreateAccountScreenState extends State<DoctorCreateAccountScreen> {
 
       Navigator.pop(context);
     } catch (e) {
-      print('Error: $e');
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('❌ Error: $e')),
       );

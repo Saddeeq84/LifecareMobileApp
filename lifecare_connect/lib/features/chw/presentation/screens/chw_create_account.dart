@@ -1,11 +1,10 @@
-// ignore_for_file: use_build_context_synchronously, avoid_print
+// CHW account creation screen
 
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
-// import 'package:firebase_app_check/firebase_app_check.dart'; // Commented out for development
 
 class CHWCreateAccountScreen extends StatefulWidget {
   const CHWCreateAccountScreen({super.key});
@@ -72,9 +71,7 @@ class _CHWCreateAccountScreenState extends State<CHWCreateAccountScreen> {
       final user = userCredential.user;
       if (user == null) throw Exception('User creation failed');
 
-      // For CHWs, they still auto-verify email to prevent login issues,
-      // but they now require admin approval before accessing the dashboard
-      // This ensures proper oversight while maintaining technical functionality
+      // CHWs auto-verify email but require admin approval before dashboard access
       
       await _firestore.collection('users').doc(user.uid).set({
         'fullName': fullName,
@@ -87,9 +84,6 @@ class _CHWCreateAccountScreenState extends State<CHWCreateAccountScreen> {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      // Commented out to avoid App Check token errors in development
-      // final token = await FirebaseAppCheck.instance.getToken();
-      // print('App Check token: $token');
 
       await _auth.verifyPhoneNumber(
         phoneNumber: phone,
@@ -319,4 +313,4 @@ class _CHWCreateAccountScreenState extends State<CHWCreateAccountScreen> {
     );
   }
 }
-// This screen allows CHWs to create an account, verify their phone number, and wait for admin approval before accessing the dashboard.
+/// Allows CHWs to create an account, verify phone, and await admin approval before dashboard access.

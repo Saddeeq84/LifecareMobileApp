@@ -1,6 +1,6 @@
-// ignore_for_file: use_build_context_synchronously, prefer_interpolation_to_compose_strings
 
-// ignore_for_file: prefer_const_constructors
+
+
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -132,7 +132,7 @@ class _PendingConsultationTab extends StatelessWidget {
                         ),
                       ],
                     ),
-                    // ...rest of children (actions, date, reason, etc.)...
+
                     SizedBox(
                       height: 40,
                       child: ListView(
@@ -176,7 +176,7 @@ class _PendingConsultationTab extends StatelessWidget {
                                           );
                                           Navigator.of(context).push(
                                             MaterialPageRoute(
-                                              builder: (context) => MessagesScreen(),
+                                              builder: (context) => const MessagesScreen(),
                                               settings: RouteSettings(
                                                 arguments: {
                                                   'conversationId': conversationId,
@@ -187,16 +187,16 @@ class _PendingConsultationTab extends StatelessWidget {
                                           );
                                         },
                                       ),
-                                      ListTile(
-                                        leading: const Icon(Icons.videocam, color: Colors.grey),
-                                        title: const Text('Video Call'),
-                                        subtitle: const Text('Coming soon'),
+                                      const ListTile(
+                                        leading: Icon(Icons.videocam, color: Colors.grey),
+                                        title: Text('Video Call'),
+                                        subtitle: Text('Coming soon'),
                                         enabled: false,
                                       ),
-                                      ListTile(
-                                        leading: const Icon(Icons.call, color: Colors.grey),
-                                        title: const Text('Audio Call'),
-                                        subtitle: const Text('Coming soon'),
+                                      const ListTile(
+                                        leading: Icon(Icons.call, color: Colors.grey),
+                                        title: Text('Audio Call'),
+                                        subtitle: Text('Coming soon'),
                                         enabled: false,
                                       ),
                                       ListTile(
@@ -236,7 +236,7 @@ class _PendingConsultationTab extends StatelessWidget {
                               );
                             },
                           ),
-                          SizedBox(width: 0),
+                          const SizedBox(width: 0),
                           IconButton(
                             icon: const Icon(Icons.note_add, color: Colors.indigo, size: 22),
                             tooltip: 'Add Clinical Note',
@@ -249,7 +249,7 @@ class _PendingConsultationTab extends StatelessWidget {
                               );
                             },
                           ),
-                          SizedBox(width: 0),
+                          const SizedBox(width: 0),
                           IconButton(
                             icon: const Icon(Icons.chat, color: Colors.indigo, size: 22),
                             tooltip: 'Chat with Patient',
@@ -266,7 +266,7 @@ class _PendingConsultationTab extends StatelessWidget {
                               );
                               Navigator.of(context).push(
                                 MaterialPageRoute(
-                                  builder: (context) => MessagesScreen(),
+                                  builder: (context) => const MessagesScreen(),
                                   settings: RouteSettings(
                                     arguments: {
                                       'conversationId': conversationId,
@@ -277,7 +277,7 @@ class _PendingConsultationTab extends StatelessWidget {
                               );
                             },
                           ),
-                          SizedBox(width: 0),
+                          const SizedBox(width: 0),
                           IconButton(
                             icon: const Icon(Icons.info, color: Colors.indigo, size: 28),
                             tooltip: 'View Details',
@@ -443,7 +443,7 @@ class _CompletedConsultationTab extends StatelessWidget {
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
                                               const SizedBox(height: 8),
-                                              Text('Prescriptions:', style: TextStyle(fontWeight: FontWeight.bold)),
+                                              const Text('Prescriptions:', style: TextStyle(fontWeight: FontWeight.bold)),
                                               ...List<String>.from(record['prescriptions']).map((med) => Padding(
                                                 padding: const EdgeInsets.only(left: 8.0, top: 2.0),
                                                 child: Text(med),
@@ -455,7 +455,7 @@ class _CompletedConsultationTab extends StatelessWidget {
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
                                               const SizedBox(height: 8),
-                                              Text('Lab Requests:', style: TextStyle(fontWeight: FontWeight.bold)),
+                                              const Text('Lab Requests:', style: TextStyle(fontWeight: FontWeight.bold)),
                                               ...List<String>.from(record['labRequests']).map((lab) => Padding(
                                                 padding: const EdgeInsets.only(left: 8.0, top: 2.0),
                                                 child: Text(lab),
@@ -467,7 +467,7 @@ class _CompletedConsultationTab extends StatelessWidget {
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
                                               const SizedBox(height: 8),
-                                              Text('Radiology Requests:', style: TextStyle(fontWeight: FontWeight.bold)),
+                                              const Text('Radiology Requests:', style: TextStyle(fontWeight: FontWeight.bold)),
                                               ...List<String>.from(record['radiologyRequests']).map((rad) => Padding(
                                                 padding: const EdgeInsets.only(left: 8.0, top: 2.0),
                                                 child: Text(rad),
@@ -664,7 +664,7 @@ class _DoctorConsultationDetailScreenState extends State<DoctorConsultationDetai
       };
       try {
         await FirebaseFirestore.instance.collection('health_records').add(recordData);
-        // Mark appointment as completed so it disappears from pending and appears in completed tab
+
         if (widget.appointment['id'] != null) {
           await FirebaseFirestore.instance.collection('appointments').doc(widget.appointment['id']).update({'status': 'completed'});
         } else if (widget.appointment['appointmentId'] != null) {
@@ -796,7 +796,7 @@ class _DoctorConsultationDetailScreenState extends State<DoctorConsultationDetai
                 if (selectedPrescriptions.isNotEmpty)
                   Column(
                     children: selectedPrescriptions.map((med) {
-                      // Best-practice options for each medication
+
                       final Map<String, List<String>> medStrengths = {
                         'Paracetamol': ['500mg', '1g'],
                         'Amoxicillin': ['250mg', '500mg'],
@@ -1159,12 +1159,12 @@ class _DoctorConsultationDetailScreenState extends State<DoctorConsultationDetai
                 ),
               ]),
               const SizedBox(height: 24),
-              Divider(),
+              const Divider(),
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8.0),
                 child: Row(
                   children: [
-                    Icon(Icons.verified_user, color: Colors.indigo),
+                    const Icon(Icons.verified_user, color: Colors.indigo),
                     const SizedBox(width: 8),
                     Text('Signed by: $doctorName', style: const TextStyle(fontWeight: FontWeight.w500)),
                     const Spacer(),

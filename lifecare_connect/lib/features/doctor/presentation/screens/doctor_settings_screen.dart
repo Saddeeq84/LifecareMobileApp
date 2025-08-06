@@ -1,4 +1,4 @@
-// ignore_for_file: use_build_context_synchronously
+
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -44,7 +44,7 @@ class _DoctorSettingsScreenState extends State<DoctorSettingsScreen> {
         });
       }
     } catch (e) {
-      // Handle error silently or show snackbar
+
     }
   }
 
@@ -76,7 +76,7 @@ class _DoctorSettingsScreenState extends State<DoctorSettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Account Section
+
           _buildSectionHeader('Account'),
           _buildSettingsTile(
             icon: Icons.person,
@@ -93,7 +93,7 @@ class _DoctorSettingsScreenState extends State<DoctorSettingsScreen> {
           
           const SizedBox(height: 24),
           
-          // Notifications Section
+
           _buildSectionHeader('Notifications'),
           _buildSwitchTile(
             icon: Icons.notifications,
@@ -128,7 +128,7 @@ class _DoctorSettingsScreenState extends State<DoctorSettingsScreen> {
           
           const SizedBox(height: 24),
           
-          // Preferences Section
+
           _buildSectionHeader('Preferences'),
           _buildDropdownTile(
             icon: Icons.language,
@@ -155,7 +155,7 @@ class _DoctorSettingsScreenState extends State<DoctorSettingsScreen> {
           
           const SizedBox(height: 24),
           
-          // Privacy Section
+
           _buildSectionHeader('Privacy & Data'),
           _buildSettingsTile(
             icon: Icons.privacy_tip,
@@ -178,7 +178,7 @@ class _DoctorSettingsScreenState extends State<DoctorSettingsScreen> {
           
           const SizedBox(height: 24),
           
-          // Support Section
+
           _buildSectionHeader('Support'),
           _buildSettingsTile(
             icon: Icons.help,
@@ -201,7 +201,7 @@ class _DoctorSettingsScreenState extends State<DoctorSettingsScreen> {
           
           const SizedBox(height: 32),
           
-          // Logout Button
+
           Card(
             color: Colors.red.shade50,
             child: ListTile(
@@ -527,7 +527,7 @@ class _DoctorSettingsScreenState extends State<DoctorSettingsScreen> {
         throw Exception('User not authenticated');
       }
 
-      // Get user details
+
       final userDoc = await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
@@ -535,11 +535,11 @@ class _DoctorSettingsScreenState extends State<DoctorSettingsScreen> {
       
       final userData = userDoc.data();
       
-      // Generate ticket ID
+
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final ticketId = 'BUG-${timestamp.toString().substring(timestamp.toString().length - 8)}';
       
-      // Collect device info (simplified for web compatibility)
+
       final deviceInfo = {
         'platform': 'Flutter',
         'timestamp': DateTime.now().toIso8601String(),

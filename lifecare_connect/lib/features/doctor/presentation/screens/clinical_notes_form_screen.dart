@@ -1,4 +1,4 @@
-// ignore_for_file: use_build_context_synchronously, prefer_const_constructors
+
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -92,7 +92,7 @@ class _ClinicalNotesFormScreenState extends State<ClinicalNotesFormScreen> {
     pdf.addPage(
       pw.MultiPage(
         build: (context) => [
-          pw.Text('Clinical Notes for ${widget.patientName}', style: pw.TextStyle(fontSize: 20)),
+          pw.Text('Clinical Notes for ${widget.patientName}', style: const pw.TextStyle(fontSize: 20)),
           pw.SizedBox(height: 10),
           for (var note in notes)
             pw.Container(

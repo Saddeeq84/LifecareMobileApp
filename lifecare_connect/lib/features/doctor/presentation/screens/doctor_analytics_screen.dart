@@ -91,7 +91,7 @@ class DoctorOverviewTab extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           
-          // Statistics Cards
+
           Row(
             children: [
               Expanded(
@@ -139,7 +139,7 @@ class DoctorOverviewTab extends StatelessWidget {
           
           const SizedBox(height: 32),
           
-          // Recent Activity
+
           const Text(
             'Recent Activity',
             style: TextStyle(
@@ -308,7 +308,7 @@ class DoctorReportsTab extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           
-          // Report Options
+
           _buildReportOption(
             context,
             'Patient Summary Report',
@@ -347,7 +347,7 @@ class DoctorReportsTab extends StatelessWidget {
           
           const SizedBox(height: 32),
           
-          // Recent Reports
+
           const Text(
             'Recent Reports',
             style: TextStyle(
@@ -446,7 +446,7 @@ class DoctorReportsTab extends StatelessWidget {
   }
 
   void _viewReport(Map<String, dynamic> data, String reportId) {
-    // Implementation for viewing a specific report
+
   }
 
   void _showComingSoonDialog(BuildContext context, String reportType) {
@@ -502,12 +502,12 @@ class DoctorAnalyticsTab extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           
-          // Performance Metrics
+
           _buildPerformanceMetrics(),
           
           const SizedBox(height: 32),
           
-          // Charts and Graphs
+
           const Text(
             'Trends & Patterns',
             style: TextStyle(
@@ -521,7 +521,7 @@ class DoctorAnalyticsTab extends StatelessWidget {
           
           const SizedBox(height: 32),
           
-          // Insights
+
           const Text(
             'Key Insights',
             style: TextStyle(

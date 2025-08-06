@@ -1,4 +1,4 @@
-// ignore_for_file: prefer_const_constructors, use_build_context_synchronously, avoid_print, prefer_const_literals_to_create_immutables
+
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -38,7 +38,7 @@ class _CHWDashboardState extends State<CHWDashboard> {
         'route': '/chw_dashboard/patients',
         'subtitle': 'Patient list and details',
       },
-      // Profile card removed
+
       {
         'icon': Icons.person_add,
         'title': 'Register Patient',
@@ -106,11 +106,11 @@ class _CHWDashboardState extends State<CHWDashboard> {
                 ),
               );
               if (shouldLogout == true) {
-                // Sign out from Firebase Auth
+
                 try {
                   await FirebaseAuth.instance.signOut();
                 } catch (e) {
-                  // Optionally show error
+
                 }
                 context.go('/login');
               }

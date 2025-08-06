@@ -1,4 +1,4 @@
-// ignore_for_file: avoid_print, prefer_final_fields
+
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -21,7 +21,7 @@ class _EmergencyCareScreenState extends State<EmergencyCareScreen> {
   String? _selectedSeverity;
   String? _selectedFacilityId;
   Map<String, dynamic>? _selectedFacility;
-  bool _isSubmitting = false;
+  final bool _isSubmitting = false;
   List<QueryDocumentSnapshot> _emergencyFacilities = [];
   
   final List<Map<String, dynamic>> _emergencyTypes = [
@@ -117,14 +117,14 @@ class _EmergencyCareScreenState extends State<EmergencyCareScreen> {
           .collection('users')
           .where('role', isEqualTo: 'facility')
           .where('isActive', isEqualTo: true)
-          .where('facilityType', whereIn: ['hospital', 'scan_center']) // Emergency-capable facilities
+          .where('facilityType', whereIn: ['hospital', 'scan_center'])
           .get();
 
       setState(() {
         _emergencyFacilities = facilitiesSnapshot.docs;
       });
     } catch (e) {
-      print('Error loading emergency facilities: $e');
+
     }
   }
 
@@ -233,7 +233,7 @@ class _EmergencyCareScreenState extends State<EmergencyCareScreen> {
     );
     return;
 
-    // Commented out actual submission code for future implementation
+
     /*
     if (!_formKey.currentState!.validate()) return;
     if (_selectedEmergencyType == null || _selectedSeverity == null) {

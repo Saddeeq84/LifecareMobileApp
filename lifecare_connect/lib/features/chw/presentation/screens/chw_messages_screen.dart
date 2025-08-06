@@ -1,4 +1,4 @@
-// ignore_for_file: sort_child_properties_last, prefer_final_fields, prefer_const_constructors
+
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -935,8 +935,8 @@ class _MessageDetailScreenState extends State<MessageDetailScreen> {
                 FloatingActionButton(
                   mini: true,
                   backgroundColor: Colors.teal,
-                  child: const Icon(Icons.send, color: Colors.white),
                   onPressed: _sendReply,
+                  child: const Icon(Icons.send, color: Colors.white),
                 ),
               ],
             ),
@@ -962,7 +962,7 @@ class _MessageDetailScreenState extends State<MessageDetailScreen> {
         .add({
       'message': _replyController.text.trim(),
       'senderId': widget.currentUserId,
-      'senderName': 'CHW User', // You might want to get this from user profile
+      'senderName': 'CHW User',
       'timestamp': FieldValue.serverTimestamp(),
     });
 
@@ -1007,7 +1007,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
     super.dispose();
   }
 
-  TextEditingController _healthNotesController = TextEditingController();
+  final TextEditingController _healthNotesController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -1119,8 +1119,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 FloatingActionButton(
                   mini: true,
                   backgroundColor: Colors.teal,
-                  child: const Icon(Icons.send, color: Colors.white),
                   onPressed: _sendMessage,
+                  child: const Icon(Icons.send, color: Colors.white),
                 ),
               ],
             ),
@@ -1130,7 +1130,6 @@ class _ConversationScreenState extends State<ConversationScreen> {
       floatingActionButton: FloatingActionButton(
         heroTag: 'addHealthNotes',
         backgroundColor: Colors.teal.shade400,
-        child: const Icon(Icons.note_add),
         tooltip: 'Add Health Notes',
         onPressed: () {
           showModalBottomSheet(
@@ -1166,7 +1165,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                     TextField(
                       controller: _healthNotesController,
                       maxLines: 5,
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                         labelText: 'Enter health notes',
                         border: OutlineInputBorder(),
                       ),
@@ -1182,7 +1181,6 @@ class _ConversationScreenState extends State<ConversationScreen> {
                         ElevatedButton(
                           onPressed: () {
                             // Save health notes logic here
-                            // For now, just close the modal
                             Navigator.of(context).pop();
                           },
                           child: const Text('Save'),
@@ -1195,6 +1193,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
             },
           );
         },
+        child: const Icon(Icons.note_add),
       ),
     );
   }

@@ -1,4 +1,4 @@
-// ignore_for_file: deprecated_member_use
+
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -58,7 +58,7 @@ class _CHWEditProfileScreenState extends State<CHWEditProfileScreen> {
         }
       }
     } catch (e) {
-      debugPrint('Error loading user data: $e');
+
       _showErrorSnackBar('Failed to load user data');
     } finally {
       setState(() => _isLoading = false);
@@ -88,7 +88,7 @@ class _CHWEditProfileScreenState extends State<CHWEditProfileScreen> {
         }
       }
     } catch (e) {
-      debugPrint('Error loading settings: $e');
+
     }
   }
 
@@ -110,7 +110,7 @@ class _CHWEditProfileScreenState extends State<CHWEditProfileScreen> {
         _showSuccessSnackBar('Settings saved successfully');
       }
     } catch (e) {
-      debugPrint('Error saving settings: $e');
+
       _showErrorSnackBar('Failed to save settings');
     }
   }

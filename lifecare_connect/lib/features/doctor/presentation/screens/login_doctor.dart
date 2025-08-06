@@ -1,7 +1,4 @@
-// Doctor Login Screen
-// Handles authentication and navigation for doctor users only.
 
-// ignore_for_file: use_build_context_synchronously
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -21,7 +18,7 @@ class _LoginDoctorScreenState extends State<LoginDoctorScreen> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   final _auth = FirebaseAuth.instance;
-  // final _userService = UserService(); // Service not available yet
+
 
   bool loading = false;
 
@@ -43,12 +40,7 @@ class _LoginDoctorScreenState extends State<LoginDoctorScreen> {
         password: passwordController.text.trim(),
       );
 
-      // ✅ Do NOT overwrite user role here
-      // await _userService.navigateBasedOnRole(context);
-      
-      // For now, navigate to doctor dashboard directly
       if (mounted) {
-        // Use GoRouter for navigation to avoid null router issues
         context.go('/doctor_dashboard');
       }
 

@@ -1,7 +1,4 @@
-// Doctor Dashboard Screen
-// Main dashboard for doctor users, provides navigation to doctor features and profile.
 
-// ignore_for_file: prefer_const_constructors, use_build_context_synchronously, prefer_const_literals_to_create_immutables
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -16,18 +13,17 @@ class DoctorDashboard extends StatefulWidget {
 }
 
 class _DoctorDashboardState extends State<DoctorDashboard> {
-  // Doctor's name and loading state
+
   String doctorName = 'Doctor';
   bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadDoctorInfo(); // Load doctor info from Firestore
+    _loadDoctorInfo();
   }
 
   Future<void> _loadDoctorInfo() async {
-    // Loads doctor info from Firestore and updates state
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
@@ -54,7 +50,6 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
   }
 
   Future<void> _logout(BuildContext context) async {
-    // Handles logout with confirmation dialog
     _showLogoutDialog(context);
   }
 
@@ -62,29 +57,29 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Row(
+        title: const Row(
           children: [
             Icon(Icons.logout, color: Colors.red),
             SizedBox(width: 8),
             Text('Logout'),
           ],
         ),
-        content: Text('Are you sure you want to logout from your account?'),
+        content: const Text('Are you sure you want to logout from your account?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'),
+            child: const Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () async {
-              Navigator.pop(context); // Close the dialog before logging out
+              Navigator.pop(context);
               await _performLogout(context);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
             ),
-            child: Text('Logout'),
+            child: const Text('Logout'),
           ),
         ],
       ),
@@ -113,7 +108,7 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Row(
+        title: const Row(
           children: [
             Icon(Icons.upcoming, color: Colors.indigo),
             SizedBox(width: 8),
@@ -122,12 +117,12 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
         ),
         content: Text(
           '$feature feature is under development and will be available in a future update.',
-          style: TextStyle(fontSize: 16),
+          style: const TextStyle(fontSize: 16),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text('OK', style: TextStyle(color: Colors.indigo)),
+            child: const Text('OK', style: TextStyle(color: Colors.indigo)),
           ),
         ],
       ),
@@ -178,7 +173,7 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
             Expanded(
               child: ListView.separated(
                 itemCount: _doctorDashboardItems.length,
-                separatorBuilder: (context, index) => Divider(height: 1),
+                separatorBuilder: (context, index) => const Divider(height: 1),
                 itemBuilder: (context, index) {
                   final item = _doctorDashboardItems[index];
                   return ListTile(
@@ -334,4 +329,4 @@ const List<DashboardItem> _doctorDashboardItems = [
     route: '/wallet',
   ),
 ];
-// This file defines the Doctor Dashboard screen with a grid of options
+

@@ -1,4 +1,4 @@
-// ignore_for_file: use_build_context_synchronously, prefer_const_constructors, prefer_const_literals_to_create_immutables, deprecated_member_use
+
 
 import 'package:flutter/material.dart';
 import 'patient_appointment_screen.dart';
@@ -71,7 +71,7 @@ class _PatientDashboardMainViewState extends State<PatientDashboardMainView> {
       'action': 'wallet',
       'color': Colors.amber,
     },
-    // AI Chatbot icon removed
+
   ];
 
   void _handleDashboardItemTap(BuildContext context, String action) {
@@ -96,7 +96,7 @@ class _PatientDashboardMainViewState extends State<PatientDashboardMainView> {
         break;
       case 'messages':
         setState(() => _showChatBadge = false);
-        Navigator.push(context, MaterialPageRoute(builder: (context) => MessagesScreen()));
+        Navigator.push(context, MaterialPageRoute(builder: (context) => const MessagesScreen()));
         break;
       case 'wallet':
         _showComingSoonDialog(context, 'Wallet');
@@ -116,8 +116,8 @@ class _PatientDashboardMainViewState extends State<PatientDashboardMainView> {
         title: Row(
           children: [
             Icon(Icons.upcoming, color: Colors.green.shade600),
-            SizedBox(width: 8),
-            Text('Coming Soon'),
+            const SizedBox(width: 8),
+            const Text('Coming Soon'),
           ],
         ),
         content: Column(
@@ -125,10 +125,10 @@ class _PatientDashboardMainViewState extends State<PatientDashboardMainView> {
           children: [
             Text(
               '$feature feature is under development and will be available in a future update.',
-              style: TextStyle(fontSize: 16),
+              style: const TextStyle(fontSize: 16),
             ),
-            SizedBox(height: 16),
-            Text(
+            const SizedBox(height: 16),
+            const Text(
               'Stay tuned for updates!',
               style: TextStyle(fontSize: 14, color: Colors.grey),
             ),
@@ -174,31 +174,31 @@ class _PatientDashboardMainViewState extends State<PatientDashboardMainView> {
               final shouldLogout = await showDialog<bool>(
                 context: context,
                 builder: (context) => AlertDialog(
-                  title: Row(
+                  title: const Row(
                     children: [
                       Icon(Icons.logout, color: Colors.red),
                       SizedBox(width: 8),
                       Text('Confirm Logout'),
                     ],
                   ),
-                  content: Text('Are you sure you want to logout?'),
+                  content: const Text('Are you sure you want to logout?'),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(false),
-                      child: Text('Cancel'),
+                      child: const Text('Cancel'),
                     ),
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(true),
-                      child: Text('Logout', style: TextStyle(color: Colors.red)),
+                      child: const Text('Logout', style: TextStyle(color: Colors.red)),
                     ),
                   ],
                 ),
               );
-              // Ensure dialog is closed before signOut and navigation
+
               if (shouldLogout == true) {
                 await FirebaseAuth.instance.signOut();
                 if (mounted) {
-                  // Use GoRouter for navigation to login
+
                   context.go('/login');
                 }
               }

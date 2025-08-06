@@ -1,4 +1,4 @@
-// ignore_for_file: use_build_context_synchronously
+
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -48,7 +48,7 @@ class _DoctorMessagesScreenState extends State<DoctorMessagesScreen> with Ticker
       ),
       body: Column(
         children: [
-          // Quick Action Cards
+
           Container(
             padding: const EdgeInsets.all(16),
             child: SingleChildScrollView(
@@ -87,7 +87,7 @@ class _DoctorMessagesScreenState extends State<DoctorMessagesScreen> with Ticker
             ),
           ),
           
-          // Tab Bar
+
           Container(
             color: Colors.indigo.shade700,
             child: TabBar(
@@ -105,7 +105,7 @@ class _DoctorMessagesScreenState extends State<DoctorMessagesScreen> with Ticker
             ),
           ),
           
-          // Tab Views
+
           Expanded(
             child: TabBarView(
               controller: _tabController,
@@ -342,7 +342,7 @@ class DoctorMessagesTab extends StatelessWidget {
       query = query.where('targetRole', isEqualTo: targetRole);
     }
 
-    // Show both sent and received messages for doctors
+
     return query
         .orderBy('timestamp', descending: true)
         .snapshots();
@@ -403,7 +403,7 @@ class DoctorMessagesTab extends StatelessWidget {
     final senderId = data['senderId'] ?? '';
     final priority = data['priority'] ?? 'normal';
 
-    // Determine if this is an outgoing message from current doctor
+
     final isOutgoing = senderId == currentUserId;
 
     return Card(
@@ -541,7 +541,7 @@ class DoctorMessagesTab extends StatelessWidget {
   }
 
   void _showMessageDetails(Map<String, dynamic> data, String messageId) {
-    // Implementation for showing message details
-    // This could open a detailed view or a reply dialog
+
+
   }
 }

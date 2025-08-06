@@ -1,4 +1,4 @@
-// ignore_for_file: use_build_context_synchronously, prefer_const_constructors
+
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -72,7 +72,7 @@ class _PatientSettingsScreenState extends State<PatientSettingsScreen> {
         }, SetOptions(merge: true));
 
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+          const SnackBar(
             content: Text('Settings saved successfully'),
             backgroundColor: Colors.green,
           ),
@@ -96,10 +96,10 @@ class _PatientSettingsScreenState extends State<PatientSettingsScreen> {
     required IconData icon,
   }) {
     return Card(
-      margin: EdgeInsets.symmetric(vertical: 4),
+      margin: const EdgeInsets.symmetric(vertical: 4),
       child: ListTile(
         leading: Container(
-          padding: EdgeInsets.all(8),
+          padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             color: Colors.green.shade100,
             shape: BoxShape.circle,
@@ -112,7 +112,7 @@ class _PatientSettingsScreenState extends State<PatientSettingsScreen> {
         ),
         title: Text(
           title,
-          style: TextStyle(
+          style: const TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: 16,
           ),
@@ -162,7 +162,7 @@ class _PatientSettingsScreenState extends State<PatientSettingsScreen> {
                 color: Colors.green.shade700,
               ),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             _buildSettingsTile(
               title: 'Push Notifications',
               subtitle: 'Receive notifications from the app',
@@ -185,7 +185,7 @@ class _PatientSettingsScreenState extends State<PatientSettingsScreen> {
               icon: Icons.health_and_safety,
             ),
             
-            SizedBox(height: 24),
+            const SizedBox(height: 24),
             
             // Appearance Section
             Text(
@@ -196,7 +196,7 @@ class _PatientSettingsScreenState extends State<PatientSettingsScreen> {
                 color: Colors.green.shade700,
               ),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             _buildSettingsTile(
               title: 'Dark Mode',
               subtitle: 'Use dark theme (Coming Soon)',
@@ -205,7 +205,7 @@ class _PatientSettingsScreenState extends State<PatientSettingsScreen> {
               icon: Icons.dark_mode,
             ),
             
-            SizedBox(height: 24),
+            const SizedBox(height: 24),
             
             // Account Actions Section
             Text(
@@ -216,14 +216,14 @@ class _PatientSettingsScreenState extends State<PatientSettingsScreen> {
                 color: Colors.green.shade700,
               ),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             
             // Privacy Policy
             Card(
-              margin: EdgeInsets.symmetric(vertical: 4),
+              margin: const EdgeInsets.symmetric(vertical: 4),
               child: ListTile(
                 leading: Container(
-                  padding: EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: Colors.blue.shade100,
                     shape: BoxShape.circle,
@@ -234,7 +234,7 @@ class _PatientSettingsScreenState extends State<PatientSettingsScreen> {
                     size: 24,
                   ),
                 ),
-                title: Text(
+                title: const Text(
                   'Privacy Policy',
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
@@ -248,7 +248,7 @@ class _PatientSettingsScreenState extends State<PatientSettingsScreen> {
                     fontSize: 14,
                   ),
                 ),
-                trailing: Icon(Icons.arrow_forward_ios, size: 16),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                 onTap: () {
                   // Show Privacy Policy dialog
                   showDialog(
@@ -280,10 +280,10 @@ class _PatientSettingsScreenState extends State<PatientSettingsScreen> {
             
             // Help & Support
             Card(
-              margin: EdgeInsets.symmetric(vertical: 4),
+              margin: const EdgeInsets.symmetric(vertical: 4),
               child: ListTile(
                 leading: Container(
-                  padding: EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: Colors.orange.shade100,
                     shape: BoxShape.circle,
@@ -294,7 +294,7 @@ class _PatientSettingsScreenState extends State<PatientSettingsScreen> {
                     size: 24,
                   ),
                 ),
-                title: Text(
+                title: const Text(
                   'Help & Support',
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
@@ -308,7 +308,7 @@ class _PatientSettingsScreenState extends State<PatientSettingsScreen> {
                     fontSize: 14,
                   ),
                 ),
-                trailing: Icon(Icons.arrow_forward_ios, size: 16),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                 onTap: () {
                   // Show Help & Support dialog
                   showDialog(
@@ -382,7 +382,7 @@ class _PatientSettingsScreenState extends State<PatientSettingsScreen> {
                     size: 24,
                   ),
                 ),
-                title: Text(
+                title: const Text(
                   'Report a Bug',
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
@@ -396,12 +396,12 @@ class _PatientSettingsScreenState extends State<PatientSettingsScreen> {
                     fontSize: 14,
                   ),
                 ),
-                trailing: Icon(Icons.arrow_forward_ios, size: 16),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                 onTap: _showBugReportDialog,
               ),
             ),
             
-            SizedBox(height: 32),
+            const SizedBox(height: 32),
             
             // App Version Info
             Center(
@@ -415,7 +415,7 @@ class _PatientSettingsScreenState extends State<PatientSettingsScreen> {
                       color: Colors.grey[600],
                     ),
                   ),
-                  SizedBox(height: 4),
+                  const SizedBox(height: 4),
                   Text(
                     'Version 1.0.0',
                     style: TextStyle(

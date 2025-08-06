@@ -75,13 +75,13 @@ class _DoctorClinicalResourcesScreenState extends State<DoctorClinicalResourcesS
         final File file = File(filePath);
         await file.writeAsBytes(response.bodyBytes);
 
-        // Update download count
+
         FirebaseFirestore.instance
             .collection('training_materials')
             .doc(docId)
             .update({'downloadCount': FieldValue.increment(1)});
 
-        // Open the file
+
         final result = await OpenFile.open(filePath);
         if (result.type != ResultType.done && mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

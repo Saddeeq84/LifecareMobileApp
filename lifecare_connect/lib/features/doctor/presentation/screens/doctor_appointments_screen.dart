@@ -1,4 +1,4 @@
-// ignore_for_file: use_build_context_synchronously
+
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -24,9 +24,9 @@ class DoctorAppointmentsTabView extends StatelessWidget {
         ),
         body: TabBarView(
           children: [
-            // Only show 'pending' in Pending Approval
+
             DoctorAppointmentsList(userId: userId, status: 'pending'),
-            // Only show 'approved' in Approved Appointments
+
             DoctorAppointmentsList(userId: userId, status: 'approved'),
           ],
         ),
@@ -36,7 +36,7 @@ class DoctorAppointmentsTabView extends StatelessWidget {
 }
 
 class DoctorAppointmentsList extends StatelessWidget {
-  // Constructor (if any) remains here
+
 
   final String userId;
   final String status;
@@ -80,7 +80,7 @@ class DoctorAppointmentsList extends StatelessWidget {
         'reviewedBy': userId
       });
 
-      // Create a consultation document for the doctor
+
       final consultationsCollection = FirebaseFirestore.instance.collection('consultations');
       await consultationsCollection.add({
         'appointmentId': appointmentDoc.id,
@@ -92,7 +92,7 @@ class DoctorAppointmentsList extends StatelessWidget {
         'createdAt': FieldValue.serverTimestamp(),
         'type': data['type'] ?? 'general',
         'reason': data['reason'] ?? '',
-        // Add any other relevant fields from the appointment as needed
+
       });
 
       await _sendPatientMessage(
@@ -177,11 +177,11 @@ class DoctorAppointmentsList extends StatelessWidget {
   }
 
   Future<void> _sendPatientMessage({required String patientId, required String patientName, required String content}) async {
-    // Try to send a message using set with merge:true to avoid NOT_FOUND error
+
     final messagesCollection = FirebaseFirestore.instance.collection('messages');
-    final docRef = messagesCollection.doc(); // auto-generated ID
+    final docRef = messagesCollection.doc();
     await docRef.set({
-      'conversationId': patientId, // Or use a real conversation id logic
+      'conversationId': patientId,
       'senderId': userId,
       'senderName': 'Doctor',
       'senderRole': 'doctor',
@@ -198,7 +198,7 @@ class DoctorAppointmentsList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Always filter by doctorId and status for both tabs
+
     final appointmentStream = FirebaseFirestore.instance
         .collection('appointments')
         .where('providerId', isEqualTo: userId)
@@ -367,7 +367,7 @@ class DoctorAppointmentsList extends StatelessWidget {
                         ],
                       ),
                     ),
-                    // --- Approval, Deny, and Mark as Completed Buttons ---
+
                     if (status == 'pending')
                       Row(
                         children: [
@@ -390,7 +390,7 @@ class DoctorAppointmentsList extends StatelessWidget {
                           ),
                         ],
                       ),
-                    // No action buttons for approved appointments in this screen
+
                   ],
                 ),
               ),
