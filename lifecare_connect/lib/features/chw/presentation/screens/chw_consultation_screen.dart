@@ -1,4 +1,4 @@
-// ignore_for_file: prefer_const_constructors
+// ignore_for_file: prefer_const_constructors, depend_on_referenced_packages
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -9,7 +9,7 @@ import './chw_create_referral_screen.dart';
 import 'chw_consultation_details_screen.dart';
 
 class CHWConsultationScreen extends StatelessWidget {
-  const CHWConsultationScreen({Key? key}) : super(key: key);
+  const CHWConsultationScreen({super.key});
 
   @override
   Widget build(BuildContext context) {

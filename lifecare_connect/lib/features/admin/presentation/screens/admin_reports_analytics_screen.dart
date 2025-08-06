@@ -1,4 +1,4 @@
-// ignore_for_file: avoid_print, use_build_context_synchronously, curly_braces_in_flow_control_structures, deprecated_member_use
+// ignore_for_file: avoid_print, use_build_context_synchronously, curly_braces_in_flow_control_structures, deprecated_member_use, depend_on_referenced_packages
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';

@@ -1,4 +1,4 @@
-// ignore_for_file: deprecated_member_use, prefer_const_constructors
+// ignore_for_file: deprecated_member_use, prefer_const_constructors, depend_on_referenced_packages
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -434,7 +434,7 @@ class _DailyHealthTipsTab extends StatelessWidget {
             ...tips.map((tip) {
               final data = tip.data() as Map<String, dynamic>;
               return _buildTipCard(data);
-            }).toList(),
+            }),
           ],
         );
       },

@@ -1,4 +1,4 @@
-// ignore_for_file: prefer_const_constructors, deprecated_member_use, use_build_context_synchronously, prefer_const_literals_to_create_immutables
+// ignore_for_file: prefer_const_constructors, deprecated_member_use, use_build_context_synchronously, prefer_const_literals_to_create_immutables, depend_on_referenced_packages
 
 import 'dart:io';
 import 'package:flutter/material.dart';

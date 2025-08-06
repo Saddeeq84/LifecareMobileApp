@@ -1,4 +1,4 @@
-// ignore_for_file: use_build_context_synchronously, prefer_final_fields, deprecated_member_use, prefer_const_constructors
+// ignore_for_file: use_build_context_synchronously, prefer_final_fields, deprecated_member_use, prefer_const_constructors, depend_on_referenced_packages
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';

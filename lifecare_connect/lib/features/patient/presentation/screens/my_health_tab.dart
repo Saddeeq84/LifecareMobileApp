@@ -12,7 +12,7 @@ import 'emergency_care_screen.dart';
 
 class _VitalSignsForm extends StatefulWidget {
   final User? currentUser;
-  const _VitalSignsForm({Key? key, required this.currentUser}) : super(key: key);
+  const _VitalSignsForm({required this.currentUser});
   @override
   State<_VitalSignsForm> createState() => _VitalSignsFormState();
 }

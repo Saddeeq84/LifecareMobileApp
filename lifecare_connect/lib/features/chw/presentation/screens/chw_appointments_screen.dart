@@ -11,7 +11,7 @@ import '../../../shared/helpers/chw_message_helper.dart';
 
 class CHWAppointmentsScreen extends StatelessWidget {
   final int initialTab;
-  const CHWAppointmentsScreen({Key? key, this.initialTab = 0}) : super(key: key);
+  const CHWAppointmentsScreen({super.key, this.initialTab = 0});
 
   @override
   Widget build(BuildContext context) {

@@ -1082,7 +1082,7 @@ class _FacilityMessageDetailScreenState extends State<FacilityMessageDetailScree
                                 ),
                               ),
                             );
-                          }).toList(),
+                          }),
                         ],
                       );
                     },

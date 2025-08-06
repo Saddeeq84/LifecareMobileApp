@@ -17,12 +17,12 @@ class CHWAncPncConsultationScreen extends StatefulWidget {
   final String appointmentType;
 
   CHWAncPncConsultationScreen({
-    Key? key,
+    super.key,
     required this.appointmentId,
     required this.patientName,
     required this.patientId,
     required this.appointmentType,
-  }) : super(key: key);
+  });
 
   @override
   State<CHWAncPncConsultationScreen> createState() => _CHWAncPncConsultationScreenState();
@@ -626,13 +626,13 @@ class MultiSelectDropdown extends StatelessWidget {
   final String otherValue;
 
   const MultiSelectDropdown({
-    Key? key,
+    super.key,
     required this.label,
     required this.options,
     required this.selected,
     required this.onChanged,
     required this.otherValue,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

@@ -1,6 +1,8 @@
+// ignore_for_file: depend_on_referenced_packages
+
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-// import 'package:firebase_app_check/firebase_app_check.dart'; // Commented out for development
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
@@ -16,25 +18,24 @@ final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Initialize Firebase
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  
-  // Initialize Firebase App Check (disabled for development to avoid rate limiting)
-  // Uncomment for production deployment
-  /*
+
+  // Initialize Firebase only if not already initialized
+  if (Firebase.apps.isEmpty) {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  }
+
+  // Initialize Firebase App Check for production
   await FirebaseAppCheck.instance.activate(
-    webProvider: ReCaptchaV3Provider('recaptcha-v3-site-key'),
-    androidProvider: AndroidProvider.debug,
-    appleProvider: AppleProvider.debug,
+    webProvider: ReCaptchaV3Provider('6LffLoErAAAAAPnHyrMPo4p7_sIu9jBPHG4km5ju'),
+    androidProvider: AndroidProvider.playIntegrity,
+    appleProvider: AppleProvider.deviceCheck,
   );
-  */
-  
+
   // Initialize Firebase Messaging
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-  
+
   // Initialize local notifications
   await _initializeNotifications();
   runApp(const LifeCareApp());
@@ -67,7 +68,9 @@ class LifeCareApp extends StatelessWidget {
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   debugPrint('Handling a background message: ${message.messageId}');
 }
 

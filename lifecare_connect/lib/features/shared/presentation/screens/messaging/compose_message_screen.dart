@@ -6,7 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../../data/services/message_service.dart';
 
 class ComposeMessageScreen extends StatefulWidget {
-  const ComposeMessageScreen({Key? key}) : super(key: key);
+  const ComposeMessageScreen({super.key});
 
   @override
   _ComposeMessageScreenState createState() => _ComposeMessageScreenState();

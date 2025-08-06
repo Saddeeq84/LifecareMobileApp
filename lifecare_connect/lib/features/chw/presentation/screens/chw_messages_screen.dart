@@ -896,7 +896,7 @@ class _MessageDetailScreenState extends State<MessageDetailScreen> {
                                 ),
                               ),
                             );
-                          }).toList(),
+                          }),
                         ],
                       );
                     },

@@ -13,7 +13,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 
 class PatientDashboard extends StatelessWidget {
-  const PatientDashboard({Key? key}) : super(key: key);
+  const PatientDashboard({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +22,7 @@ class PatientDashboard extends StatelessWidget {
 }
 
 class PatientDashboardMainView extends StatefulWidget {
-  const PatientDashboardMainView({Key? key}) : super(key: key);
+  const PatientDashboardMainView({super.key});
 
   @override
   State<PatientDashboardMainView> createState() => _PatientDashboardMainViewState();

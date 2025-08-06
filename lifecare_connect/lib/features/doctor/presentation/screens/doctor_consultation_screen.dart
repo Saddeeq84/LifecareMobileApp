@@ -28,7 +28,7 @@ Widget _buildInfoRow(String label, String value) {
 }
 
 class DoctorConsultationScreen extends StatefulWidget {
-  const DoctorConsultationScreen({Key? key}) : super(key: key);
+  const DoctorConsultationScreen({super.key});
 
   @override
   State<DoctorConsultationScreen> createState() => _DoctorConsultationScreenState();
@@ -538,7 +538,7 @@ class _CompletedConsultationTab extends StatelessWidget {
 class DoctorConsultationDetailScreen extends StatefulWidget {
   final Map<String, dynamic> appointment;
   final bool readOnly;
-  const DoctorConsultationDetailScreen({Key? key, required this.appointment, this.readOnly = false}) : super(key: key);
+  const DoctorConsultationDetailScreen({super.key, required this.appointment, this.readOnly = false});
 
   @override
   State<DoctorConsultationDetailScreen> createState() => _DoctorConsultationDetailScreenState();

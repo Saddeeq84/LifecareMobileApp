@@ -1,4 +1,4 @@
-// ignore_for_file: avoid_print
+// ignore_for_file: avoid_print, depend_on_referenced_packages
 
 import '../../features/chw/presentation/screens/chw_consultation_screen.dart';
 import '../../features/admin/presentation/screens/admin_settings_screen.dart';

@@ -577,7 +577,7 @@ class _EmergencyCareScreenState extends State<EmergencyCareScreen> {
                                 });
                               },
                             );
-                          }).toList(),
+                          }),
                           if (_selectedFacility != null)
                             Padding(
                               padding: const EdgeInsets.only(top: 12.0, left: 8.0, right: 8.0),

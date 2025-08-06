@@ -1,4 +1,4 @@
-// ignore_for_file: prefer_const_constructors, deprecated_member_use, prefer_const_literals_to_create_immutables
+// ignore_for_file: prefer_const_constructors, deprecated_member_use, prefer_const_literals_to_create_immutables, depend_on_referenced_packages
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -439,7 +439,7 @@ class _TrainingMaterialsScreenState extends State<TrainingMaterialsScreen>
               padding: EdgeInsets.only(bottom: 8),
               child: _buildMaterialCard(material, progress),
             );
-          }).toList(),
+          }),
       ],
     );
   }

@@ -7,7 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../../data/services/message_service.dart';
 
 class BroadcastMessageScreen extends StatefulWidget {
-  const BroadcastMessageScreen({Key? key}) : super(key: key);
+  const BroadcastMessageScreen({super.key});
 
   @override
   _BroadcastMessageScreenState createState() => _BroadcastMessageScreenState();

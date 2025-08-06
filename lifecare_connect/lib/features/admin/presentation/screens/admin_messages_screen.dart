@@ -9,7 +9,7 @@ import '../widgets/admin_individual_messages_tab.dart';
 
 class AdminMessagesScreen extends StatefulWidget {
   final String adminUserId;
-  const AdminMessagesScreen({Key? key, required this.adminUserId}) : super(key: key);
+  const AdminMessagesScreen({super.key, required this.adminUserId});
 
   @override
   State<AdminMessagesScreen> createState() => _AdminMessagesScreenState();
@@ -152,7 +152,7 @@ class _AdminMessagesScreenState extends State<AdminMessagesScreen> with TickerPr
 
 class _AdminBroadcastMessagesTab extends StatelessWidget {
   final String adminUserId;
-  const _AdminBroadcastMessagesTab({Key? key, required this.adminUserId}) : super(key: key);
+  const _AdminBroadcastMessagesTab({required this.adminUserId});
 
   @override
   Widget build(BuildContext context) {
