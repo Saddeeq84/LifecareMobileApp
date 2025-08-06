@@ -10,16 +10,16 @@ plugins {
 }
 
 android {
-    namespace = "com.rhemn.lifecare_connect"
+    namespace = "com.lifecare_connect"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "27.0.12077973" // Optional: Use only if you're relying on NDK features
 
     defaultConfig {
-        applicationId = "com.rhemn.lifecare_connect"
+        applicationId = "com.lifecare_connect"
         minSdk = 23
         targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
+        versionCode = 2 // Increased from 1 to 2
+        versionName = "1.0.1" // Updated version name
         multiDexEnabled = true // ✅ Required for large apps using many methods (e.g., Firebase)
     }
 
@@ -33,10 +33,18 @@ android {
         jvmTarget = JavaVersion.VERSION_11.toString()
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file("/Users/muhammadsaddiq/my-release-key.jks")
+            storePassword = "rhemn_2025"
+            keyAlias = "my-key-alias" // Update with your key alias
+            keyPassword = "rhemn_2025"
+        }
+    }
+
     buildTypes {
         getByName("release") {
-            // ⚠️ Replace debug signing with a real keystore for production builds
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 }
@@ -47,7 +55,7 @@ flutter {
 
 dependencies {
     // ✅ Firebase Bill of Materials - synchronizes Firebase dependency versions
-    implementation(platform("com.google.firebase:firebase-bom:33.16.0"))
+    implementation(platform("com.google.firebase:firebase-bom:34.0.0"))
 
     // ✅ Firebase SDKs
     implementation("com.google.firebase:firebase-analytics")

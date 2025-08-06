@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    package="com.rhemn.lifecare_connect">
+    package="com.lifecare_connect">
 
     <!-- ✅ Permissions go here, outside <application> -->
     <uses-permission android:name="android.permission.INTERNET"/>

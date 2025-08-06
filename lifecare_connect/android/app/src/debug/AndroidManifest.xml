@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    package="com.rhemn.lifecare_connect">
+    package="com.lifecare_connect">
 
     <!-- Internet permission (optional here if already in main manifest) -->
     <uses-permission android:name="android.permission.INTERNET"/>

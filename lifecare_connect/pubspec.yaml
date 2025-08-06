@@ -30,6 +30,7 @@ dependencies:
   path: ^1.8.0
   path_provider: ^2.0.15
   open_file: ^3.3.2
+  # macOS platform reference removed to avoid open_file_macos error
   http: ^1.1.0
 
   # ✅ UI & Navigation
@@ -68,3 +69,4 @@ flutter:
         - asset: assets/fonts/OpenSans-Regular.ttf
         - asset: assets/fonts/OpenSans-Bold.ttf
           weight: 700
+

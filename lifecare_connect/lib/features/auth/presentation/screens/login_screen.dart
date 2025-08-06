@@ -1,4 +1,5 @@
-// ignore_for_file: prefer_const_constructors, use_super_parameters
+
+// ignore_for_file: prefer_const_constructors
 
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -182,31 +183,51 @@ class LoginScreen extends StatelessWidget {
                         color: Colors.teal,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Column(
+                      child: Stack(
                         children: [
-                          Image.asset(
-                            'assets/images/logo.png',
-                            height: 70,
-                            fit: BoxFit.contain,
-                          ),
-                          const SizedBox(height: 16),
-                          const Text(
-                            'LifeCare Connect',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                          Align(
+                            alignment: Alignment.topRight,
+                            child: GestureDetector(
+                              onTap: () {
+                                Navigator.push(context, MaterialPageRoute(builder: (_) => LoginAdminScreen()));
+                              },
+                              child: Container(
+                                margin: EdgeInsets.only(top: 2, right: 2),
+                                child: Icon(
+                                  Icons.verified_user_outlined,
+                                  color: Colors.white,
+                                  size: 22,
+                                ),
+                              ),
                             ),
                           ),
-                          const SizedBox(height: 8),
-                          const Text(
-                            'Connecting communities to quality healthcare',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.white70,
-                            ),
+                          Column(
+                            children: [
+                              Image.asset(
+                                'assets/images/logo.png',
+                                height: 48,
+                                fit: BoxFit.contain,
+                              ),
+                              const SizedBox(height: 16),
+                              const Text(
+                                'LifeCare Connect',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'Connecting communities to quality healthcare',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.white70,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -218,80 +239,68 @@ class LoginScreen extends StatelessWidget {
                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
                     ),
                     SizedBox(height: 25),
-
-                    ElevatedButton.icon(
-                      icon: Icon(Icons.medical_services_outlined),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.teal,
-                        foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      onPressed: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => CHWLoginScreen()));
-                      },
-                      label: Text('Community Health Worker'),
+                    GridView.count(
+                      crossAxisCount: 2,
+                      shrinkWrap: true,
+                      physics: NeverScrollableScrollPhysics(),
+                      mainAxisSpacing: 18,
+                      crossAxisSpacing: 18,
+                      childAspectRatio: 1.3,
+                      children: [
+                        ElevatedButton.icon(
+                          icon: Icon(Icons.person_outline, size: 32),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.teal,
+                            foregroundColor: Colors.white,
+                            padding: EdgeInsets.symmetric(vertical: 18, horizontal: 8),
+                            textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                          ),
+                          onPressed: () {
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => LoginPatient()));
+                          },
+                          label: Text('Patient'),
+                        ),
+                        ElevatedButton.icon(
+                          icon: Icon(Icons.group_outlined, size: 32),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.teal,
+                            foregroundColor: Colors.white,
+                            padding: EdgeInsets.symmetric(vertical: 18, horizontal: 8),
+                            textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                          ),
+                          onPressed: () {
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => CHWLoginScreen()));
+                          },
+                          label: Text('CHW'),
+                        ),
+                        ElevatedButton.icon(
+                          icon: Icon(Icons.medical_services_outlined, size: 32),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.teal,
+                            foregroundColor: Colors.white,
+                            padding: EdgeInsets.symmetric(vertical: 18, horizontal: 8),
+                            textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                          ),
+                          onPressed: () {
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => LoginDoctorScreen()));
+                          },
+                          label: Text('Doctor'),
+                        ),
+                        ElevatedButton.icon(
+                          icon: Icon(Icons.business_outlined, size: 32),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.teal,
+                            foregroundColor: Colors.white,
+                            padding: EdgeInsets.symmetric(vertical: 18, horizontal: 8),
+                            textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                          ),
+                          onPressed: () {
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => FacilityLoginScreen()));
+                          },
+                          label: Text('Facility'),
+                        ),
+                      ],
                     ),
-
-                    SizedBox(height: 15),
-
-                    ElevatedButton.icon(
-                      icon: Icon(Icons.people_outline),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.teal,
-                        foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      onPressed: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => LoginPatient()));
-                      },
-                      label: Text('Patient'),
-                    ),
-
-                    SizedBox(height: 15),
-
-                    ElevatedButton.icon(
-                      icon: Icon(Icons.local_hospital_outlined),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.teal,
-                        foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      onPressed: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => LoginDoctorScreen()));
-                      },
-                      label: Text('Doctor'),
-                    ),
-
-                    SizedBox(height: 15),
-
-                    ElevatedButton.icon(
-                      icon: Icon(Icons.admin_panel_settings_outlined),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.teal,
-                        foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      onPressed: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => LoginAdminScreen()));
-                      },
-                      label: Text('Admin'),
-                    ),
-
-                    SizedBox(height: 15),
-
-                    ElevatedButton.icon(
-                      icon: Icon(Icons.business_outlined),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.teal,
-                        foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      onPressed: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => FacilityLoginScreen()));
-                      },
-                      label: Text('Facility / Corporate Login'),
-                    ),
-
                     SizedBox(height: 40),
                     Divider(thickness: 1.2),
                     SizedBox(height: 10),

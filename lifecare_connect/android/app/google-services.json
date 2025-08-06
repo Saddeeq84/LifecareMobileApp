@@ -2,22 +2,22 @@
   "project_info": {
     "project_number": "815876091951",
     "project_id": "lifecare-connect",
-    "storage_bucket": "lifecare-connect.appspot.com"
+    "storage_bucket": "lifecare-connect.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:815876091951:android:fd346056ca8453611616da",
+        "mobilesdk_app_id": "1:815876091951:android:e15bb768d46527291616da",
         "android_client_info": {
-          "package_name": "com.rhemn.lifecare_connect"
+          "package_name": "com.lifecare_connect"
         }
       },
       "oauth_client": [
         {
-          "client_id": "815876091951-vsb91jmp9ngahk935cdfokav48uucsr6.apps.googleusercontent.com",
+          "client_id": "815876091951-5kfjs31r97nmj0j54b4l9culogmctlld.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.rhemn.lifecare_connect",
+            "package_name": "com.lifecare_connect",
             "certificate_hash": "39ce74491aa951ea9e51738b0b3c0dcdd77ec6fa"
           }
         },
@@ -37,6 +37,13 @@
             {
               "client_id": "815876091951-0s9vb4h4euc6sq2s5dnlcn5leflu39uo.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "815876091951-2domps0gtjrsp7fgvkq0n5scl6gjgpbv.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.lifecareConnect"
+              }
             }
           ]
         }

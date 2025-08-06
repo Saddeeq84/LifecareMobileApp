@@ -15,6 +15,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 // Import actual screens from features
 import '../../features/auth/presentation/screens/login_screen.dart';
+// Ensure that LoginScreen is defined as a class in login_screen.dart
 import '../../features/admin/presentation/screens/admin_dashboard.dart';
 import '../../features/doctor/presentation/screens/doctor_patient_list_screen.dart';
 import '../../features/doctor/presentation/screens/doctor_referrals_screen.dart';
@@ -133,7 +134,7 @@ class AppRouter {
       GoRoute(
         path: '/login',
         name: 'login',
-        builder: (context, state) => const LoginScreen(),
+        builder: (context, state) => const LoginScreen(), // Make sure LoginScreen is a class in login_screen.dart
       ),
       
       // Admin Routes
