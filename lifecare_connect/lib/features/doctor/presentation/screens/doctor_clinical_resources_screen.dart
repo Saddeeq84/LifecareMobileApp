@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
+import 'file_opener_stub.dart'
+    if (dart.library.io) 'file_opener_io.dart';
 import 'dart:io';
 
 class DoctorClinicalResourcesScreen extends StatefulWidget {
@@ -66,7 +67,6 @@ class _DoctorClinicalResourcesScreenState extends State<DoctorClinicalResourcesS
   /// Download and open PDF file
   Future<void> _downloadAndOpenPdf(String url, String fileName, String docId) async {
     setState(() => _downloadingFiles[docId] = true);
-
     try {
       final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
@@ -74,19 +74,18 @@ class _DoctorClinicalResourcesScreenState extends State<DoctorClinicalResourcesS
         final String filePath = '${tempDir.path}/$fileName';
         final File file = File(filePath);
         await file.writeAsBytes(response.bodyBytes);
-
-
         FirebaseFirestore.instance
             .collection('training_materials')
             .doc(docId)
             .update({'downloadCount': FieldValue.increment(1)});
-
-
-        final result = await OpenFile.open(filePath);
-        if (result.type != ResultType.done && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Could not open PDF file')),
-          );
+        try {
+          await openFile(filePath);
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Could not open PDF file')),
+            );
+          }
         }
       } else {
         if (mounted) {

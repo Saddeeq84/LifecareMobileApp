@@ -1,0 +1,13 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "shell",
+			"label": "Flutter Web Build + Font Fix",
+			"command": "flutter build web --release && ./scripts/post_build_fix_fonts.sh",
+			"group": "build",
+			"problemMatcher": [],
+			"isBackground": false
+		}
+	]
+}

@@ -73,7 +73,7 @@ class _UploadLicenseScreenState extends State<UploadLicenseScreen> {
                 backgroundColor: Colors.green.shade700,
                 minimumSize: const Size.fromHeight(50),
               ),
-              child: Text("Submit"),
+              child: const Text("Submit"),
             ),
           ],
         ),

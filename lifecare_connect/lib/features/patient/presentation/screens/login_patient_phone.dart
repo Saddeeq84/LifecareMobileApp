@@ -14,6 +14,13 @@ class LoginPatientPhone extends StatefulWidget {
 
 class _LoginPatientPhoneState extends State<LoginPatientPhone> {
   final _phoneController = TextEditingController();
+  String formatPhoneNumber(String input) {
+    String phone = input.replaceAll(RegExp(r'\s+|-'), '');
+    if (phone.startsWith('0') && phone.length == 11) {
+      return '+234' + phone.substring(1);
+    }
+    return phone;
+  }
   final _codeController = TextEditingController();
   String? _verificationId;
   bool _codeSent = false;
@@ -23,7 +30,7 @@ class _LoginPatientPhoneState extends State<LoginPatientPhone> {
     setState(() => _loading = true);
 
     await FirebaseAuth.instance.verifyPhoneNumber(
-      phoneNumber: _phoneController.text.trim(),
+      phoneNumber: formatPhoneNumber(_phoneController.text.trim()),
       verificationCompleted: (credential) async {
         await FirebaseAuth.instance.signInWithCredential(credential);
         if (mounted) Navigator.pushReplacementNamed(context, '/patient_dashboard');
