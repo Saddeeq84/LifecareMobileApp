@@ -17,7 +17,7 @@ class _LoginPatientPhoneState extends State<LoginPatientPhone> {
   String formatPhoneNumber(String input) {
     String phone = input.replaceAll(RegExp(r'\s+|-'), '');
     if (phone.startsWith('0') && phone.length == 11) {
-      return '+234' + phone.substring(1);
+      return '+234${phone.substring(1)}';
     }
     return phone;
   }
