@@ -400,8 +400,7 @@ class _ComprehensiveBookAppointmentScreenState extends State<ComprehensiveBookAp
       print("   - Provider: ${_selectedProvider!['name']} (${_selectedProvider!['id']})");
       print("   - Type: ${_selectedAppointmentType ?? 'General Consultation'}");
       print("   - Date: $appointmentDateTime");
-      print("   - Main Reason: " +
-        (_selectedMainReason == 'Other' ? _otherMainReason : _selectedMainReason ?? ''));
+      print("   - Main Reason: ${_selectedMainReason == 'Other' ? _otherMainReason : _selectedMainReason ?? ''}");
 
       print("💾 Saving appointment using AppointmentService...");
       
@@ -1137,7 +1136,7 @@ class _ComprehensiveBookAppointmentScreenState extends State<ComprehensiveBookAp
                       });
                     },
                   );
-                }).toList(),
+                }),
                 if (_selectedMainReason == null)
                   const Padding(
                     padding: EdgeInsets.only(left: 8.0, top: 4),
