@@ -418,6 +418,39 @@ class _MyHealthTabState extends State<MyHealthTab> with SingleTickerProviderStat
                     final typeLower = type.toLowerCase();
                     final consultTypeLower = consultationType.toLowerCase();
                     final providerType = (data['providerType'] ?? details['providerType'] ?? '').toString().toLowerCase();
+                    // --- Filter details for dialog ---
+                    final filteredDetails = <String, dynamic>{};
+                    for (final entry in details.entries) {
+                      final k = entry.key.toLowerCase();
+                      if (
+                        k.contains('id') ||
+                        k == 'timestamp' ||
+                        k == 'statusflag' ||
+                        k == 'createdat' ||
+                        k == 'updatedat' ||
+                        k == 'appointmentid' ||
+                        k == 'patientid' ||
+                        k == 'prescribedat' ||
+                        k == 'requestedat'
+                      ) {
+                        continue;
+                      }
+                      filteredDetails[entry.key] = entry.value;
+                    }
+
+                    // Helper to resolve user/doctor/chw name from id
+                    Future<String?> getNameFromId(String? id, String collection) async {
+                      if (id == null || id.isEmpty) return null;
+                      try {
+                        final doc = await FirebaseFirestore.instance.collection(collection).doc(id).get();
+                        if (doc.exists) {
+                          final data = doc.data();
+                          if (data != null && data['name'] != null) return data['name'].toString();
+                          if (data != null && data['fullName'] != null) return data['fullName'].toString();
+                        }
+                      } catch (_) {}
+                      return null;
+                    }
                     final chwUidVal = (data['chwUid'] ?? details['chwUid'] ?? '').toString();
                     final chwIdVal = (data['chwId'] ?? details['chwId'] ?? '').toString();
                     final hasCHW = providerType == 'chw' || chwUidVal.isNotEmpty || chwIdVal.isNotEmpty;
@@ -509,27 +542,102 @@ class _MyHealthTabState extends State<MyHealthTab> with SingleTickerProviderStat
                           showDialog(
                             context: context,
                             builder: (context) {
-                              return AlertDialog(
-                                title: Text(cardTitle),
-                                content: SingleChildScrollView(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      for (final entry in details.entries)
-                                        if (entry.value != null && entry.value.toString().isNotEmpty)
-                                          Padding(
-                                            padding: const EdgeInsets.symmetric(vertical: 2),
-                                            child: Text('${entry.key}: ${entry.value}', style: const TextStyle(fontSize: 15)),
-                                          ),
+                              return FutureBuilder<Map<String, dynamic>>(
+                                future: () async {
+                                  final map = Map<String, dynamic>.from(filteredDetails);
+                                  // Hide prescribedAt, prescribedBy, requestedAt
+                                  map.removeWhere((k, v) {
+                                    final key = k.toLowerCase();
+                                    return key == 'prescribedat' ||
+                                           key == 'requestedat' ||
+                                           key == 'prescribedby' ||
+                                           key == 'timestamp' ||
+                                           key == 'createdat' ||
+                                           key == 'updatedat';
+                                  });
+                                  // Only show relevant fields for CHW/Doctor/Preconsultation
+                                  final relevantKeys = [
+                                    'symptoms',
+                                    'diagnosis',
+                                    'treatment',
+                                    'mainComplaint',
+                                    'notes',
+                                    'recommendations',
+                                    'findings',
+                                    'plan',
+                                    'reasonForVisit',
+                                    'complaint',
+                                    'vitals',
+                                    'medications',
+                                    'referralReason',
+                                    'Prescribed By',
+                                    'prescriptions',
+                                    'laboratoryInvestigations',
+                                    'radiologicalInvestigations'
+                                  ];
+                                  final typeKeys = [typeLower, consultTypeLower];
+                                  if (typeKeys.any((t) => t.contains('chw') || t.contains('consultation') || t.contains('doctor') || t.contains('preconsultation'))) {
+                                    map.removeWhere((k, v) => !relevantKeys.contains(k) && !relevantKeys.contains(k.toLowerCase().replaceAll('_','')));
+                                  }
+                                  return map;
+                                }(),
+                                builder: (context, snapshot) {
+                                  final map = snapshot.data ?? filteredDetails;
+                                  String formatLabel(String key) {
+                                    final k = key.toString().replaceAll('_', ' ');
+                                    return k.isNotEmpty ? (k[0].toUpperCase() + k.substring(1)) : k;
+                                  }
+                                  return AlertDialog(
+                                    title: Text(cardTitle),
+                                    content: SingleChildScrollView(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          ...map.entries
+                                              .where((entry) => entry.value != null && entry.value.toString().isNotEmpty)
+                                              .map((entry) {
+                                                final keyLower = entry.key.toLowerCase();
+                                                final isPrescription = keyLower == 'prescriptions';
+                                                final isLabTest = keyLower == 'laboratoryinvestigations';
+                                                final value = entry.value;
+                                                String displayValue;
+                                                if (isPrescription && value is List) {
+                                                  // If prescriptions is a list of objects, extract medication names
+                                                  displayValue = value.map((e) {
+                                                    if (e is Map && e.containsKey('name')) return e['name'];
+                                                    return e.toString();
+                                                  }).join(', ');
+                                                } else if (isLabTest && value is List) {
+                                                  // If lab tests is a list of objects, extract test names
+                                                  displayValue = value.map((e) {
+                                                    if (e is Map && e.containsKey('name')) return e['name'];
+                                                    return e.toString();
+                                                  }).join(', ');
+                                                } else {
+                                                  displayValue = value.toString();
+                                                }
+                                                return Padding(
+                                                  padding: const EdgeInsets.symmetric(vertical: 2),
+                                                  child: Row(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      Text('${formatLabel(entry.key)}: ', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                                      Expanded(child: Text(displayValue, style: const TextStyle(fontSize: 15))),
+                                                    ],
+                                                  ),
+                                                );
+                                              })
+                                        ],
+                                      ),
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.of(context).pop(),
+                                        child: const Text('Close'),
+                                      ),
                                     ],
-                                  ),
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.of(context).pop(),
-                                    child: const Text('Close'),
-                                  ),
-                                ],
+                                  );
+                                },
                               );
                             },
                           );

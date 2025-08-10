@@ -338,7 +338,30 @@ class _PatientRegistrationFormState extends State<_PatientRegistrationForm> {
 
             // Create Account Button
             ElevatedButton(
-              onPressed: _isLoading ? null : _registerPatient,
+              onPressed: _isLoading
+                  ? null
+                  : () async {
+                      final confirmed = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Confirm Submission'),
+                          content: const Text('Are you sure you want to create this account?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(false),
+                              child: const Text('Cancel'),
+                            ),
+                            ElevatedButton(
+                              onPressed: () => Navigator.of(context).pop(true),
+                              child: const Text('Yes, Submit'),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (confirmed == true) {
+                        _registerPatient();
+                      }
+                    },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.teal,
                 foregroundColor: Colors.white,

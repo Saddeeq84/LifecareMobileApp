@@ -28,7 +28,26 @@ class _ComprehensiveBookAppointmentScreenState extends State<ComprehensiveBookAp
   final PageController _pageController = PageController();
   
   // Form Controllers
-  final _mainComplaintController = TextEditingController();
+  // Main Reason for Appointment (single-select)
+  final List<String> _mainReasons = [
+    'Fever or Chills',
+    'Cough or Breathing Difficulty',
+    'Chest Pain or Palpitations',
+    'Stomach Pain, Diarrhea or Constipation',
+    'Urinary Problems (pain, frequency, blood in urine)',
+    'Skin Rash, Itching or Swelling',
+    'Headache, Seizures or Weakness',
+    'Joint or Muscle Pain',
+    'Mental Health Concern (e.g., Anxiety, Depression, Stress)',
+    "Pregnancy or Women's Health Concern",
+    "Child's Health Concern",
+    'Eye or Vision Issues',
+    'Ear, Nose or Throat Issues',
+    'Cancer-related Concerns',
+    'Other',
+  ];
+  String? _selectedMainReason;
+  String _otherMainReason = '';
   final _symptomsController = TextEditingController();
   final _medicationsTakenController = TextEditingController();
   final _triggersController = TextEditingController();
@@ -112,7 +131,7 @@ class _ComprehensiveBookAppointmentScreenState extends State<ComprehensiveBookAp
 
   @override
   void dispose() {
-    _mainComplaintController.dispose();
+  // No controller for main complaint anymore
     _symptomsController.dispose();
     _medicationsTakenController.dispose();
     _triggersController.dispose();
@@ -326,10 +345,11 @@ class _ComprehensiveBookAppointmentScreenState extends State<ComprehensiveBookAp
       );
       return;
     }
-    if (_mainComplaintController.text.trim().isEmpty) {
-      print("❌ No main complaint provided");
+    if (_selectedMainReason == null ||
+        (_selectedMainReason == 'Other' && _otherMainReason.trim().isEmpty)) {
+      print("❌ No main reason for appointment selected");
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please describe your main complaint')),
+        const SnackBar(content: Text('Please select or specify your main reason for appointment')),
       );
       return;
     }
@@ -380,7 +400,8 @@ class _ComprehensiveBookAppointmentScreenState extends State<ComprehensiveBookAp
       print("   - Provider: ${_selectedProvider!['name']} (${_selectedProvider!['id']})");
       print("   - Type: ${_selectedAppointmentType ?? 'General Consultation'}");
       print("   - Date: $appointmentDateTime");
-      print("   - Main Complaint: ${_mainComplaintController.text.trim()}");
+      print("   - Main Reason: " +
+        (_selectedMainReason == 'Other' ? _otherMainReason : _selectedMainReason ?? ''));
 
       print("💾 Saving appointment using AppointmentService...");
       
@@ -401,7 +422,7 @@ class _ComprehensiveBookAppointmentScreenState extends State<ComprehensiveBookAp
         providerName: _selectedProvider!['name'],
         providerType: _selectedProvider!['type'],
         appointmentDate: appointmentDateTime,
-        reason: _mainComplaintController.text.trim(),
+        reason: _selectedMainReason == 'Other' ? _otherMainReason : _selectedMainReason ?? '',
         notes: _additionalNotesController.text.trim(),
       );
 
@@ -415,7 +436,7 @@ class _ComprehensiveBookAppointmentScreenState extends State<ComprehensiveBookAp
             doctorId: _selectedProvider!['id'],
             patientName: patientName,
             appointmentDate: appointmentDateTime,
-            reason: _mainComplaintController.text.trim(),
+            reason: _selectedMainReason == 'Other' ? _otherMainReason : _selectedMainReason ?? '',
           );
           print("✅ Doctor notification sent");
         } else if (_selectedProvider!['type'] == 'chw') {
@@ -424,7 +445,7 @@ class _ComprehensiveBookAppointmentScreenState extends State<ComprehensiveBookAp
             chwId: _selectedProvider!['id'],
             patientName: patientName,
             appointmentDate: appointmentDateTime,
-            reason: _mainComplaintController.text.trim(),
+            reason: _selectedMainReason == 'Other' ? _otherMainReason : _selectedMainReason ?? '',
           );
           print("✅ CHW notification sent");
         }
@@ -445,7 +466,7 @@ class _ComprehensiveBookAppointmentScreenState extends State<ComprehensiveBookAp
         
         // Pre-consultation checklist
         'preConsultationData': {
-          'mainComplaint': _mainComplaintController.text.trim(),
+          'mainComplaint': _selectedMainReason == 'Other' ? _otherMainReason : _selectedMainReason ?? '',
           'symptoms': _symptomsController.text.trim(),
           'medicationsTaken': _medicationsTakenController.text.trim(),
           'triggers': _triggersController.text.trim(),
@@ -483,7 +504,7 @@ class _ComprehensiveBookAppointmentScreenState extends State<ComprehensiveBookAp
             _selectedTime!.minute,
           ).toIso8601String(),
           'healthAssessment': {
-            'mainComplaint': _mainComplaintController.text.trim(),
+            'mainComplaint': _selectedMainReason == 'Other' ? _otherMainReason : _selectedMainReason ?? '',
             'symptoms': _symptomsController.text.trim(),
             'medicationsTaken': _medicationsTakenController.text.trim(),
             'triggers': _triggersController.text.trim(),
@@ -533,7 +554,7 @@ class _ComprehensiveBookAppointmentScreenState extends State<ComprehensiveBookAp
           'providerId': _selectedProvider!['id'],
           'providerName': _selectedProvider!['name'],
           'providerType': _selectedProvider!['type'],
-          'mainComplaint': _mainComplaintController.text.trim(),
+          'mainComplaint': _selectedMainReason == 'Other' ? _otherMainReason : _selectedMainReason ?? '',
           'severity': _selectedSeverity ?? '1 - Mild discomfort',
           'urgency': _selectedUrgency ?? 'Normal - Regular appointment',
           'hasAttachments': uploadedFileUrls.isNotEmpty,
@@ -557,7 +578,7 @@ class _ComprehensiveBookAppointmentScreenState extends State<ComprehensiveBookAp
           // Update existing health summary
           await healthSummaryRef.update({
             'lastAssessmentDate': FieldValue.serverTimestamp(),
-            'lastComplaint': _mainComplaintController.text.trim(),
+            'lastComplaint': _selectedMainReason == 'Other' ? _otherMainReason : _selectedMainReason ?? '',
             'lastSymptoms': _symptomsController.text.trim(),
             'currentMedications': _medicationsTakenController.text.trim(),
             'knownAllergies': _allergiesController.text.trim(),
@@ -576,7 +597,7 @@ class _ComprehensiveBookAppointmentScreenState extends State<ComprehensiveBookAp
             'patientId': currentUser.uid,
             'createdAt': FieldValue.serverTimestamp(),
             'lastAssessmentDate': FieldValue.serverTimestamp(),
-            'lastComplaint': _mainComplaintController.text.trim(),
+            'lastComplaint': _selectedMainReason == 'Other' ? _otherMainReason : _selectedMainReason ?? '',
             'lastSymptoms': _symptomsController.text.trim(),
             'currentMedications': _medicationsTakenController.text.trim(),
             'knownAllergies': _allergiesController.text.trim(),
@@ -1055,13 +1076,75 @@ class _ComprehensiveBookAppointmentScreenState extends State<ComprehensiveBookAp
             ),
             const SizedBox(height: 24),
             
-            // Main Complaint
-            _buildTextFormField(
-              controller: _mainComplaintController,
-              label: 'Main Complaint / Reason for Visit *',
-              hint: 'Describe your primary concern or reason for this appointment',
-              maxLines: 3,
-              required: true,
+            // Main Reason for Appointment (single-select)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Main Reason for Appointment *',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Select the main symptom or reason for consultation (Choose the most relevant one).',
+                  style: TextStyle(color: Colors.grey),
+                ),
+                const SizedBox(height: 8),
+                ..._mainReasons.map((reason) {
+                  if (reason == 'Other') {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        RadioListTile<String>(
+                          title: const Text('Other (please specify):'),
+                          value: 'Other',
+                          groupValue: _selectedMainReason,
+                          onChanged: (val) {
+                            setState(() {
+                              _selectedMainReason = val;
+                              _otherMainReason = '';
+                            });
+                          },
+                        ),
+                        if (_selectedMainReason == 'Other')
+                          Padding(
+                            padding: const EdgeInsets.only(left: 32.0, bottom: 8),
+                            child: TextFormField(
+                              decoration: const InputDecoration(
+                                labelText: 'Please specify',
+                                border: OutlineInputBorder(),
+                              ),
+                              onChanged: (val) => setState(() => _otherMainReason = val),
+                              validator: (val) {
+                                if (_selectedMainReason == 'Other' && (val == null || val.trim().isEmpty)) {
+                                  return 'Please specify your main reason';
+                                }
+                                return null;
+                              },
+                            ),
+                          ),
+                      ],
+                    );
+                  }
+                  return RadioListTile<String>(
+                    title: Text(reason),
+                    value: reason,
+                    groupValue: _selectedMainReason,
+                    onChanged: (val) {
+                      setState(() {
+                        _selectedMainReason = val;
+                        if (val != 'Other') _otherMainReason = '';
+                      });
+                    },
+                  );
+                }).toList(),
+                if (_selectedMainReason == null)
+                  const Padding(
+                    padding: EdgeInsets.only(left: 8.0, top: 4),
+                    child: Text('Please select a main reason', style: TextStyle(color: Colors.red, fontSize: 12)),
+                  ),
+                const SizedBox(height: 16),
+              ],
             ),
             
             // Symptoms
@@ -1409,8 +1492,8 @@ class _ComprehensiveBookAppointmentScreenState extends State<ComprehensiveBookAp
             title: 'Medical Information',
             icon: Icons.medical_information,
             children: [
-              if (_mainComplaintController.text.isNotEmpty)
-                _buildReviewRow('Main Complaint', _mainComplaintController.text),
+              if (_selectedMainReason != null && (_selectedMainReason != 'Other' || _otherMainReason.isNotEmpty))
+                _buildReviewRow('Main Complaint', _selectedMainReason == 'Other' ? _otherMainReason : _selectedMainReason ?? ''),
               if (_symptomsController.text.isNotEmpty)
                 _buildReviewRow('Symptoms', _symptomsController.text),
               if (_durationController.text.isNotEmpty)

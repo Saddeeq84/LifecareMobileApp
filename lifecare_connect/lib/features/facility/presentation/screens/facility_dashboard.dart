@@ -5,7 +5,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:go_router/go_router.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'facility_profile_screen.dart';
 import 'facility_settings_screen.dart';
 import 'facility_booking_screen.dart';
@@ -13,45 +13,7 @@ import 'facility_messages_screen.dart';
 import 'facility_patient_list_screen.dart';
 import 'facility_analytics_screen.dart';
 import 'facility_services_screen.dart';
-
-class FacilityDashboard extends StatelessWidget {
-  const FacilityDashboard({super.key});
-
-  // Dashboard items: icon, label, and navigation callback
-  List<Map<String, dynamic>> get dashboardItems => [
-        {
-          "icon": Icons.calendar_today,
-          "label": "Bookings",
-          "action": "bookings"
-        },
-        {
-          "icon": Icons.chat,
-          "label": "Messages",
-          "action": "messages"
-        },
-        {
-          "icon": Icons.people,
-          "label": "My Patients",
-          "action": "patients"
-        },
-        {
-          "icon": Icons.medical_services,
-          "label": "Services",
-          "action": "services"
-        },
-        {
-          "icon": Icons.analytics,
-          "label": "Reports & Analytics",
-          "action": "analytics"
-        },
-        {
-          "icon": Icons.account_balance_wallet,
-          "label": "Wallet",
-          "action": "wallet"
-        },
-      ];
-
-  // Handles logout with confirmation dialog and Firebase Auth
+import 'package:go_router/go_router.dart';
   Future<void> _handleLogout(BuildContext context) async {
     _showLogoutDialog(context);
   }
@@ -107,6 +69,82 @@ class FacilityDashboard extends StatelessWidget {
       }
     }
   }
+
+
+
+class FacilityDashboard extends StatefulWidget {
+  const FacilityDashboard({super.key});
+
+  @override
+  State<FacilityDashboard> createState() => _FacilityDashboardState();
+}
+
+class _FacilityDashboardState extends State<FacilityDashboard> {
+  int _unreadCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _listenForUnreadMessages();
+  }
+
+  void _listenForUnreadMessages() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    final userId = user.uid;
+    FirebaseFirestore.instance
+        .collection('messages')
+        .where('participantIds', arrayContains: userId)
+        .snapshots()
+        .listen((snapshot) {
+      int totalUnread = 0;
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        final unreadCounts = data['unreadCounts'] as Map<String, dynamic>?;
+        if (unreadCounts != null && unreadCounts[userId] != null) {
+          totalUnread += unreadCounts[userId] is int ? unreadCounts[userId] as int : 0;
+        }
+      }
+      if (mounted) {
+        setState(() {
+          _unreadCount = totalUnread;
+        });
+      }
+    });
+  }
+
+  List<Map<String, dynamic>> get dashboardItems => [
+        {
+          "icon": Icons.calendar_today,
+          "label": "Bookings",
+          "action": "bookings"
+        },
+        {
+          "icon": Icons.chat,
+          "label": "Messages",
+          "action": "messages"
+        },
+        {
+          "icon": Icons.people,
+          "label": "My Patients",
+          "action": "patients"
+        },
+        {
+          "icon": Icons.medical_services,
+          "label": "Services",
+          "action": "services"
+        },
+        {
+          "icon": Icons.analytics,
+          "label": "Reports & Analytics",
+          "action": "analytics"
+        },
+        {
+          "icon": Icons.account_balance_wallet,
+          "label": "Wallet",
+          "action": "wallet"
+        },
+      ];
 
   void _navigateToProfile(BuildContext context) {
     try {
@@ -302,6 +340,41 @@ class FacilityDashboard extends StatelessWidget {
         backgroundColor: Colors.teal.shade800,
         foregroundColor: Colors.white,
         actions: [
+          // Messages IconButton with unread badge
+          Stack(
+            children: [
+              IconButton(
+                onPressed: () => _navigateToMessages(context),
+                icon: const Icon(Icons.chat),
+                tooltip: "Messages",
+              ),
+              if (_unreadCount > 0)
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 18,
+                      minHeight: 18,
+                    ),
+                    child: Text(
+                      _unreadCount > 99 ? '99+' : '$_unreadCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
+          ),
           // Profile navigation button
           IconButton(
             onPressed: () => _navigateToProfile(context),

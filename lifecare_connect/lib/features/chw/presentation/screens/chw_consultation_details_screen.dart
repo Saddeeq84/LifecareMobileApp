@@ -28,6 +28,7 @@ class CHWConsultationDetailsScreen extends StatefulWidget {
 }
 
 class _CHWConsultationDetailsScreenState extends State<CHWConsultationDetailsScreen> with TickerProviderStateMixin {
+  String _selectedRequestCategory = 'Lab';
   late TabController _tabController;
   final _consultationFormKey = GlobalKey<FormState>();
   final _prescriptionFormKey = GlobalKey<FormState>();
@@ -906,21 +907,45 @@ class _CHWConsultationDetailsScreenState extends State<CHWConsultationDetailsScr
                       ),
                     ),
                     const SizedBox(height: 16),
-                    // Request Type with suggestions
+                    // Select Lab or Radiology first
+                    DropdownButtonFormField<String>(
+                      value: _selectedRequestCategory,
+                      decoration: const InputDecoration(
+                        labelText: 'Request Category *',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 'Lab', child: Text('Lab')),
+                        DropdownMenuItem(value: 'Radiology', child: Text('Radiology')),
+                      ],
+                      onChanged: widget.isReadOnly
+                          ? null
+                          : (String? value) {
+                              setState(() {
+                                _selectedRequestCategory = value ?? 'Lab';
+                                _requestTypeController.clear();
+                              });
+                            },
+                    ),
+                    const SizedBox(height: 16),
+                    // Request Type with suggestions, filtered by category, with 'Others' option
                     Autocomplete<String>(
                       optionsBuilder: (textEditingValue) {
-                        final allTests = [..._commonLabTests, ..._commonRadiologyTests];
+                        final List<String> baseList = _selectedRequestCategory == 'Lab'
+                            ? List<String>.from(_commonLabTests)
+                            : List<String>.from(_commonRadiologyTests);
+                        // Ensure 'Other' is always present at the end
+                        if (!baseList.contains('Other')) baseList.add('Other');
                         if (textEditingValue.text.isEmpty) {
-                          return allTests;
+                          return baseList;
                         }
-                        return allTests.where((test) =>
+                        return baseList.where((test) =>
                             test.toLowerCase().contains(textEditingValue.text.toLowerCase()));
                       },
                       onSelected: (selection) {
                         _requestTypeController.text = selection;
                       },
                       fieldViewBuilder: (context, controller, focusNode, onEditingComplete) {
-                        // Add listener to sync controller text (safe to add repeatedly in this context)
                         _requestTypeController.addListener(() {
                           if (controller.text != _requestTypeController.text) {
                             controller.text = _requestTypeController.text;
@@ -929,27 +954,51 @@ class _CHWConsultationDetailsScreenState extends State<CHWConsultationDetailsScr
                             );
                           }
                         });
-                        return TextFormField(
-                          controller: controller,
-                          focusNode: focusNode,
-                          onEditingComplete: onEditingComplete,
-                          decoration: const InputDecoration(
-                            labelText: 'Test/Scan Type *',
-                            prefixIcon: Icon(Icons.science),
-                            border: OutlineInputBorder(),
-                          ),
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Please enter test/scan type';
-                            }
-                            return null;
-                          },
-                          onChanged: (value) {
-                            if (_requestTypeController.text != value) {
-                              _requestTypeController.text = value;
-                            }
-                          },
-                          readOnly: widget.isReadOnly,
+                        return Column(
+                          children: [
+                            TextFormField(
+                              controller: controller,
+                              focusNode: focusNode,
+                              onEditingComplete: onEditingComplete,
+                              decoration: const InputDecoration(
+                                labelText: 'Test/Scan Type *',
+                                prefixIcon: Icon(Icons.science),
+                                border: OutlineInputBorder(),
+                              ),
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'Please enter test/scan type';
+                                }
+                                return null;
+                              },
+                              onChanged: (value) {
+                                if (_requestTypeController.text != value) {
+                                  _requestTypeController.text = value;
+                                }
+                              },
+                              readOnly: widget.isReadOnly,
+                            ),
+                            if (controller.text == 'Other')
+                              Padding(
+                                padding: const EdgeInsets.only(top: 12.0),
+                                child: TextFormField(
+                                  enabled: !widget.isReadOnly,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Specify Other Test/Investigation',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  onChanged: (val) {
+                                    _requestTypeController.text = val;
+                                  },
+                                  validator: (val) {
+                                    if (controller.text == 'Other' && (val == null || val.trim().isEmpty)) {
+                                      return 'Please specify the test/investigation';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ),
+                          ],
                         );
                       },
                     ),

@@ -1,3 +1,4 @@
+import 'package:lifecare_connect/core/utils/email_admin_approval.dart';
 // ignore_for_file: use_build_context_synchronously, prefer_const_constructors
 
 import 'package:flutter/material.dart';
@@ -97,6 +98,22 @@ class _OwnerRegisterFacilityScreenState
       });
 
       if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            content: const Text('Your email has been verified. Your account will require admin approval before it becomes active. You will receive another email once your account is approved.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+        await sendAdminApprovalRequiredEmail(
+          _emailController.text.trim(),
+          _nameController.text.trim(),
+        );
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text("✅ Facility submitted for approval."),
@@ -309,7 +326,30 @@ class _OwnerRegisterFacilityScreenState
               ),
               const SizedBox(height: 32),
               ElevatedButton(
-                onPressed: _isSubmitting ? null : _handleSubmit,
+                onPressed: _isSubmitting
+                    ? null
+                    : () async {
+                        final confirmed = await showDialog<bool>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Confirm Submission'),
+                            content: const Text('Are you sure you want to submit this facility for approval?'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(context).pop(false),
+                                child: const Text('Cancel'),
+                              ),
+                              ElevatedButton(
+                                onPressed: () => Navigator.of(context).pop(true),
+                                child: const Text('Yes, Submit'),
+                              ),
+                            ],
+                          ),
+                        );
+                        if (confirmed == true) {
+                          _handleSubmit();
+                        }
+                      },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.orange,
                   foregroundColor: Colors.white,

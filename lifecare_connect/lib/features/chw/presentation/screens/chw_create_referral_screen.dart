@@ -302,8 +302,8 @@ class _CHWCreateReferralScreenState extends State<CHWCreateReferralScreen> {
         'doctorId': doctorId,
       });
 
-      // Message to patient (personalized)
-      final patientMessage = '$patientNameForMessage, you have been referred to Dr. $doctorNameForMessage for further care by $chwNameForMessage. Please await further instructions.';
+      // Message to patient (personalized, always includes doctor name)
+      final patientMessage = '$patientNameForMessage, you have been referred to Dr. $doctorNameForMessage for further care by $chwNameForMessage. Please await further instructions from Dr. $doctorNameForMessage.';
       try {
         await CHWMessageHelper.sendReferralMessageToPatient(patientId, patientMessage);
       } catch (e) {
@@ -568,7 +568,28 @@ class _CHWCreateReferralScreenState extends State<CHWCreateReferralScreen> {
                 : Column(
                     children: [
                       ElevatedButton(
-                        onPressed: _createReferral,
+                        onPressed: () async {
+                          final confirmed = await showDialog<bool>(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: const Text('Confirm Referral'),
+                              content: const Text('Are you sure you want to create this referral?'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.of(context).pop(false),
+                                  child: const Text('Cancel'),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () => Navigator.of(context).pop(true),
+                                  child: const Text('Confirm'),
+                                ),
+                              ],
+                            ),
+                          );
+                          if (confirmed == true) {
+                            _createReferral();
+                          }
+                        },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.teal,
                           foregroundColor: Colors.white,

@@ -12,8 +12,10 @@ class AdminDashboard extends StatefulWidget {
   State<AdminDashboard> createState() => _AdminDashboardState();
 }
 
+
 class _AdminDashboardState extends State<AdminDashboard> {
   String _adminName = 'Admin';
+  int _unreadCount = 0;
 
   @override
   void initState() {
@@ -21,6 +23,32 @@ class _AdminDashboardState extends State<AdminDashboard> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkAdminDocument();
       _fetchAdminName();
+      _listenForUnreadMessages();
+    });
+  }
+
+  void _listenForUnreadMessages() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    final userId = user.uid;
+    FirebaseFirestore.instance
+        .collection('messages')
+        .where('participantIds', arrayContains: userId)
+        .snapshots()
+        .listen((snapshot) {
+      int totalUnread = 0;
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        final unreadCounts = data['unreadCounts'] as Map<String, dynamic>?;
+        if (unreadCounts != null && unreadCounts[userId] != null) {
+          totalUnread += unreadCounts[userId] is int ? unreadCounts[userId] as int : 0;
+        }
+      }
+      if (mounted) {
+        setState(() {
+          _unreadCount = totalUnread;
+        });
+      }
     });
   }
 
@@ -59,6 +87,41 @@ class _AdminDashboardState extends State<AdminDashboard> {
         title: Text('Admin Dashboard'),
         backgroundColor: Colors.teal,
         actions: [
+          // Messages IconButton with unread badge
+          Stack(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.message),
+                tooltip: 'Messages',
+                onPressed: () => context.push('/admin_dashboard/messages'),
+              ),
+              if (_unreadCount > 0)
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 18,
+                      minHeight: 18,
+                    ),
+                    child: Text(
+                      _unreadCount > 99 ? '99+' : '$_unreadCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
+          ),
           IconButton(
             icon: Icon(Icons.settings),
             tooltip: 'Settings',

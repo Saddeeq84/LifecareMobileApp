@@ -216,6 +216,36 @@ class _LoginPatientState extends State<LoginPatient> with SingleTickerProviderSt
                       padding: EdgeInsets.symmetric(vertical: 14),
                     ),
                   ),
+                  SizedBox(height: 12),
+                  TextButton(
+                    onPressed: () async {
+                      final email = _emailController.text.trim();
+                      if (email.isEmpty || !email.contains('@')) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Enter a valid email to reset password.')),
+                        );
+                        return;
+                      }
+                      try {
+                        await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Password reset email sent.')),
+                        );
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Failed to send reset email: $e')),
+                        );
+                      }
+                    },
+                    child: Text(
+                      "Forgot Password?",
+                      style: TextStyle(
+                        color: Colors.teal,
+                        decoration: TextDecoration.underline,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),

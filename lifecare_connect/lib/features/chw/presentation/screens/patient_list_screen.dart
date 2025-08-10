@@ -68,10 +68,12 @@ class ChwPatientListScreen extends StatelessWidget {
               subtitle: const Text('Document antenatal care visit'),
               onTap: () {
                 Navigator.pop(context);
-                // Navigate to ANC checklist with patient context
-                context.go('/chw_dashboard/anc-checklist', extra: {
+                // Navigate to CHW ANC Consultation Details screen
+                context.go('/chw_anc_consultation_details', extra: {
+                  'appointmentId': '', // No appointment yet
                   'patientId': patient.id,
                   'patientName': patientName,
+                  'appointmentData': {'appointmentType': 'ANC'},
                 });
               },
             ),

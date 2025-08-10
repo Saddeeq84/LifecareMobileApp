@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'chw_anc_pnc_consultation_screen.dart';
 import './chw_create_referral_screen.dart';
 import 'chw_consultation_details_screen.dart';
+import 'package:lifecare_connect/features/shared/data/services/message_service.dart';
 
 class CHWConsultationScreen extends StatelessWidget {
   const CHWConsultationScreen({super.key});
@@ -160,8 +161,27 @@ class CHWConsultationScreen extends StatelessWidget {
                         IconButton(
                           icon: Icon(Icons.chat, color: Colors.blue),
                           tooltip: 'Chat',
-                          onPressed: () {
-                            GoRouter.of(context).go('/chw_dashboard/messages/chat/$patientId', extra: {
+                          onPressed: () async {
+                            final chwUid = FirebaseAuth.instance.currentUser?.uid;
+                            if (chwUid == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('User not authenticated.')),
+                              );
+                              return;
+                            }
+                            // Import MessageService at the top if not already
+                            final conversation = await MessageService.findOrCreateConversation(
+                              userId: chwUid,
+                              otherUserId: patientId,
+                              otherUserName: patientName,
+                            );
+                            if (conversation == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Could not start conversation.')),
+                              );
+                              return;
+                            }
+                            GoRouter.of(context).go('/chw_dashboard/messages/chat/${conversation.id}', extra: {
                               'otherParticipantName': patientName,
                               'otherParticipantRole': 'PATIENT',
                             });

@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:lifecare_connect/core/utils/email_admin_approval.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
@@ -33,16 +34,41 @@ class _DoctorCreateAccountScreenState extends State<DoctorCreateAccountScreen> {
   bool loading = false;
 
   final List<String> specializations = [
-    'General Practitioner',
-    'Pediatrics',
-    'Cardiology',
-    'Dermatology',
-    'Gynecology',
-    'Orthopedics',
-    'Psychiatry',
-    'Radiology',
-    'Surgery',
+    'General Practitioner (GP) / Family Physician',
+    'Primary Care Physician',
+    'Internal Medicine Specialist',
+    'Cardiologist',
+    'Endocrinologist',
+    'Pulmonologist',
+    'Nephrologist',
+    'Gastroenterologist',
+    'Rheumatologist',
+    'Infectious Disease Specialist',
+    'Hematologist',
+    'Oncologist',
+    'General Surgeon',
+    'Orthopedic Surgeon',
+    'Neurosurgeon',
+    'Cardiothoracic Surgeon',
+    'Plastic & Reconstructive Surgeon',
+    'ENT Surgeon',
+    'Urologist',
+    'Obstetrician & Gynecologist (OB/GYN)',
+    'Reproductive Endocrinologist',
+    'Maternal–Fetal Medicine Specialist',
+    'Pediatrician',
+    'Pediatric Cardiologist',
+    'Pediatric Neurologist',
+    'Pediatric Surgeon',
+    'Neonatologist',
+    'Psychiatrist',
+    'Ophthalmologist',
+    'Otorhinolaryngologist (ENT Specialist)',
+    'Dermatologist',
+    'Oral & Maxillofacial Surgeon',
+    'Other',
   ];
+  String? otherSpecialization;
 
   final ImagePicker _picker = ImagePicker();
 
@@ -136,13 +162,24 @@ class _DoctorCreateAccountScreenState extends State<DoctorCreateAccountScreen> {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      final token = await FirebaseAppCheck.instance.getToken();
+  await FirebaseAppCheck.instance.getToken();
 
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('✅ Registered successfully. Awaiting admin approval.'),
+      // Show dialog and send email about admin approval requirement
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          content: const Text('Your email has been verified. Your account will require admin approval before it becomes active. You will receive another email once your account is approved.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
+            ),
+          ],
         ),
+      );
+      await sendAdminApprovalRequiredEmail(
+        emailController.text.trim(),
+        fullNameController.text.trim(),
       );
 
       Navigator.pop(context);
@@ -233,13 +270,34 @@ class _DoctorCreateAccountScreenState extends State<DoctorCreateAccountScreen> {
                 decoration: const InputDecoration(labelText: 'Specialization'),
                 value: selectedSpecialization,
                 items: specializations
-                    .map((spec) =>
-                        DropdownMenuItem(value: spec, child: Text(spec)))
+                    .map((spec) => DropdownMenuItem(value: spec, child: Text(spec)))
                     .toList(),
-                onChanged: (val) => setState(() => selectedSpecialization = val),
+                onChanged: (val) {
+                  setState(() {
+                    selectedSpecialization = val;
+                    if (val != 'Other') otherSpecialization = null;
+                  });
+                },
                 validator: (val) =>
                     val == null ? 'Please select a specialization' : null,
               ),
+              if (selectedSpecialization == 'Other')
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: TextFormField(
+                    decoration: const InputDecoration(
+                      labelText: 'Please specify your specialization',
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (val) => setState(() => otherSpecialization = val),
+                    validator: (val) {
+                      if (selectedSpecialization == 'Other' && (val == null || val.trim().isEmpty)) {
+                        return 'Please specify your specialization';
+                      }
+                      return null;
+                    },
+                  ),
+                ),
               const SizedBox(height: 10),
               DropdownButtonFormField<String>(
                 decoration: const InputDecoration(labelText: 'Gender'),
@@ -287,7 +345,30 @@ class _DoctorCreateAccountScreenState extends State<DoctorCreateAccountScreen> {
               ),
               const SizedBox(height: 30),
               ElevatedButton(
-                onPressed: loading ? null : handleRegister,
+                onPressed: loading
+                    ? null
+                    : () async {
+                        final confirmed = await showDialog<bool>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Confirm Submission'),
+                            content: const Text('Are you sure you want to register this account?'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(context).pop(false),
+                                child: const Text('Cancel'),
+                              ),
+                              ElevatedButton(
+                                onPressed: () => Navigator.of(context).pop(true),
+                                child: const Text('Yes, Register'),
+                              ),
+                            ],
+                          ),
+                        );
+                        if (confirmed == true) {
+                          handleRegister();
+                        }
+                      },
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
                 child: loading
                     ? const CircularProgressIndicator(color: Colors.white)

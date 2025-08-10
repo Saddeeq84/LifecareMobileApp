@@ -81,10 +81,16 @@ class PatientHealthRecordsScreen extends StatelessWidget {
                   const SizedBox(height: 24),
                   ElevatedButton.icon(
                     onPressed: () {
-                      context.push('/chw_dashboard/anc-checklist', extra: {
-                        'patientId': patientId,
-                        'patientName': patientName,
-                      });
+                      // Navigate to ANC/PNC Consultation Screen (update route and params as needed)
+                      context.push(
+                        '/chw_anc_pnc_consultation',
+                        extra: {
+                          'appointmentId': '', // New record, so no appointmentId yet
+                          'patientId': patientId,
+                          'patientName': patientName,
+                          'appointmentType': 'ANC',
+                        },
+                      );
                     },
                     icon: const Icon(Icons.add),
                     label: const Text('Add ANC Record'),

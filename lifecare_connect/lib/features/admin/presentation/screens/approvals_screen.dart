@@ -3,6 +3,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:lifecare_connect/core/utils/email_utils.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ApprovalsScreen extends StatelessWidget {
   const ApprovalsScreen({super.key});
@@ -98,11 +100,11 @@ class _ApprovalList extends StatelessWidget {
                 children: [
                   Text(email),
                   Text("Role: $userRole", style: const TextStyle(fontSize: 12)),
-                  if (userRole == 'chw') 
+                  if (userRole == 'chw')
                     Text(
-                      user['isApproved'] == true ? "Status: Approved" : "Status: Pending", 
+                      user['isApproved'] == true ? "Status: Approved" : "Status: Pending",
                       style: TextStyle(
-                        fontSize: 12, 
+                        fontSize: 12,
                         color: user['isApproved'] == true ? Colors.green : Colors.orange,
                         fontWeight: FontWeight.bold,
                       ),
@@ -110,22 +112,134 @@ class _ApprovalList extends StatelessWidget {
                 ],
               ),
               trailing: (isApproved == null && user['isApproved'] != true) || (isApproved == false)
-                  ? ElevatedButton(
-                      onPressed: () =>
-                          _approveUser(docs[index].id, context),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.teal,
-                      ),
-                      child: const Text('Approve'),
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ElevatedButton(
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) {
+                                return AlertDialog(
+                                  title: Text('Review Account Details'),
+                                  content: SingleChildScrollView(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        for (final entry in user.entries)
+                                          if (entry.value != null && entry.value.toString().isNotEmpty && entry.key != 'password' && entry.key != 'isApproved' && entry.key != 'licenseFile' && entry.key != 'govDocument')
+                                            Padding(
+                                              padding: const EdgeInsets.symmetric(vertical: 2),
+                                              child: Text('${entry.key}: ${entry.value}', style: const TextStyle(fontSize: 15)),
+                                            ),
+                                        // Show license file for doctor
+                                        if ((user['role'] == 'doctor' || user['role'] == 'facility') && (user['licenseFile'] != null || user['govDocument'] != null))
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(vertical: 8),
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                if (user['role'] == 'doctor' && user['licenseFile'] != null)
+                                                  Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      const Text('License Document:', style: TextStyle(fontWeight: FontWeight.bold)),
+                                                      const SizedBox(height: 4),
+                                                      InkWell(
+                                                        onTap: () async {
+                                                          final url = user['licenseFile'];
+                                                          final uri = Uri.tryParse(url);
+                                                          if (uri != null && await canLaunchUrl(uri)) {
+                                                            await launchUrl(uri);
+                                                          }
+                                                        },
+                                                        child: Text(
+                                                          user['licenseFile'],
+                                                          style: const TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                if (user['role'] == 'facility' && user['govDocument'] != null)
+                                                  Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      const Text('Government Document:', style: TextStyle(fontWeight: FontWeight.bold)),
+                                                      const SizedBox(height: 4),
+                                                      InkWell(
+                                                        onTap: () async {
+                                                          final url = user['govDocument'];
+                                                          final uri = Uri.tryParse(url);
+                                                          if (uri != null && await canLaunchUrl(uri)) {
+                                                            await launchUrl(uri);
+                                                          }
+                                                        },
+                                                        child: Text(
+                                                          user['govDocument'],
+                                                          style: const TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                              ],
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context).pop(),
+                                      child: const Text('Close'),
+                                    ),
+                                    ElevatedButton(
+                                      onPressed: () {
+                                        Navigator.of(context).pop();
+                                        _approveUser(docs[index].id, context);
+                                      },
+                                      style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
+                                      child: const Text('Approve'),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+                          child: const Text('Review'),
+                        ),
+                      ],
                     )
-                  : userRole == 'chw' && user['isApproved'] == true
+                  : (user['isApproved'] == true && (userRole == 'chw' || userRole == 'doctor' || userRole == 'facility'))
                       ? Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             const Icon(Icons.check_circle, color: Colors.green),
                             const SizedBox(width: 8),
                             ElevatedButton(
-                              onPressed: () => _revokeUser(docs[index].id, context),
+                              onPressed: () async {
+                                final confirm = await showDialog<bool>(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: const Text('Confirm Revoke'),
+                                    content: const Text('Are you sure you want to revoke this account approval?'),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.of(context).pop(false),
+                                        child: const Text('Cancel'),
+                                      ),
+                                      ElevatedButton(
+                                        onPressed: () => Navigator.of(context).pop(true),
+                                        style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                                        child: const Text('Revoke'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                                if (confirm == true) {
+                                  _revokeUser(docs[index].id, context);
+                                }
+                              },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.red,
                                 minimumSize: const Size(60, 32),
@@ -144,10 +258,16 @@ class _ApprovalList extends StatelessWidget {
 
   Future<void> _approveUser(String userId, BuildContext context) async {
     try {
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+      final userData = userDoc.data();
       await FirebaseFirestore.instance
           .collection('users')
           .doc(userId)
           .update({'isApproved': true});
+      if (userData != null && userData['email'] != null && (userData['role'] == 'doctor' || userData['role'] == 'chw' || userData['role'] == 'facility')) {
+        final name = userData['fullName'] ?? userData['name'] ?? '';
+        await sendAccountApprovedEmail(userData['email'], name);
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('✅ User approved')),
       );
