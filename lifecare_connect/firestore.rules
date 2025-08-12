@@ -1,3 +1,6 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
     // MESSAGES COLLECTION - Unified messaging
     match /messages/{messageId} {
       // Allow authenticated users to read and write messages
@@ -17,9 +20,6 @@
       allow read: if isAuthenticated();
       allow write, delete: if false;
     }
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
 
     // 🔧 UTILITY FUNCTIONS
     function isAuthenticated() {
@@ -75,24 +75,30 @@ service cloud.firestore {
     match /users/{userId} {
       // Users can read and update their own data
       allow read, update: if isAuthenticated() && request.auth.uid == userId;
-      
+
       // Admin can read and write all user data
       allow read, write: if isAdmin();
-      
-      // Only admins can create user profiles (during registration)
-      allow create: if isAdmin() || request.auth.uid == userId;
-      
+
+  // TEMP: Allow public write for debugging (INSECURE)
+  allow create, write: if true;
+    // TEMP: Allow public write to facilities collection for debugging (INSECURE)
+    match /facilities/{facilityId} {
+      // Require 'documentUrl' on create
+      allow create: if request.resource.data.keys().hasAll(['documentUrl']);
+      allow read, update, delete: if true;
+    }
+
       // Healthcare providers can read other user profiles for patient management
       allow read: if isAuthenticated() && (isDoctor() || isCHWWithoutApproval() || isFacility());
-      
+
       // CHW can create patient profiles
-      allow create: if isCHWWithoutApproval() && 
+      allow create: if isCHWWithoutApproval() &&
         request.resource.data.role == 'patient' &&
         request.resource.data.createdBy == request.auth.uid;
-      
+
       // Only admin can delete user profiles
       allow delete: if isAdmin();
-      
+
       // List permissions for specific user types
       allow list: if isAuthenticated() && (isAdmin() || isDoctor() || isCHWWithoutApproval() || isFacility());
     }

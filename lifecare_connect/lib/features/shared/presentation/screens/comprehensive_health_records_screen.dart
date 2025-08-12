@@ -436,18 +436,45 @@ class _ComprehensiveHealthRecordsScreenState extends State<ComprehensiveHealthRe
     showDialog(
       context: context,
       builder: (context) {
+        final providerName = data['providerName'] as String? ?? data['chwName'] as String? ?? data['doctorName'] as String? ?? 'Unknown';
         return AlertDialog(
           title: Text('Record Details'),
           content: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: data.entries
-                  .where((entry) => !_isSystemField(entry.key))
+              children: [
+                if (providerName.isNotEmpty)
+                  _buildDetailSection('Provider', providerName),
+                if (data['diagnosis'] != null)
+                  _buildDetailSection('Diagnosis', data['diagnosis'].toString()),
+                if (data['prescription'] != null)
+                  _buildDetailSection('Prescription', data['prescription'].toString()),
+                if (data['labRequest'] != null)
+                  _buildDetailSection('Lab Request', data['labRequest'].toString()),
+                if (data['radiologyRequest'] != null)
+                  _buildDetailSection('Radiology Request', data['radiologyRequest'].toString()),
+                if (data['followUpNote'] != null)
+                  _buildDetailSection('Follow-up Note', data['followUpNote'].toString()),
+                if (data['additionalNotes'] != null)
+                  _buildDetailSection('Additional Notes', data['additionalNotes'].toString()),
+                // Pre-consultation Checklist Section
+                if (data['reason'] != null || data['allergies'] != null || data['medicalHistory'] != null)
+                  ...[
+                    _buildDetailSection('Reason for Visit', data['reason']?.toString() ?? ''),
+                    _buildDetailSection('Known Allergies', data['allergies']?.toString() ?? ''),
+                    _buildDetailSection('Medical History', data['medicalHistory']?.toString() ?? ''),
+                    if (data['currentMedications'] != null)
+                      _buildDetailSection('Current Medications', data['currentMedications'].toString()),
+                  ],
+                // Fallback: show all other fields not handled above
+                ...data.entries
+                  .where((entry) => !_isSystemField(entry.key) && !['providerName','chwName','doctorName','diagnosis','prescription','labRequest','radiologyRequest','followUpNote','additionalNotes','reason','allergies','medicalHistory','currentMedications'].contains(entry.key))
                   .map((entry) => _buildDetailSection(
                         _formatFieldName(entry.key),
                         entry.value?.toString() ?? '',
                       ))
-                  .toList(),
+                  ,
+              ],
             ),
           ),
           actions: [

@@ -47,6 +47,25 @@ class _ApprovalList extends StatelessWidget {
     required this.role,
     required this.isApproved,
   });
+  
+  static Future<void> rejectUser(String userId, BuildContext context, {String? reason, String? email, String? name}) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .update({'isApproved': false, 'isRejected': true, 'rejectionReason': reason ?? ''});
+      if (email != null && name != null && reason != null) {
+        await sendAccountRejectedEmail(email, name, reason);
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('❌ User rejected')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('❌ Rejection failed: $e')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,18 +73,23 @@ class _ApprovalList extends StatelessWidget {
         FirebaseFirestore.instance.collection('users');
 
     if (role == null) {
-      // Pending users (doctors, facilities, and CHWs)
+      // Pending users (doctors, facilities, and CHWs), exclude rejected
       query = query
           .where('role', whereIn: ['doctor', 'facility', 'chw'])
-          .where('isApproved', isEqualTo: false);
+          .where('isApproved', isEqualTo: false)
+          .where('isRejected', isEqualTo: false);
     } else if (role == 'chw') {
-      // CHWs (both pending and approved) - special case for CHW management
-      query = query.where('role', isEqualTo: 'chw');
+      // Only approved, non-rejected CHWs
+      query = query
+          .where('role', isEqualTo: 'chw')
+          .where('isApproved', isEqualTo: true)
+          .where('isRejected', isEqualTo: false);
     } else {
-      // Specific role with approval status
+      // Approved users, exclude rejected
       query = query
           .where('role', isEqualTo: role)
-          .where('isApproved', isEqualTo: isApproved!);
+          .where('isApproved', isEqualTo: isApproved!)
+          .where('isRejected', isEqualTo: false);
     }
 
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -111,7 +135,7 @@ class _ApprovalList extends StatelessWidget {
                     ),
                 ],
               ),
-              trailing: (isApproved == null && user['isApproved'] != true) || (isApproved == false)
+              trailing: ((isApproved == null && user['isApproved'] != true) || (isApproved == false))
                   ? Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -127,63 +151,48 @@ class _ApprovalList extends StatelessWidget {
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         for (final entry in user.entries)
-                                          if (entry.value != null && entry.value.toString().isNotEmpty && entry.key != 'password' && entry.key != 'isApproved' && entry.key != 'licenseFile' && entry.key != 'govDocument')
+                                          if (entry.value != null && entry.value.toString().isNotEmpty && entry.key != 'password' && entry.key != 'isApproved' && entry.key != 'licenseFile' && entry.key != 'licenseUrl' && entry.key != 'govDocument' && entry.key != 'registrationDocUrl' && entry.key != 'documentUrl')
                                             Padding(
                                               padding: const EdgeInsets.symmetric(vertical: 2),
                                               child: Text('${entry.key}: ${entry.value}', style: const TextStyle(fontSize: 15)),
                                             ),
-                                        // Show license file for doctor
-                                        if ((user['role'] == 'doctor' || user['role'] == 'facility') && (user['licenseFile'] != null || user['govDocument'] != null))
-                                          Padding(
-                                            padding: const EdgeInsets.symmetric(vertical: 8),
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                if (user['role'] == 'doctor' && user['licenseFile'] != null)
-                                                  Column(
-                                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                                    children: [
-                                                      const Text('License Document:', style: TextStyle(fontWeight: FontWeight.bold)),
-                                                      const SizedBox(height: 4),
-                                                      InkWell(
-                                                        onTap: () async {
-                                                          final url = user['licenseFile'];
-                                                          final uri = Uri.tryParse(url);
-                                                          if (uri != null && await canLaunchUrl(uri)) {
-                                                            await launchUrl(uri);
-                                                          }
-                                                        },
-                                                        child: Text(
-                                                          user['licenseFile'],
-                                                          style: const TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
-                                                        ),
-                                                      ),
-                                                    ],
+                                        // Show all possible document fields as clickable links
+                                        ...[
+                                          ['licenseFile', 'License Document'],
+                                          ['licenseUrl', 'License Document'],
+                                          ['govDocument', 'Government Document'],
+                                          ['registrationDocUrl', 'Registration Document'],
+                                          ['documentUrl', 'Submitted Document'],
+                                        ].map((docField) {
+                                          final value = user[docField[0]];
+                                          if (value != null && value.toString().trim().isNotEmpty) {
+                                            return Padding(
+                                              padding: const EdgeInsets.symmetric(vertical: 4),
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text('${docField[1]}:', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                                  const SizedBox(height: 4),
+                                                  InkWell(
+                                                    onTap: () async {
+                                                      final url = value.toString();
+                                                      final uri = Uri.tryParse(url);
+                                                      if (uri != null && await canLaunchUrl(uri)) {
+                                                        await launchUrl(uri);
+                                                      }
+                                                    },
+                                                    child: const Text(
+                                                      'View Document',
+                                                      style: TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
+                                                    ),
                                                   ),
-                                                if (user['role'] == 'facility' && user['govDocument'] != null)
-                                                  Column(
-                                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                                    children: [
-                                                      const Text('Government Document:', style: TextStyle(fontWeight: FontWeight.bold)),
-                                                      const SizedBox(height: 4),
-                                                      InkWell(
-                                                        onTap: () async {
-                                                          final url = user['govDocument'];
-                                                          final uri = Uri.tryParse(url);
-                                                          if (uri != null && await canLaunchUrl(uri)) {
-                                                            await launchUrl(uri);
-                                                          }
-                                                        },
-                                                        child: Text(
-                                                          user['govDocument'],
-                                                          style: const TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                              ],
-                                            ),
-                                          ),
+                                                ],
+                                              ),
+                                            );
+                                          } else {
+                                            return const SizedBox.shrink();
+                                          }
+                                        }),
                                       ],
                                     ),
                                   ),
@@ -200,6 +209,55 @@ class _ApprovalList extends StatelessWidget {
                                       style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
                                       child: const Text('Approve'),
                                     ),
+                                    ElevatedButton(
+                                      onPressed: () async {
+                                        final reasonController = TextEditingController();
+                                        final confirm = await showDialog<bool>(
+                                          context: context,
+                                          builder: (context) => AlertDialog(
+                                            title: const Text('Reject User'),
+                                            content: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                const Text('Please provide a reason for rejection:'),
+                                                const SizedBox(height: 8),
+                                                TextField(
+                                                  controller: reasonController,
+                                                  maxLines: 3,
+                                                  decoration: const InputDecoration(
+                                                    border: OutlineInputBorder(),
+                                                    hintText: 'Reason for rejection',
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.of(context).pop(false),
+                                                child: const Text('Cancel'),
+                                              ),
+                                              ElevatedButton(
+                                                onPressed: () => Navigator.of(context).pop(true),
+                                                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                                                child: const Text('Reject'),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                        if (confirm == true) {
+                                          Navigator.of(context).pop();
+                                          await _ApprovalList.rejectUser(
+                                            docs[index].id,
+                                            context,
+                                            reason: reasonController.text.trim(),
+                                            email: user['email'],
+                                            name: user['fullName'] ?? user['name'] ?? '',
+                                          );
+                                        }
+                                      },
+                                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                                      child: const Text('Reject'),
+                                    ),
                                   ],
                                 );
                               },
@@ -207,6 +265,55 @@ class _ApprovalList extends StatelessWidget {
                           },
                           style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
                           child: const Text('Review'),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton(
+                          onPressed: () async {
+                            final reasonController = TextEditingController();
+                            final confirm = await showDialog<bool>(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Reject User'),
+                                content: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Text('Please provide a reason for rejection:'),
+                                    const SizedBox(height: 8),
+                                    TextField(
+                                      controller: reasonController,
+                                      maxLines: 3,
+                                      decoration: const InputDecoration(
+                                        border: OutlineInputBorder(),
+                                        hintText: 'Reason for rejection',
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.of(context).pop(false),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  ElevatedButton(
+                                    onPressed: () => Navigator.of(context).pop(true),
+                                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                                    child: const Text('Reject'),
+                                  ),
+                                ],
+                              ),
+                            );
+                            if (confirm == true) {
+                              await _ApprovalList.rejectUser(
+                                docs[index].id,
+                                context,
+                                reason: reasonController.text.trim(),
+                                email: user['email'],
+                                name: user['fullName'] ?? user['name'] ?? '',
+                              );
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                          child: const Text('Reject'),
                         ),
                       ],
                     )

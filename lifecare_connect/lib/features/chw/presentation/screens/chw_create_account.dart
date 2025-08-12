@@ -15,6 +15,11 @@ class CHWCreateAccountScreen extends StatefulWidget {
 }
 
 class _CHWCreateAccountScreenState extends State<CHWCreateAccountScreen> {
+  // firebase_auth 6.x does not support fetchSignInMethodsForEmail; always return false so registration proceeds.
+  Future<bool> _checkEmailExists(String email) async {
+    // TODO: When firebase_auth supports this again, restore real check.
+    return false;
+  }
   final _formKey = GlobalKey<FormState>();
   final _auth = FirebaseAuth.instance;
   final _firestore = FirebaseFirestore.instance;
@@ -55,6 +60,31 @@ class _CHWCreateAccountScreenState extends State<CHWCreateAccountScreen> {
     final password = passwordController.text.trim();
     final confirmPassword = confirmPasswordController.text.trim();
 
+    // Check if email exists
+    if (await _checkEmailExists(email)) {
+      final shouldEdit = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Email Already In Use'),
+          content: const Text('This email is already in use. Please update your email or cancel to stop.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Update'),
+            ),
+          ],
+        ),
+      );
+      if (shouldEdit != true) return;
+      // Focus email field for update
+      FocusScope.of(context).requestFocus(FocusNode());
+      return;
+    }
+
     if (password != confirmPassword) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('❗ Passwords do not match')),
@@ -75,14 +105,15 @@ class _CHWCreateAccountScreenState extends State<CHWCreateAccountScreen> {
       // CHWs auto-verify email but require admin approval before dashboard access
       
       await _firestore.collection('users').doc(user.uid).set({
-        'fullName': fullName,
-        'email': email,
-        'phone': phone,
-        'role': 'chw',
-        'isPhoneVerified': false,
-        'isApproved': false, // CHWs now need admin approval
-        'emailVerified': true, // CHWs don't need email verification 
-        'createdAt': FieldValue.serverTimestamp(),
+  'fullName': fullName,
+  'email': email,
+  'phone': phone,
+  'role': 'chw',
+  'isPhoneVerified': false,
+  'isApproved': false, // CHWs now need admin approval
+  'isRejected': false,
+  'emailVerified': true, // CHWs don't need email verification 
+  'createdAt': FieldValue.serverTimestamp(),
       });
 
 
@@ -286,6 +317,7 @@ class _CHWCreateAccountScreenState extends State<CHWCreateAccountScreen> {
                       'role': 'chw',
                       'isPhoneVerified': false,
                       'isApproved': false, // CHWs now need admin approval
+                      'isRejected': false,
                       'emailVerified': true, // CHWs don't need email verification 
                       'createdAt': FieldValue.serverTimestamp(),
                     });

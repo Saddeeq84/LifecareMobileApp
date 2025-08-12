@@ -44,6 +44,19 @@ class _LoginPatientState extends State<LoginPatient> with SingleTickerProviderSt
       );
 
       if (credential.user != null) {
+        // Check email verification for self-registered patients
+        final userDoc = await FirebaseFirestore.instance.collection('users').doc(credential.user!.uid).get();
+        final userData = userDoc.data();
+        final registeredBy = userData != null ? userData['registeredBy'] : null;
+        final emailVerified = credential.user!.emailVerified;
+        if (registeredBy == 'self' && !emailVerified) {
+          await _auth.signOut();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Please verify your email before logging in. Check your inbox.')),
+          );
+          setState(() => _isLoading = false);
+          return;
+        }
         // Save user role and navigate based on role
         await _saveUserRoleAndNavigate(credential.user!.uid);
       }

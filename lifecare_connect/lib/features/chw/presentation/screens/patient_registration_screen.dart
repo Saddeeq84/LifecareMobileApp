@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import "package:cloud_functions/cloud_functions.dart";
 
 class PatientRegistrationScreen extends StatelessWidget {
   final bool isCHW;
@@ -41,11 +42,10 @@ class _PatientRegistrationFormState extends State<_PatientRegistrationForm> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
   final _addressController = TextEditingController();
   final _emergencyContactController = TextEditingController();
-  
+  TextEditingController? _passwordController;
+  TextEditingController? _confirmPasswordController;
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
@@ -53,12 +53,21 @@ class _PatientRegistrationFormState extends State<_PatientRegistrationForm> {
   DateTime? _selectedDate;
 
   @override
+  void initState() {
+    super.initState();
+    if (!widget.isCHW) {
+      _passwordController = TextEditingController();
+      _confirmPasswordController = TextEditingController();
+    }
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
-    _passwordController.dispose();
-    _confirmPasswordController.dispose();
+    if (_passwordController != null) _passwordController!.dispose();
+    if (_confirmPasswordController != null) _confirmPasswordController!.dispose();
     _addressController.dispose();
     _emergencyContactController.dispose();
     super.dispose();
@@ -94,19 +103,9 @@ class _PatientRegistrationFormState extends State<_PatientRegistrationForm> {
     setState(() => _isLoading = true);
 
     try {
-      // Create Firebase Auth account
-      final credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
-
-      if (credential.user != null) {
-        // Save patient data to Firestore
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(credential.user!.uid)
-            .set({
-          'uid': credential.user!.uid,
+      if (widget.isCHW) {
+        // CHW: Only create Firestore record, do not create Firebase Auth user
+        await FirebaseFirestore.instance.collection('pending_patients').add({
           'name': _nameController.text.trim(),
           'email': _emailController.text.trim(),
           'phone': _phoneController.text.trim(),
@@ -115,24 +114,72 @@ class _PatientRegistrationFormState extends State<_PatientRegistrationForm> {
           'dateOfBirth': Timestamp.fromDate(_selectedDate!),
           'gender': _selectedGender,
           'role': 'patient',
-          'isApproved': true,
-          'registeredBy': widget.isCHW ? 'CHW' : 'self',
-          'createdBy': widget.isCHW ? FirebaseAuth.instance.currentUser?.uid : credential.user!.uid,
+          'isApproved': false,
+          'registeredBy': 'CHW',
+          'createdBy': FirebaseAuth.instance.currentUser?.uid,
           'createdAt': FieldValue.serverTimestamp(),
+          'emailVerified': false,
         });
-
-        // Cache role in SharedPreferences
+        // Call Firebase Cloud Function to send invitation email
+        try {
+          // You must deploy a callable function named 'sendPatientInviteEmail' in your Firebase backend
+          // Example Node.js function: functions.httpsCallable('sendPatientInviteEmail')
+          // The function should accept { email, name } and send the invite
+          await FirebaseFunctions.instance.httpsCallable('sendPatientInviteEmail').call({
+            'email': _emailController.text.trim(),
+            'name': _nameController.text.trim(),
+          });
+        } catch (e) {
+          // Optionally handle errors, but don't block registration
+        }
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('user_role', 'patient');
-
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Patient registered successfully!'),
+              content: Text('Patient registered! Invitation email sent.'),
               backgroundColor: Colors.green,
             ),
           );
           Navigator.pop(context);
+        }
+      } else {
+        // Self-registration: create Firebase Auth user as before
+        final credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController!.text.trim(),
+        );
+        if (credential.user != null) {
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(credential.user!.uid)
+              .set({
+            'uid': credential.user!.uid,
+            'name': _nameController.text.trim(),
+            'email': _emailController.text.trim(),
+            'phone': _phoneController.text.trim(),
+            'address': _addressController.text.trim(),
+            'emergencyContact': _emergencyContactController.text.trim(),
+            'dateOfBirth': Timestamp.fromDate(_selectedDate!),
+            'gender': _selectedGender,
+            'role': 'patient',
+            'isApproved': true,
+            'registeredBy': 'self',
+            'createdBy': credential.user!.uid,
+            'createdAt': FieldValue.serverTimestamp(),
+            'emailVerified': false,
+          });
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('user_role', 'patient');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Account created successfully!'),
+                backgroundColor: Colors.green,
+              ),
+            );
+            Navigator.pop(context);
+          }
         }
       }
     } catch (e) {
@@ -293,45 +340,46 @@ class _PatientRegistrationFormState extends State<_PatientRegistrationForm> {
             ),
             const SizedBox(height: 16),
 
-            TextFormField(
-              controller: _passwordController,
-              obscureText: _obscurePassword,
-              decoration: InputDecoration(
-                labelText: 'Password *',
-                prefixIcon: const Icon(Icons.lock),
-                border: const OutlineInputBorder(),
-                suffixIcon: IconButton(
-                  icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
-                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+            if (!widget.isCHW) ...[
+              TextFormField(
+                controller: _passwordController,
+                obscureText: _obscurePassword,
+                decoration: InputDecoration(
+                  labelText: 'Password *',
+                  prefixIcon: const Icon(Icons.lock),
+                  border: const OutlineInputBorder(),
+                  suffixIcon: IconButton(
+                    icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
+                    onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                  ),
                 ),
+                validator: (value) {
+                  if (value?.trim().isEmpty ?? true) return 'Please enter password';
+                  if (value!.length < 6) return 'Password must be at least 6 characters';
+                  return null;
+                },
               ),
-              validator: (value) {
-                if (value?.trim().isEmpty ?? true) return 'Please enter password';
-                if (value!.length < 6) return 'Password must be at least 6 characters';
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-
-            TextFormField(
-              controller: _confirmPasswordController,
-              obscureText: _obscureConfirmPassword,
-              decoration: InputDecoration(
-                labelText: 'Confirm Password *',
-                prefixIcon: const Icon(Icons.lock_outline),
-                border: const OutlineInputBorder(),
-                suffixIcon: IconButton(
-                  icon: Icon(_obscureConfirmPassword ? Icons.visibility_off : Icons.visibility),
-                  onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _confirmPasswordController,
+                obscureText: _obscureConfirmPassword,
+                decoration: InputDecoration(
+                  labelText: 'Confirm Password *',
+                  prefixIcon: const Icon(Icons.lock_outline),
+                  border: const OutlineInputBorder(),
+                  suffixIcon: IconButton(
+                    icon: Icon(_obscureConfirmPassword ? Icons.visibility_off : Icons.visibility),
+                    onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+                  ),
                 ),
+                validator: (value) {
+                  if (value?.trim().isEmpty ?? true) return 'Please confirm password';
+                  if (value != _passwordController!.text) return 'Passwords do not match';
+                  return null;
+                },
               ),
-              validator: (value) {
-                if (value?.trim().isEmpty ?? true) return 'Please confirm password';
-                if (value != _passwordController.text) return 'Passwords do not match';
-                return null;
-              },
-            ),
-            const SizedBox(height: 32),
+              const SizedBox(height: 32),
+            ],
 
             // Register Button
             ElevatedButton(

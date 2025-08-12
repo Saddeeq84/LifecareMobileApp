@@ -337,7 +337,7 @@ class _CHWConsultationDetailsScreenState extends State<CHWConsultationDetailsScr
         foregroundColor: Colors.white,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          onPressed: () => context.go('/chw_dashboard/patients'),
         ),
         actions: [
           IconButton(

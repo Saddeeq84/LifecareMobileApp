@@ -33,6 +33,11 @@ class _PatientRegistrationForm extends StatefulWidget {
 }
 
 class _PatientRegistrationFormState extends State<_PatientRegistrationForm> {
+  // firebase_auth 6.x does not support fetchSignInMethodsForEmail; always return false so registration proceeds.
+  Future<bool> _checkEmailExists(String email) async {
+    // TODO: When firebase_auth supports this again, restore real check.
+    return false;
+  }
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -87,6 +92,39 @@ class _PatientRegistrationFormState extends State<_PatientRegistrationForm> {
       return;
     }
 
+    // Check if email exists before proceeding
+    final email = _emailController.text.trim();
+    if (await _checkEmailExists(email)) {
+      final shouldEdit = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Email Already In Use'),
+          content: const Text('This email is already in use. Please update your email or cancel to stop.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Update'),
+            ),
+          ],
+        ),
+      );
+      if (shouldEdit != true) return;
+      // Focus email field for update
+      FocusScope.of(context).requestFocus(FocusNode());
+      return;
+    }
+
+    if (_passwordController.text != _confirmPasswordController.text) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Passwords do not match')),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
@@ -97,6 +135,15 @@ class _PatientRegistrationFormState extends State<_PatientRegistrationForm> {
       );
 
       if (credential.user != null) {
+        // For self-registered patients, send email verification
+        if (!widget.isCHW) {
+          try {
+            await credential.user!.sendEmailVerification();
+          } catch (e) {
+            // Ignore errors for email verification
+          }
+        }
+
         // Save patient data to Firestore
         await FirebaseFirestore.instance
             .collection('users')
@@ -114,6 +161,7 @@ class _PatientRegistrationFormState extends State<_PatientRegistrationForm> {
           'isApproved': true,
           'registeredBy': widget.isCHW ? 'CHW' : 'self',
           'createdAt': FieldValue.serverTimestamp(),
+          'emailVerified': widget.isCHW ? true : false,
         });
 
         // Cache role in SharedPreferences
@@ -122,8 +170,12 @@ class _PatientRegistrationFormState extends State<_PatientRegistrationForm> {
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Account created successfully! Please login.'),
+            SnackBar(
+              content: Text(
+                !widget.isCHW
+                    ? 'Account created! Please verify your email before logging in.'
+                    : 'Account created successfully! Please login.',
+              ),
               backgroundColor: Colors.green,
             ),
           );
@@ -134,7 +186,7 @@ class _PatientRegistrationFormState extends State<_PatientRegistrationForm> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Registration failed: ${e.toString()}'),
+            content: Text('Registration failed: [${e.toString()}'),
             backgroundColor: Colors.red,
           ),
         );

@@ -15,6 +15,9 @@ import '../../../patient/presentation/screens/patient_create_account.dart';
 import '../../../chw/presentation/screens/chw_create_account.dart';
 import '../../../doctor/presentation/screens/doctor_create_account.dart';
 import '../../../facility/presentation/screens/owner_register_facility_screen.dart';
+import 'about_screen.dart';
+import 'contact_screen.dart';
+import 'privacy_screen.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -150,6 +153,18 @@ class LoginScreen extends StatelessWidget {
     );
   }
 
+  void _showAboutScreen(BuildContext context) {
+    Navigator.push(context, MaterialPageRoute(builder: (context) => AboutScreen()));
+  }
+
+  void _showContactScreen(BuildContext context) {
+    Navigator.push(context, MaterialPageRoute(builder: (context) => ContactScreen()));
+  }
+
+  void _showPrivacyScreen(BuildContext context) {
+    Navigator.push(context, MaterialPageRoute(builder: (context) => PrivacyScreen()));
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder(
@@ -187,53 +202,76 @@ class LoginScreen extends StatelessWidget {
                         color: Colors.teal,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Stack(
-                        children: [
-                          Align(
-                            alignment: Alignment.topRight,
-                            child: GestureDetector(
-                              onTap: () {
-                                Navigator.push(context, MaterialPageRoute(builder: (_) => LoginAdminScreen()));
-                              },
-                              child: Container(
-                                margin: EdgeInsets.only(top: 2, right: 2),
-                                child: Icon(
-                                  Icons.verified_user_outlined,
-                                  color: Colors.white,
-                                  size: 22,
-                                ),
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Align(
+                              alignment: Alignment.topRight,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: Icon(Icons.info_outline, color: Colors.white, size: 22),
+                                    tooltip: 'About',
+                                    onPressed: () => _showAboutScreen(context),
+                                  ),
+                                  SizedBox(width: 2),
+                                  IconButton(
+                                    icon: Icon(Icons.mail_outline, color: Colors.white, size: 22),
+                                    tooltip: 'Contact',
+                                    onPressed: () => _showContactScreen(context),
+                                  ),
+                                  SizedBox(width: 2),
+                                  IconButton(
+                                    icon: Icon(Icons.privacy_tip_outlined, color: Colors.white, size: 22),
+                                    tooltip: 'Privacy',
+                                    onPressed: () => _showPrivacyScreen(context),
+                                  ),
+                                  SizedBox(width: 2),
+                                  GestureDetector(
+                                    onTap: () {
+                                      Navigator.push(context, MaterialPageRoute(builder: (_) => LoginAdminScreen()));
+                                    },
+                                    child: Container(
+                                      margin: EdgeInsets.only(top: 2, right: 2),
+                                      child: Icon(
+                                        Icons.verified_user_outlined,
+                                        color: Colors.white,
+                                        size: 22,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ),
-                          Column(
-                            children: [
-                              Image.asset(
-                                'assets/images/logo.png',
-                                height: 48,
-                                fit: BoxFit.contain,
+                            const SizedBox(height: 16),
+                            Image.asset(
+                              'assets/images/logo.png',
+                              height: 48,
+                              fit: BoxFit.contain,
+                            ),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'LifeCare Connect',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
                               ),
-                              const SizedBox(height: 16),
-                              const Text(
-                                'LifeCare Connect',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Connecting communities to quality healthcare',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.white70,
                               ),
-                              const SizedBox(height: 8),
-                              const Text(
-                                'Connecting communities to quality healthcare',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.white70,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     SizedBox(height: 40),
@@ -321,6 +359,31 @@ class LoginScreen extends StatelessWidget {
                           decoration: TextDecoration.underline,
                         ),
                       ),
+                    ),
+                    // ...existing code...
+                    // Footer with About, Contact, Privacy buttons
+                    SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        TextButton.icon(
+                          icon: Icon(Icons.info_outline, color: Colors.teal),
+                          label: Text('About', style: TextStyle(color: Colors.teal)),
+                          onPressed: () => _showAboutScreen(context),
+                        ),
+                        SizedBox(width: 8),
+                        TextButton.icon(
+                          icon: Icon(Icons.mail_outline, color: Colors.teal),
+                          label: Text('Contact', style: TextStyle(color: Colors.teal)),
+                          onPressed: () => _showContactScreen(context),
+                        ),
+                        SizedBox(width: 8),
+                        TextButton.icon(
+                          icon: Icon(Icons.privacy_tip_outlined, color: Colors.teal),
+                          label: Text('Privacy', style: TextStyle(color: Colors.teal)),
+                          onPressed: () => _showPrivacyScreen(context),
+                        ),
+                      ],
                     ),
                   ],
                 ),

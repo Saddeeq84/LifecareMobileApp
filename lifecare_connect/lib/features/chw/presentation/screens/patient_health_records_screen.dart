@@ -330,6 +330,11 @@ class PatientHealthRecordsScreen extends StatelessWidget {
         minChildSize: 0.5,
         expand: false,
         builder: (context, scrollController) {
+          // Merge top-level fields and data fields for display
+          final Map<String, dynamic> merged = {...recordData};
+          if (recordData['data'] is Map<String, dynamic>) {
+            merged.addAll(recordData['data'] as Map<String, dynamic>);
+          }
           return Container(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -349,7 +354,7 @@ class PatientHealthRecordsScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  _getRecordTitle(recordData['type'] ?? ''),
+                  _getRecordTitle(merged['type'] ?? ''),
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -358,14 +363,14 @@ class PatientHealthRecordsScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Recorded on ${_formatDate(recordData['createdAt'])}',
+                  'Recorded on ${_formatDate(merged['createdAt'])}',
                   style: TextStyle(color: Colors.grey[600]),
                 ),
                 const Divider(height: 32),
                 Expanded(
                   child: ListView(
                     controller: scrollController,
-                    children: _buildDetailItems(recordData['data'] ?? {}),
+                    children: _buildDetailItems(merged),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -420,25 +425,91 @@ class PatientHealthRecordsScreen extends StatelessWidget {
 
   List<Widget> _buildDetailItems(Map<String, dynamic> data) {
     final List<Widget> items = [];
-
-    // Vital Signs Section
-    items.add(const _SectionHeader(title: 'Vital Signs'));
-    if (data['bloodPressure'] != null) {
-      items.add(_DetailItem(label: 'Blood Pressure', value: _safeToString(data['bloodPressure'])));
-    }
-    if (data['weight'] != null) {
-      items.add(_DetailItem(label: 'Weight', value: '${data['weight']} kg'));
-    }
-    if (data['height'] != null) {
-      items.add(_DetailItem(label: 'Height', value: '${data['height']} cm'));
-    }
-    if (data['bmi'] != null) {
-      final bmi = double.parse(data['bmi'].toString()).toStringAsFixed(1);
-      final category = data['bmiCategory'] ?? '';
-      items.add(_DetailItem(label: 'BMI', value: '$bmi ($category)'));
+    // Always show all available fields for any user (doctor, CHW, etc.)
+    // Group by sections if possible, otherwise just list all fields
+    if (data.isEmpty) {
+      items.add(const Text('No details available', style: TextStyle(color: Colors.grey)));
+      return items;
     }
 
-    // Laboratory Results Section
+    // Provider Section
+    if (data['providerName'] != null) {
+      items.add(_DetailItem(label: 'Provider', value: _safeToString(data['providerName'])));
+    }
+    // Diagnosis Section
+    if (data['diagnosis'] != null) {
+      items.add(const _SectionHeader(title: 'Diagnosis'));
+      items.add(_DetailItem(label: 'Diagnosis', value: _safeToString(data['diagnosis'])));
+    }
+    if (data['prescription'] != null) {
+      items.add(const _SectionHeader(title: 'Prescription'));
+      final prescription = data['prescription'];
+      if (prescription is List) {
+        for (var p in prescription) {
+          if (p is String) {
+            items.add(_DetailItem(label: 'Prescription', value: p));
+          } else if (p is Map<String, dynamic>) {
+            // If structured, show as before
+            String line = '';
+            if (p['medication'] != null) line += p['medication'].toString();
+            if (p['strength'] != null) line += ' ${p['strength']}';
+            if (p['dosage'] != null) line += ' ${p['dosage']}';
+            if (p['frequency'] != null) line += ' ${p['frequency']}';
+            if (p['duration'] != null) line += ' for ${p['duration']}';
+            if (p['specialInstructions'] != null) line += ' (${p['specialInstructions']})';
+            items.add(_DetailItem(label: 'Prescription', value: line.trim()));
+          } else {
+            items.add(_DetailItem(label: 'Prescription', value: _safeToString(p)));
+          }
+        }
+      } else if (prescription is String) {
+        items.add(_DetailItem(label: 'Prescription', value: prescription));
+      } else if (prescription is Map<String, dynamic>) {
+        String line = '';
+        if (prescription['medication'] != null) line += prescription['medication'].toString();
+        if (prescription['strength'] != null) line += ' ${prescription['strength']}';
+        if (prescription['dosage'] != null) line += ' ${prescription['dosage']}';
+        if (prescription['frequency'] != null) line += ' ${prescription['frequency']}';
+        if (prescription['duration'] != null) line += ' for ${prescription['duration']}';
+        if (prescription['specialInstructions'] != null) line += ' (${prescription['specialInstructions']})';
+        items.add(_DetailItem(label: 'Prescription', value: line.trim()));
+      } else {
+        items.add(_DetailItem(label: 'Prescription', value: _safeToString(prescription)));
+      }
+    }
+    if (data['labRequest'] != null) {
+      items.add(const _SectionHeader(title: 'Lab Request'));
+      items.add(_DetailItem(label: 'Lab Request', value: _safeToString(data['labRequest'])));
+    }
+    if (data['radiologyRequest'] != null) {
+      items.add(const _SectionHeader(title: 'Radiology Request'));
+      items.add(_DetailItem(label: 'Radiology Request', value: _safeToString(data['radiologyRequest'])));
+    }
+    if (data['followUpNote'] != null) {
+      items.add(const _SectionHeader(title: 'Follow-up Note'));
+      items.add(_DetailItem(label: 'Follow-up Note', value: _safeToString(data['followUpNote'])));
+    }
+    if (data['additionalNotes'] != null) {
+      items.add(const _SectionHeader(title: 'Additional Notes'));
+      items.add(_DetailItem(label: 'Additional Notes', value: _safeToString(data['additionalNotes'])));
+    }
+    if (data['bloodPressure'] != null || data['weight'] != null || data['height'] != null || data['bmi'] != null) {
+      items.add(const _SectionHeader(title: 'Vital Signs'));
+      if (data['bloodPressure'] != null) {
+        items.add(_DetailItem(label: 'Blood Pressure', value: _safeToString(data['bloodPressure'])));
+      }
+      if (data['weight'] != null) {
+        items.add(_DetailItem(label: 'Weight', value: '${data['weight']} kg'));
+      }
+      if (data['height'] != null) {
+        items.add(_DetailItem(label: 'Height', value: '${data['height']} cm'));
+      }
+      if (data['bmi'] != null) {
+        final bmi = double.parse(data['bmi'].toString()).toStringAsFixed(1);
+        final category = data['bmiCategory'] ?? '';
+        items.add(_DetailItem(label: 'BMI', value: '$bmi ($category)'));
+      }
+    }
     if (data['bloodSugar'] != null || data['urineAnalysis'] != null) {
       items.add(const _SectionHeader(title: 'Laboratory Results'));
       if (data['bloodSugar'] != null) {
@@ -448,8 +519,6 @@ class PatientHealthRecordsScreen extends StatelessWidget {
         items.add(_DetailItem(label: 'Urine Analysis', value: _safeToString(data['urineAnalysis'])));
       }
     }
-
-    // Clinical Notes Section
     if (data['symptoms'] != null || data['medications'] != null || data['notes'] != null) {
       items.add(const _SectionHeader(title: 'Clinical Notes'));
       if (data['symptoms'] != null) {
@@ -462,12 +531,9 @@ class PatientHealthRecordsScreen extends StatelessWidget {
         items.add(_DetailItem(label: 'Additional Notes', value: _safeToString(data['notes'])));
       }
     }
-
-    // ANC Checklist Section - for ANC consultation records
     if (data['checklistData'] != null) {
       items.add(const _SectionHeader(title: 'ANC Checklist'));
       final checklistData = data['checklistData'] as Map<String, dynamic>;
-      
       if (checklistData['currentSymptoms'] != null) {
         items.add(_DetailItem(label: 'Current Symptoms', value: _safeToString(checklistData['currentSymptoms'])));
       }
@@ -487,25 +553,34 @@ class PatientHealthRecordsScreen extends StatelessWidget {
         items.add(_DetailItem(label: 'Current Medications', value: _safeToString(checklistData['currentMedications'])));
       }
     }
-
-    // Pre-consultation Checklist Section
-    if (data['reason'] != null || data['allergies'] != null || data['medicalHistory'] != null) {
+    final healthAssessment = data['healthAssessment'] as Map<String, dynamic>?;
+    final hasPreConsultTop = data['reason'] != null || data['symptoms'] != null || data['currentMedications'] != null || data['allergies'] != null || data['appointmentType'] != null || data['durationOfSymptoms'] != null || data['appointmentDate'] != null || data['consultationChannel'] != null || data['medicalHistory'] != null;
+    final hasPreConsultNested = healthAssessment != null && healthAssessment.isNotEmpty;
+    bool addedAny = false;
+    if (hasPreConsultTop || hasPreConsultNested) {
       items.add(const _SectionHeader(title: 'Pre-Consultation Information'));
-      if (data['reason'] != null) {
-        items.add(_DetailItem(label: 'Reason for Visit', value: _safeToString(data['reason'])));
+      final ignored = {'providerName','providerType','appointmentId','createdAt','updatedAt','userId','patientUid','type','healthAssessment','attachments','source','submissionTimestamp'};
+      data.forEach((key, value) {
+        if (!ignored.contains(key) && value != null && key != 'healthAssessment') {
+          items.add(_DetailItem(label: _formatFieldName(key), value: _safeToString(value)));
+          addedAny = true;
+        }
+      });
+      if (healthAssessment != null) {
+        healthAssessment.forEach((key, value) {
+          if (value != null) {
+            items.add(_DetailItem(label: _formatFieldName(key), value: _safeToString(value)));
+            addedAny = true;
+          }
+        });
       }
-      if (data['allergies'] != null) {
-        items.add(_DetailItem(label: 'Known Allergies', value: _safeToString(data['allergies'])));
-      }
-      if (data['medicalHistory'] != null) {
-        items.add(_DetailItem(label: 'Medical History', value: _safeToString(data['medicalHistory'])));
-      }
-      if (data['currentMedications'] != null) {
-        items.add(_DetailItem(label: 'Current Medications', value: _safeToString(data['currentMedications'])));
+      if (!addedAny) {
+        items.add(const Padding(
+          padding: EdgeInsets.symmetric(vertical: 8),
+          child: Text('No pre-consultation details available.', style: TextStyle(color: Colors.grey)),
+        ));
       }
     }
-
-    // Next Visit Section
     if (data['nextVisitDate'] != null) {
       items.add(const _SectionHeader(title: 'Follow-up'));
       final nextVisit = data['nextVisitDate'] as Timestamp;
@@ -514,19 +589,16 @@ class PatientHealthRecordsScreen extends StatelessWidget {
         value: DateFormat('MMMM dd, yyyy').format(nextVisit.toDate()),
       ));
     }
-
-    // Show all other data fields that weren't specifically handled
     final handledFields = {
+      'providerName', 'diagnosis', 'prescription', 'labRequest', 'radiologyRequest', 'followUpNote', 'additionalNotes',
       'bloodPressure', 'weight', 'height', 'bmi', 'bmiCategory',
       'bloodSugar', 'urineAnalysis', 'symptoms', 'medications', 'notes',
       'checklistData', 'reason', 'allergies', 'medicalHistory', 'currentMedications',
       'nextVisitDate', 'createdAt', 'type', 'userId', 'date', 'accessibleBy'
     };
-    
     final additionalFields = data.entries
         .where((entry) => !handledFields.contains(entry.key) && entry.value != null)
         .toList();
-    
     if (additionalFields.isNotEmpty) {
       items.add(const _SectionHeader(title: 'Additional Information'));
       for (final entry in additionalFields) {
@@ -536,7 +608,6 @@ class PatientHealthRecordsScreen extends StatelessWidget {
         ));
       }
     }
-
     return items;
   }
 

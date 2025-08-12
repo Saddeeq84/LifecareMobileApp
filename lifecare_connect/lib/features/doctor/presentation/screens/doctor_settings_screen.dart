@@ -1,9 +1,8 @@
-
-
+import 'package:lifecare_connect/features/auth/presentation/screens/privacy_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class DoctorSettingsScreen extends StatefulWidget {
   const DoctorSettingsScreen({super.key});
@@ -13,53 +12,10 @@ class DoctorSettingsScreen extends StatefulWidget {
 }
 
 class _DoctorSettingsScreenState extends State<DoctorSettingsScreen> {
-  final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
-  bool notificationsEnabled = true;
   bool emailNotifications = true;
   bool smsNotifications = false;
   String language = 'English';
   String theme = 'System';
-
-  @override
-  void initState() {
-    super.initState();
-    _loadUserSettings();
-  }
-
-  Future<void> _loadUserSettings() async {
-    try {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(currentUserId)
-          .get();
-      
-      if (doc.exists) {
-        final data = doc.data()!;
-        setState(() {
-          notificationsEnabled = data['notificationsEnabled'] ?? true;
-          emailNotifications = data['emailNotifications'] ?? true;
-          smsNotifications = data['smsNotifications'] ?? false;
-          language = data['language'] ?? 'English';
-          theme = data['theme'] ?? 'System';
-        });
-      }
-    } catch (e) {
-
-    }
-  }
-
-  Future<void> _updateSetting(String key, dynamic value) async {
-    try {
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(currentUserId)
-          .update({key: value});
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to update setting: $e')),
-      );
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -76,35 +32,7 @@ class _DoctorSettingsScreenState extends State<DoctorSettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-
-          _buildSectionHeader('Account'),
-          _buildSettingsTile(
-            icon: Icons.person,
-            title: 'Profile Information',
-            subtitle: 'Update your personal details',
-            onTap: () => context.push('/doctor_profile'),
-          ),
-          _buildSettingsTile(
-            icon: Icons.security,
-            title: 'Security',
-            subtitle: 'Change password and security settings',
-            onTap: () => _showSecurityDialog(),
-          ),
-          
-          const SizedBox(height: 24),
-          
-
           _buildSectionHeader('Notifications'),
-          _buildSwitchTile(
-            icon: Icons.notifications,
-            title: 'Push Notifications',
-            subtitle: 'Receive notifications on this device',
-            value: notificationsEnabled,
-            onChanged: (value) {
-              setState(() => notificationsEnabled = value);
-              _updateSetting('notificationsEnabled', value);
-            },
-          ),
           _buildSwitchTile(
             icon: Icons.email,
             title: 'Email Notifications',
@@ -125,10 +53,7 @@ class _DoctorSettingsScreenState extends State<DoctorSettingsScreen> {
               _updateSetting('smsNotifications', value);
             },
           ),
-          
           const SizedBox(height: 24),
-          
-
           _buildSectionHeader('Preferences'),
           _buildDropdownTile(
             icon: Icons.language,
@@ -152,56 +77,81 @@ class _DoctorSettingsScreenState extends State<DoctorSettingsScreen> {
               _updateSetting('theme', value);
             },
           ),
-          
           const SizedBox(height: 24),
-          
-
-          _buildSectionHeader('Privacy & Data'),
+          _buildSectionHeader('Privacy Policy'),
           _buildSettingsTile(
             icon: Icons.privacy_tip,
             title: 'Privacy Policy',
             subtitle: 'View our privacy policy',
-            onTap: () => _showPrivacyPolicy(),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const PrivacyScreen()),
+            ),
           ),
-          _buildSettingsTile(
-            icon: Icons.description,
-            title: 'Terms of Service',
-            subtitle: 'View terms and conditions',
-            onTap: () => _showTermsOfService(),
-          ),
-          _buildSettingsTile(
-            icon: Icons.download,
-            title: 'Download My Data',
-            subtitle: 'Export your account data',
-            onTap: () => _showDataExportDialog(),
-          ),
-          
           const SizedBox(height: 24),
-          
-
-          _buildSectionHeader('Support'),
+          _buildSectionHeader('Help & Support'),
           _buildSettingsTile(
             icon: Icons.help,
             title: 'Help & Support',
-            subtitle: 'Get help or contact support',
-            onTap: () => _showHelpDialog(),
+            subtitle: 'Get help and contact support',
+            onTap: () {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Help & Support'),
+                  content: const SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Need help with LifeCare Connect?',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        SizedBox(height: 16),
+                        Text('📧 Email: contact_lifecare@rhemn.org.ng'),
+                        SizedBox(height: 8),
+                        Text('📞 Phone: +2347072127123'),
+                        SizedBox(height: 8),
+                        Text('🕒 Hours: Monday - Friday, 8AM - 6PM'),
+                        SizedBox(height: 16),
+                        Text(
+                          'Common Issues:',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        SizedBox(height: 8),
+                        Text('• Login problems: Check internet connection'),
+                        Text('• Booking issues: Ensure all fields are filled'),
+                        Text('• Emergency services: Call 199 for immediate help'),
+                      ],
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Close'),
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
-          _buildSettingsTile(
-            icon: Icons.bug_report,
-            title: 'Report a Bug',
-            subtitle: 'Report issues or problems',
-            onTap: () => _showBugReportDialog(),
+          Card(
+            color: Colors.red.shade50,
+            child: ListTile(
+              leading: Icon(Icons.delete_forever, color: Colors.red.shade700),
+              title: Text(
+                'Delete Account',
+                style: TextStyle(
+                  color: Colors.red.shade700,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              subtitle: const Text('Permanently delete your account'),
+              onTap: _showDeleteAccountDialog,
+            ),
           ),
-          _buildSettingsTile(
-            icon: Icons.info,
-            title: 'About',
-            subtitle: 'App version and information',
-            onTap: () => _showAboutDialog(),
-          ),
-          
           const SizedBox(height: 32),
-          
-
           Card(
             color: Colors.red.shade50,
             child: ListTile(
@@ -214,7 +164,7 @@ class _DoctorSettingsScreenState extends State<DoctorSettingsScreen> {
                 ),
               ),
               subtitle: const Text('Sign out of your account'),
-              onTap: () => _showLogoutDialog(),
+              onTap: _showLogoutDialog,
             ),
           ),
         ],
@@ -303,293 +253,68 @@ class _DoctorSettingsScreenState extends State<DoctorSettingsScreen> {
     );
   }
 
-  void _showSecurityDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Security Settings'),
-        content: const Text('Security settings will be available in a future update.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showPrivacyPolicy() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Privacy Policy'),
-        content: const SingleChildScrollView(
-          child: Text(
-            'Our Privacy Policy outlines how we collect, use, and protect your personal information...\n\n'
-            'This is a placeholder for the full privacy policy content.',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showTermsOfService() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Terms of Service'),
-        content: const SingleChildScrollView(
-          child: Text(
-            'By using this application, you agree to the following terms and conditions...\n\n'
-            'This is a placeholder for the full terms of service content.',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showDataExportDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Download My Data'),
-        content: const Text(
-          'We will email you a copy of all your data within 7 business days.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Data export request submitted')),
-              );
-            },
-            child: const Text('Request'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showHelpDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Help & Support'),
-        content: const Text(
-          'For assistance, please contact our support team:\n\n'
-          'Email: support@lifecare.com\n'
-          'Phone: +234-xxx-xxx-xxxx\n\n'
-          'We are available 24/7 to help you.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showBugReportDialog() {
-    final bugController = TextEditingController();
-    String selectedCategory = 'General';
-    String selectedPriority = 'Medium';
-    bool isSubmitting = false;
-    
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text('Report a Bug'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Please describe the issue you encountered:'),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: bugController,
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    hintText: 'Describe the bug in detail...',
-                  ),
-                  maxLines: 4,
-                ),
-                const SizedBox(height: 16),
-                const Text('Category:'),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  value: selectedCategory,
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                  ),
-                  items: ['General', 'UI/UX', 'Performance', 'Crash', 'Feature Request']
-                      .map((category) => DropdownMenuItem(
-                            value: category,
-                            child: Text(category),
-                          ))
-                      .toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      selectedCategory = value!;
-                    });
-                  },
-                ),
-                const SizedBox(height: 16),
-                const Text('Priority:'),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  value: selectedPriority,
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                  ),
-                  items: ['Low', 'Medium', 'High', 'Critical']
-                      .map((priority) => DropdownMenuItem(
-                            value: priority,
-                            child: Text(priority),
-                          ))
-                      .toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      selectedPriority = value!;
-                    });
-                  },
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: isSubmitting ? null : () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: isSubmitting 
-                  ? null 
-                  : () async {
-                      if (bugController.text.trim().isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Please describe the issue')),
-                        );
-                        return;
-                      }
-                      
-                      setState(() {
-                        isSubmitting = true;
-                      });
-                      
-                      await _submitBugReport(
-                        bugController.text.trim(),
-                        selectedCategory,
-                        selectedPriority,
-                      );
-                      
-                      Navigator.of(context).pop();
-                    },
-              child: isSubmitting 
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Submit'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _submitBugReport(String description, String category, String priority) async {
+  void _updateSetting(String key, dynamic value) async {
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    if (currentUserId == null) return;
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        throw Exception('User not authenticated');
-      }
-
-
-      final userDoc = await FirebaseFirestore.instance
+      await FirebaseFirestore.instance
           .collection('users')
-          .doc(user.uid)
-          .get();
-      
-      final userData = userDoc.data();
-      
-
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final ticketId = 'BUG-${timestamp.toString().substring(timestamp.toString().length - 8)}';
-      
-
-      final deviceInfo = {
-        'platform': 'Flutter',
-        'timestamp': DateTime.now().toIso8601String(),
-        'userAgent': 'LifeCare Connect App',
-      };
-
-      await FirebaseFirestore.instance.collection('bug_reports').add({
-        'ticketId': ticketId,
-        'description': description,
-        'category': category,
-        'priority': priority,
-        'status': 'Open',
-        'reportedBy': user.uid,
-        'reporterEmail': user.email ?? '',
-        'reporterRole': 'doctor',
-        'reporterName': userData?['fullName'] ?? 'Unknown',
-        'deviceInfo': deviceInfo,
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Bug report submitted successfully! Ticket ID: $ticketId'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
+          .doc(currentUserId)
+          .update({key: value});
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to submit bug report: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      // Handle error
     }
   }
 
-  void _showAboutDialog() {
-    showAboutDialog(
+  void _showDeleteAccountDialog() {
+    showDialog(
       context: context,
-      applicationName: 'LifeCare Connect',
-      applicationVersion: '1.0.0',
-      applicationIcon: const Icon(Icons.health_and_safety, size: 48),
-      children: const [
-        Text('LifeCare Connect is a comprehensive healthcare management platform.'),
-      ],
+      builder: (context) {
+        bool isDeleting = false;
+        return StatefulBuilder(
+          builder: (context, setState) => AlertDialog(
+            title: const Text('Delete Account'),
+            content: const Text('Are you sure you want to permanently delete your account? This action cannot be undone.'),
+            actions: [
+              TextButton(
+                onPressed: isDeleting ? null : () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                onPressed: isDeleting
+                    ? null
+                    : () async {
+                        setState(() => isDeleting = true);
+                        try {
+                          final user = FirebaseAuth.instance.currentUser;
+                          await FirebaseFirestore.instance.collection('users').doc(user!.uid).delete();
+                          await user.delete();
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Account deleted successfully'), backgroundColor: Colors.green),
+                            );
+                            Navigator.of(context).pop();
+                            context.go('/login');
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Failed to delete account: e.toString()}'), backgroundColor: Colors.red),
+                            );
+                          }
+                        } finally {
+                          setState(() => isDeleting = false);
+                        }
+                      },
+                child: isDeleting
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Text('Delete'),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 

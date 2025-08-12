@@ -48,7 +48,8 @@ class _MakeReferralFormState extends State<_MakeReferralForm> {
   final _patientIdController = TextEditingController();
   final _reasonController = TextEditingController();
   final _notesController = TextEditingController();
-  final _facilityController = TextEditingController();
+  String? _selectedDoctorId;
+  String? _selectedDoctorName;
   
   bool _isLoading = false;
   String? _selectedUrgency;
@@ -76,15 +77,14 @@ class _MakeReferralFormState extends State<_MakeReferralForm> {
     _patientIdController.dispose();
     _reasonController.dispose();
     _notesController.dispose();
-    _facilityController.dispose();
     super.dispose();
   }
 
   Future<void> _selectDate() async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime.now(),
+      initialDate: DateTime.now().subtract(const Duration(days: 365 * 20)),
+      firstDate: DateTime(1900),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
     if (picked != null) {
@@ -126,7 +126,8 @@ class _MakeReferralFormState extends State<_MakeReferralForm> {
         'referring_provider_role': widget.role,
         'reason': _reasonController.text.trim(),
         'notes': _notesController.text.trim(),
-        'facility': _facilityController.text.trim(),
+        'doctor_id': _selectedDoctorId,
+        'doctor_name': _selectedDoctorName,
         'urgency': _selectedUrgency,
         'specialty': _selectedSpecialty,
         'referral_date': Timestamp.fromDate(_selectedDate!),
@@ -208,15 +209,47 @@ class _MakeReferralFormState extends State<_MakeReferralForm> {
               ),
               const SizedBox(height: 16),
 
-              TextFormField(
-                controller: _facilityController,
-                decoration: const InputDecoration(
-                  labelText: 'Referring To (Facility/Provider) *',
-                  prefixIcon: Icon(Icons.local_hospital),
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) =>
-                    value?.trim().isEmpty ?? true ? 'Please enter facility/provider' : null,
+              StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+          .collection('users')
+          .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                    return const Text('No doctors found');
+                  }
+                  final doctors = snapshot.data!.docs;
+                  // Filter client-side for any role containing 'doctor' (case-insensitive)
+                  final filteredDoctors = doctors.where((doc) {
+                    final role = (doc['role'] ?? '').toString().toLowerCase();
+                    return role.contains('doctor');
+                  }).toList();
+                  return DropdownButtonFormField<String>(
+                    value: _selectedDoctorId,
+                    decoration: const InputDecoration(
+                      labelText: 'Select Doctor *',
+                      prefixIcon: Icon(Icons.local_hospital),
+                      border: OutlineInputBorder(),
+                    ),
+                    items: filteredDoctors.map((doc) {
+                      final name = doc['name'] ?? doc['fullName'] ?? 'Doctor';
+                      return DropdownMenuItem(
+                        value: doc.id,
+                        child: Text(name),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      final selected = filteredDoctors.firstWhere((doc) => doc.id == value);
+                      setState(() {
+                        _selectedDoctorId = value;
+                        _selectedDoctorName = selected['name'] ?? selected['fullName'] ?? 'Doctor';
+                      });
+                    },
+                    validator: (value) => value == null ? 'Please select a doctor' : null,
+                  );
+                },
               ),
               const SizedBox(height: 16),
 

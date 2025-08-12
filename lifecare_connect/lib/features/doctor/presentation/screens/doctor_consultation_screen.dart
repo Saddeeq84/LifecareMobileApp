@@ -281,26 +281,87 @@ class _PendingConsultationTab extends StatelessWidget {
                           IconButton(
                             icon: const Icon(Icons.info, color: Colors.indigo, size: 28),
                             tooltip: 'View Details',
-                            onPressed: () {
+                            onPressed: () async {
+                              final patientId = appointment['patientId'];
+                              if (patientId == null) {
+                                showDialog(
+                                  context: context,
+                                  builder: (context) => const AlertDialog(
+                                    title: Text('No Patient ID'),
+                                    content: Text('No patient ID found for this appointment.'),
+                                  ),
+                                );
+                                return;
+                              }
+                              // Fetch latest health record for this patient (any type)
+                              final query = await FirebaseFirestore.instance
+                                  .collection('health_records')
+                                  .where('patientId', isEqualTo: patientId)
+                                  .orderBy('timestamp', descending: true)
+                                  .limit(1)
+                                  .get();
+                              if (query.docs.isEmpty) {
+                                showDialog(
+                                  context: context,
+                                  builder: (context) => const AlertDialog(
+                                    title: Text('No Health Record Found'),
+                                    content: Text('No health record found for this patient.'),
+                                  ),
+                                );
+                                return;
+                              }
+                              final record = query.docs.first.data();
+                              // Filter out system fields
+                              final filteredDetails = <String, dynamic>{};
+                              record.forEach((key, value) {
+                                final k = key.toLowerCase();
+                                if (k == 'timestamp' || k == 'createdat' || k == 'updatedat' || k == 'appointmentid' || k == 'patientid' || k == 'prescribedat' || k == 'requestedat' || k == 'userid' || k == 'recordid' || k == 'id' || k == 'source' || k == 'status' || k == 'fileurls' || k == 'filenames' || k == 'uploaddate' || k == 'submissiontimestamp' || k == 'requiresreview' || k == 'accessibleby' || k == 'iseditable' || k == 'isdeletable') {
+                                  return;
+                                }
+                                filteredDetails[key] = value;
+                              });
+                              String formatLabel(String key) {
+                                final k = key.toString().replaceAll('_', ' ');
+                                return k.isNotEmpty ? (k[0].toUpperCase() + k.substring(1)) : k;
+                              }
                               showDialog(
                                 context: context,
                                 builder: (context) {
                                   return AlertDialog(
-                                    title: const Text('Booking/Referral Details'),
+                                    title: const Text('Health Record Details'),
                                     content: SingleChildScrollView(
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          _buildInfoRow('Patient Name', appointment['patientName'] ?? 'Unknown'),
-                                          _buildInfoRow('Age', appointment['age']?.toString() ?? 'Not provided'),
-                                          _buildInfoRow('Sex', appointment['sex'] ?? 'Not provided'),
-                                          _buildInfoRow('Phone', appointment['phone'] ?? 'Not provided'),
-                                          _buildInfoRow('Address', appointment['address'] ?? 'Not provided'),
-                                          _buildInfoRow('Appointment Date', appointment['appointmentDate']?.toString() ?? 'Not provided'),
-                                          if (appointment['referralReason'] != null && appointment['referralReason'].toString().isNotEmpty)
-                                            _buildInfoRow('Referral Reason', appointment['referralReason']),
-                                          if (appointment['reason'] != null && appointment['reason'].toString().isNotEmpty)
-                                            _buildInfoRow('Consultation Reason', appointment['reason']),
+                                          ...filteredDetails.entries
+                                              .where((entry) => entry.value != null && entry.value.toString().isNotEmpty)
+                                              .map((entry) {
+                                                final value = entry.value;
+                                                String displayValue;
+                                                if (entry.key.toLowerCase() == 'prescriptions' && value is List) {
+                                                  displayValue = value.map((e) {
+                                                    if (e is Map && e.containsKey('name')) return e['name'];
+                                                    return e.toString();
+                                                  }).join(', ');
+                                                } else if (entry.key.toLowerCase() == 'laboratoryinvestigations' && value is List) {
+                                                  displayValue = value.map((e) {
+                                                    if (e is Map && e.containsKey('name')) return e['name'];
+                                                    return e.toString();
+                                                  }).join(', ');
+                                                } else {
+                                                  displayValue = value.toString();
+                                                }
+                                                return Padding(
+                                                  padding: const EdgeInsets.symmetric(vertical: 2),
+                                                  child: Row(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      Text('${formatLabel(entry.key)}: ', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                                      Expanded(child: Text(displayValue, style: const TextStyle(fontSize: 15))),
+                                                    ],
+                                                  ),
+                                                );
+                                              })
                                         ],
                                       ),
                                     ),
@@ -557,21 +618,30 @@ class _DoctorConsultationDetailScreenState extends State<DoctorConsultationDetai
   List<String> selectedRadiology = [];
 
   final List<String> prescriptionOptions = [
-    'Paracetamol',
-    'Amoxicillin',
-    'Ibuprofen',
-    'Metformin',
-    'Lisinopril',
-    'Ciprofloxacin',
-    'Azithromycin',
-    'Omeprazole',
-    'Amlodipine',
-    'Losartan',
-    'Atorvastatin',
-    'Cetirizine',
-    'Salbutamol',
-    'Hydrochlorothiazide',
-    'Other'
+  'Paracetamol',
+  'Amoxicillin',
+  'Ibuprofen',
+  'Metformin',
+  'Lisinopril',
+  'Ciprofloxacin',
+  'Azithromycin',
+  'Omeprazole',
+  'Amlodipine',
+  'Losartan',
+  'Atorvastatin',
+  'Cetirizine',
+  'Salbutamol',
+  'Hydrochlorothiazide',
+  // Antimalarial medications (sub-Saharan Africa)
+  'Artemether-Lumefantrine',
+  'Artesunate',
+  'Quinine',
+  'Dihydroartemisinin-Piperaquine',
+  'Sulfadoxine-Pyrimethamine',
+  'Chloroquine',
+  'Primaquine',
+  'Mefloquine',
+  'Other'
   ];
   final List<String> labOptions = [
     'CBC',
@@ -758,27 +828,78 @@ class _DoctorConsultationDetailScreenState extends State<DoctorConsultationDetai
                         showDialog(
                           context: context,
                           builder: (context) {
-                            String customMed = '';
+                            final customMedController = TextEditingController();
+                            final customStrengthController = TextEditingController();
+                            final customDosageController = TextEditingController();
+                            final customFrequencyController = TextEditingController();
+                            final customDurationController = TextEditingController();
+                            final formKey = GlobalKey<FormState>();
                             return AlertDialog(
                               title: const Text('Enter custom medication'),
-                              content: TextField(
-                                autofocus: true,
-                                decoration: const InputDecoration(labelText: 'Medication name'),
-                                onChanged: (val) => customMed = val,
+                              content: Form(
+                                key: formKey,
+                                child: SingleChildScrollView(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      TextFormField(
+                                        controller: customMedController,
+                                        decoration: const InputDecoration(labelText: 'Medication name *'),
+                                        validator: (val) => val == null || val.trim().isEmpty ? 'Required' : null,
+                                        autofocus: true,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      TextFormField(
+                                        controller: customStrengthController,
+                                        decoration: const InputDecoration(labelText: 'Strength'),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      TextFormField(
+                                        controller: customDosageController,
+                                        decoration: const InputDecoration(labelText: 'Dosage'),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      TextFormField(
+                                        controller: customFrequencyController,
+                                        decoration: const InputDecoration(labelText: 'Frequency'),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      TextFormField(
+                                        controller: customDurationController,
+                                        decoration: const InputDecoration(labelText: 'Duration'),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
                               actions: [
                                 TextButton(
-                                  onPressed: () => Navigator.of(context).pop(),
+                                  onPressed: () {
+                                    if (Navigator.of(context).canPop()) {
+                                      Navigator.of(context).pop();
+                                    }
+                                  },
                                   child: const Text('Cancel'),
                                 ),
                                 ElevatedButton(
                                   onPressed: () {
-                                    if (customMed.trim().isNotEmpty) {
+                                    if (formKey.currentState?.validate() ?? false) {
+                                      final med = customMedController.text.trim();
+                                      final strength = customStrengthController.text.trim();
+                                      final dosage = customDosageController.text.trim();
+                                      final frequency = customFrequencyController.text.trim();
+                                      final duration = customDurationController.text.trim();
                                       setState(() {
-                                        selectedPrescriptions.add(customMed.trim());
+                                        selectedPrescriptions.add(
+                                          [med, strength, dosage, frequency, duration]
+                                            .where((e) => e.isNotEmpty)
+                                            .join(' | ')
+                                        );
                                       });
+                                      if (Navigator.of(context).canPop()) {
+                                        Navigator.of(context).pop();
+                                      }
                                     }
-                                    Navigator.of(context).pop();
                                   },
                                   child: const Text('Add'),
                                 ),
@@ -786,188 +907,119 @@ class _DoctorConsultationDetailScreenState extends State<DoctorConsultationDetai
                             );
                           },
                         );
-                      } else if (value != null && !selectedPrescriptions.contains(value)) {
-                        setState(() {
-                          selectedPrescriptions.add(value);
-                        });
+                      } else if (value != null && !selectedPrescriptions.any((p) => p.startsWith(value))) {
+                        // Show dialog for default fields for standard medication
+                        final strengthController = TextEditingController();
+                        final dosageController = TextEditingController();
+                        final frequencyController = TextEditingController();
+                        final durationController = TextEditingController();
+                        final formKey = GlobalKey<FormState>();
+                        showDialog(
+                          context: context,
+                          builder: (context) {
+                            return AlertDialog(
+                              title: Text('Enter details for $value'),
+                              content: Form(
+                                key: formKey,
+                                child: SingleChildScrollView(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      TextFormField(
+                                        controller: strengthController,
+                                        decoration: const InputDecoration(labelText: 'Strength'),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      TextFormField(
+                                        controller: dosageController,
+                                        decoration: const InputDecoration(labelText: 'Dosage'),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      TextFormField(
+                                        controller: frequencyController,
+                                        decoration: const InputDecoration(labelText: 'Frequency'),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      TextFormField(
+                                        controller: durationController,
+                                        decoration: const InputDecoration(labelText: 'Duration'),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () {
+                                    if (Navigator.of(context).canPop()) {
+                                      Navigator.of(context).pop();
+                                    }
+                                  },
+                                  child: const Text('Cancel'),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    setState(() {
+                                      selectedPrescriptions.add(
+                                        [value, strengthController.text.trim(), dosageController.text.trim(), frequencyController.text.trim(), durationController.text.trim()]
+                                          .where((e) => e.isNotEmpty)
+                                          .join(' | ')
+                                      );
+                                    });
+                                    if (Navigator.of(context).canPop()) {
+                                      Navigator.of(context).pop();
+                                    }
+                                  },
+                                  child: const Text('Add'),
+                                ),
+                              ],
+                            );
+                          },
+                        );
                       }
                     },
                   ),
                 if (selectedPrescriptions.isNotEmpty)
                   Column(
-                    children: selectedPrescriptions.map((med) {
-
-                      final Map<String, List<String>> medStrengths = {
-                        'Paracetamol': ['500mg', '1g'],
-                        'Amoxicillin': ['250mg', '500mg'],
-                        'Ibuprofen': ['200mg', '400mg'],
-                        'Metformin': ['500mg', '850mg'],
-                        'Lisinopril': ['5mg', '10mg'],
-                        'Ciprofloxacin': ['250mg', '500mg'],
-                        'Azithromycin': ['250mg', '500mg'],
-                        'Omeprazole': ['20mg', '40mg'],
-                        'Amlodipine': ['5mg', '10mg'],
-                        'Losartan': ['50mg', '100mg'],
-                        'Atorvastatin': ['10mg', '20mg'],
-                        'Cetirizine': ['10mg'],
-                        'Salbutamol': ['2mg', '4mg'],
-                        'Hydrochlorothiazide': ['12.5mg', '25mg'],
-                        'Other': ['Custom'],
-                      };
-                      final List<String> dosageOptions = ['1 tablet', '2 tablets', '5ml', '10ml', 'Custom'];
-                      final List<String> frequencyOptions = [
-                        'Once daily',
-                        'Twice daily',
-                        'Three times daily',
-                        'Four times daily',
-                        'As needed',
-                        'Custom',
-                      ];
-                      final List<String> durationOptions = [
-                        '1 day', '3 days', '5 days', '7 days', '10 days', '14 days', 'As needed', 'Custom'
-                      ];
-                      String? selectedStrength;
-                      String? selectedDosage;
-                      String? selectedFrequency;
-                      String? selectedDuration;
-                      final instructionsController = TextEditingController();
-                      final customDurationController = TextEditingController();
-                      return StatefulBuilder(
-                        builder: (context, setCardState) {
-                          return Card(
-                            margin: const EdgeInsets.symmetric(vertical: 6),
-                            elevation: 1,
-                            child: Padding(
-                              padding: const EdgeInsets.all(12.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
+                    children: selectedPrescriptions
+                        .map((med) {
+                          return StatefulBuilder(
+                            builder: (context, setCardState) {
+                              return Card(
+                                margin: const EdgeInsets.symmetric(vertical: 6),
+                                elevation: 1,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(12.0),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Expanded(
-                                        child: Text(
-                                          med,
-                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                                        ),
-                                      ),
-                                      if (!readOnly)
-                                        IconButton(
-                                          icon: const Icon(Icons.delete, color: Colors.red),
-                                          tooltip: 'Remove',
-                                          onPressed: () {
-                                            setState(() {
-                                              selectedPrescriptions.remove(med);
-                                            });
-                                          },
-                                        ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    children: [
-                                      Flexible(
-                                        child: DropdownButtonFormField<String>(
-                                          decoration: const InputDecoration(
-                                            labelText: 'Strength',
-                                            border: OutlineInputBorder(),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              med,
+                                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                            ),
                                           ),
-                                          value: selectedStrength,
-                                          items: medStrengths[med]?.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList() ?? [],
-                                          onChanged: readOnly ? null : (val) {
-                                            setCardState(() {
-                                              selectedStrength = val;
-                                            });
-                                          },
-                                          validator: (val) => (val == null || val.isEmpty) ? 'Strength required' : null,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Flexible(
-                                        child: DropdownButtonFormField<String>(
-                                          decoration: const InputDecoration(
-                                            labelText: 'Dosage',
-                                            border: OutlineInputBorder(),
-                                          ),
-                                          value: selectedDosage,
-                                          items: dosageOptions.map((d) => DropdownMenuItem(value: d, child: Text(d))).toList(),
-                                          onChanged: readOnly ? null : (val) {
-                                            setCardState(() {
-                                              selectedDosage = val;
-                                            });
-                                          },
-                                          validator: (val) => (val == null || val.isEmpty) ? 'Dosage required' : null,
-                                        ),
+                                          if (!readOnly)
+                                            IconButton(
+                                              icon: const Icon(Icons.delete, color: Colors.red),
+                                              tooltip: 'Remove',
+                                              onPressed: () {
+                                                setState(() {
+                                                  selectedPrescriptions.remove(med);
+                                                });
+                                              },
+                                            ),
+                                        ],
                                       ),
                                     ],
                                   ),
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    children: [
-                                      Flexible(
-                                        child: DropdownButtonFormField<String>(
-                                          decoration: const InputDecoration(
-                                            labelText: 'Frequency',
-                                            border: OutlineInputBorder(),
-                                          ),
-                                          value: selectedFrequency,
-                                          items: frequencyOptions.map((f) => DropdownMenuItem(value: f, child: Text(f))).toList(),
-                                          onChanged: readOnly ? null : (val) {
-                                            setCardState(() {
-                                              selectedFrequency = val;
-                                            });
-                                          },
-                                          validator: (val) => (val == null || val.isEmpty) ? 'Frequency required' : null,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Flexible(
-                                        child: DropdownButtonFormField<String>(
-                                          decoration: const InputDecoration(
-                                            labelText: 'Duration',
-                                            border: OutlineInputBorder(),
-                                          ),
-                                          value: selectedDuration,
-                                          items: durationOptions.map((d) => DropdownMenuItem(value: d, child: Text(d))).toList(),
-                                          onChanged: readOnly ? null : (val) {
-                                            setCardState(() {
-                                              selectedDuration = val;
-                                            });
-                                          },
-                                          validator: (val) => (val == null || val.isEmpty) ? 'Duration required' : null,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  if (selectedDuration == 'Custom')
-                                    Padding(
-                                      padding: const EdgeInsets.only(top: 8.0),
-                                      child: TextFormField(
-                                        controller: customDurationController,
-                                        decoration: const InputDecoration(
-                                          labelText: 'Enter custom duration',
-                                          border: OutlineInputBorder(),
-                                        ),
-                                        enabled: !readOnly,
-                                        readOnly: readOnly,
-                                      ),
-                                    ),
-                                  const SizedBox(height: 8),
-                                  TextFormField(
-                                    controller: instructionsController,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Special Instructions (optional)',
-                                      border: OutlineInputBorder(),
-                                    ),
-                                    enabled: !readOnly,
-                                    readOnly: readOnly,
-                                  ),
-                                ],
-                              ),
-                            ),
+                                ),
+                              );
+                            },
                           );
-                        },
-                      );
-                    }).toList(),
+                        }).toList(),
                   ),
               ]),
               _buildSection('Laboratory Investigations', [

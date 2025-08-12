@@ -3,6 +3,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class FacilityProfileScreen extends StatefulWidget {
   const FacilityProfileScreen({super.key});
@@ -372,7 +375,12 @@ class _FacilityProfileScreenState extends State<FacilityProfileScreen> {
                 _buildSectionTitle('Profile Status'),
                 const SizedBox(height: 16),
                 _buildProfileCompleteness(),
+                const SizedBox(height: 32),
+                _buildSectionTitle('Registration Document'),
+                const SizedBox(height: 16),
+                _buildDocumentUploadCard(context),
               ],
+
             ],
           ),
         ),
@@ -549,5 +557,95 @@ class _FacilityProfileScreenState extends State<FacilityProfileScreen> {
         ],
       ),
     );
+  }
+  Widget _buildDocumentUploadCard(BuildContext context) {
+    final docUrl = _facilityData['documentUrl'] as String?;
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (docUrl != null && docUrl.isNotEmpty)
+              Row(
+                children: [
+                  const Icon(Icons.check_circle, color: Colors.green),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text('Document uploaded', style: TextStyle(color: Colors.green, fontWeight: FontWeight.w500)),
+                  ),
+                  TextButton(
+                    onPressed: () async {
+                      if (await canLaunchUrl(Uri.parse(docUrl))) {
+                        await launchUrl(Uri.parse(docUrl), mode: LaunchMode.externalApplication);
+                      }
+                    },
+                    child: const Text('View'),
+                  ),
+                ],
+              )
+            else
+              Row(
+                children: [
+                  const Icon(Icons.warning, color: Colors.orange),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text('No document uploaded', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.w500)),
+                  ),
+                ],
+              ),
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.upload_file),
+              label: Text(docUrl == null ? 'Upload Document' : 'Re-upload Document'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.teal,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              onPressed: () => _pickAndUploadDocument(context),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickAndUploadDocument(BuildContext context) async {
+    try {
+      final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx']);
+      if (result == null || result.files.isEmpty) return;
+      final file = result.files.first;
+      final fileBytes = file.bytes;
+      final fileName = file.name;
+      if (fileBytes == null) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to read file.')));
+        return;
+      }
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('User not logged in.')));
+        return;
+      }
+      final storageRef = FirebaseStorage.instance.ref().child('facility_documents/$userId/$fileName');
+      final uploadTask = storageRef.putData(fileBytes);
+      final snapshot = await uploadTask.whenComplete(() {});
+      final downloadUrl = await snapshot.ref.getDownloadURL();
+      // Update Firestore
+      await FirebaseFirestore.instance.collection('users').doc(userId).update({
+        'documentUrl': downloadUrl,
+        'documentUploadedAt': FieldValue.serverTimestamp(),
+      });
+      if (mounted) {
+        setState(() {
+          _facilityData['documentUrl'] = downloadUrl;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Document uploaded successfully.')));
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to upload document: $e')));
+    }
   }
 }

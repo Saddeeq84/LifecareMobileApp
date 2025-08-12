@@ -71,12 +71,17 @@ class _CHWCreateReferralScreenState extends State<CHWCreateReferralScreen> {
       if (currentUser == null) return;
 
       // 1. Fetch all active doctors
-      final allDoctorsSnapshot = await FirebaseFirestore.instance
+      final allUsersSnapshot = await FirebaseFirestore.instance
           .collection('users')
-          .where('role', isEqualTo: 'doctor')
-          .where('isActive', isEqualTo: true)
-          .where('isApproved', isEqualTo: true)
           .get();
+
+      // Filter client-side for role containing 'doctor' (case-insensitive), isActive, and isApproved
+      final allDoctorsSnapshot = allUsersSnapshot.docs.where((doc) {
+        final data = doc.data();
+        final role = (data['role'] ?? '').toString().toLowerCase();
+        final isApproved = data['isApproved'] == true;
+        return role.contains('doctor') && isApproved;
+      }).toList();
 
       // 2. Fetch interacted doctor IDs (from referrals, appointments, health_records)
       final Set<String> interactedDoctorIds = <String>{};
@@ -120,8 +125,7 @@ class _CHWCreateReferralScreenState extends State<CHWCreateReferralScreen> {
 
       // 3. Build doctor list, marking interacted ones
       // Only include doctors that actually exist in the current snapshot
-      final validDoctorIds = allDoctorsSnapshot.docs.map((doc) => doc.id).toSet();
-      List<Map<String, dynamic>> allDoctors = allDoctorsSnapshot.docs.map((doc) {
+  List<Map<String, dynamic>> allDoctors = allDoctorsSnapshot.map((doc) {
         final data = doc.data();
         return {
           'id': doc.id,
@@ -130,7 +134,7 @@ class _CHWCreateReferralScreenState extends State<CHWCreateReferralScreen> {
           'facility': data['facility'] ?? 'Unknown Facility',
           'interacted': interactedDoctorIds.contains(doc.id),
         };
-      }).where((doc) => validDoctorIds.contains(doc['id'])).toList();
+      }).toList();
 
       // 4. Sort: interacted doctors first, then by name
       allDoctors.sort((a, b) {

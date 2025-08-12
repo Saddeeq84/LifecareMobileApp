@@ -1,7 +1,10 @@
 
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
+import '../../../auth/presentation/screens/privacy_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class PatientSettingsScreen extends StatefulWidget {
@@ -218,7 +221,7 @@ class _PatientSettingsScreenState extends State<PatientSettingsScreen> {
             ),
             const SizedBox(height: 16),
             
-            // Privacy Policy
+            // Privacy Policy (linked to main privacy policy screen)
             Card(
               margin: const EdgeInsets.symmetric(vertical: 4),
               child: ListTile(
@@ -250,35 +253,12 @@ class _PatientSettingsScreenState extends State<PatientSettingsScreen> {
                 ),
                 trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                 onTap: () {
-                  // Show Privacy Policy dialog
-                  showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('Privacy Policy'),
-                      content: const SingleChildScrollView(
-                        child: Text(
-                          'LifeCare Connect Privacy Policy\n\n'
-                          '1. Data Collection: We collect health data to provide medical services.\n\n'
-                          '2. Data Usage: Your data is used solely for healthcare delivery and emergency services.\n\n'
-                          '3. Data Security: All health information is encrypted and stored securely.\n\n'
-                          '4. Data Sharing: We only share data with authorized healthcare providers.\n\n'
-                          '5. User Rights: You can request data deletion or modification at any time.\n\n'
-                          'For full terms, contact our support team.',
-                        ),
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('Close'),
-                        ),
-                      ],
-                    ),
-                  );
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => PrivacyScreen()));
                 },
               ),
             ),
             
-            // Help & Support
+            // Help & Support (updated contact info)
             Card(
               margin: const EdgeInsets.symmetric(vertical: 4),
               child: ListTile(
@@ -310,7 +290,6 @@ class _PatientSettingsScreenState extends State<PatientSettingsScreen> {
                 ),
                 trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                 onTap: () {
-                  // Show Help & Support dialog
                   showDialog(
                     context: context,
                     builder: (context) => AlertDialog(
@@ -325,9 +304,9 @@ class _PatientSettingsScreenState extends State<PatientSettingsScreen> {
                               style: TextStyle(fontWeight: FontWeight.bold),
                             ),
                             SizedBox(height: 16),
-                            Text('📧 Email: support@lifecare.ng'),
+                            Text('📧 Email: contact_lifecare@rhemn.org.ng'),
                             SizedBox(height: 8),
-                            Text('📞 Phone: +234-800-LIFECARE'),
+                            Text('📞 Phone: +2347072127123'),
                             SizedBox(height: 8),
                             Text('🕒 Hours: Monday - Friday, 8AM - 6PM'),
                             SizedBox(height: 16),
@@ -354,50 +333,110 @@ class _PatientSettingsScreenState extends State<PatientSettingsScreen> {
               ),
             ),
             
-            // Bug Report
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.shade200,
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
+            // Change Password
+            Card(
+              margin: const EdgeInsets.symmetric(vertical: 4),
               child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.red.shade50,
-                    borderRadius: BorderRadius.circular(8),
+                    color: Colors.purple.shade100,
+                    shape: BoxShape.circle,
                   ),
                   child: Icon(
-                    Icons.bug_report,
-                    color: Colors.red.shade700,
+                    Icons.lock,
+                    color: Colors.purple.shade700,
                     size: 24,
                   ),
                 ),
                 title: const Text(
-                  'Report a Bug',
+                  'Change Password',
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 16,
                   ),
                 ),
                 subtitle: Text(
-                  'Report issues or technical problems',
+                  'Update your account password',
                   style: TextStyle(
                     color: Colors.grey[600],
                     fontSize: 14,
                   ),
                 ),
                 trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                onTap: _showBugReportDialog,
+                onTap: _showChangePasswordDialog,
+              ),
+            ),
+
+            // Logout
+            Card(
+              margin: const EdgeInsets.symmetric(vertical: 4),
+              child: ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade100,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.logout,
+                    color: Colors.red.shade700,
+                    size: 24,
+                  ),
+                ),
+                title: const Text(
+                  'Logout',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                    color: Colors.red,
+                  ),
+                ),
+                subtitle: Text(
+                  'Sign out of your account',
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 14,
+                  ),
+                ),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                onTap: _showLogoutDialog,
+              ),
+            ),
+
+            // Delete Account
+            Card(
+              margin: const EdgeInsets.symmetric(vertical: 4),
+              child: ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.delete_forever,
+                    color: Colors.red.shade700,
+                    size: 24,
+                  ),
+                ),
+                title: const Text(
+                  'Delete Account',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                    color: Colors.red,
+                  ),
+                ),
+                subtitle: Text(
+                  'Permanently delete your account',
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 14,
+                  ),
+                ),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                onTap: _showDeleteAccountDialog,
               ),
             ),
             
@@ -432,71 +471,47 @@ class _PatientSettingsScreenState extends State<PatientSettingsScreen> {
     );
   }
 
-  void _showBugReportDialog() {
-    final bugController = TextEditingController();
-    String selectedCategory = 'General';
-    String selectedPriority = 'Medium';
+  void _showChangePasswordDialog() {
+    final currentPasswordController = TextEditingController();
+    final newPasswordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
     bool isSubmitting = false;
-    
+
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('Report a Bug'),
+          title: const Text('Change Password'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Please describe the issue you encountered:'),
+                TextField(
+                  controller: currentPasswordController,
+                  decoration: const InputDecoration(
+                    labelText: 'Current Password',
+                    border: OutlineInputBorder(),
+                  ),
+                  obscureText: true,
+                ),
                 const SizedBox(height: 16),
                 TextField(
-                  controller: bugController,
+                  controller: newPasswordController,
                   decoration: const InputDecoration(
+                    labelText: 'New Password',
                     border: OutlineInputBorder(),
-                    hintText: 'Describe the bug in detail...',
                   ),
-                  maxLines: 4,
+                  obscureText: true,
                 ),
                 const SizedBox(height: 16),
-                const Text('Category:'),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  value: selectedCategory,
+                TextField(
+                  controller: confirmPasswordController,
                   decoration: const InputDecoration(
+                    labelText: 'Confirm New Password',
                     border: OutlineInputBorder(),
                   ),
-                  items: ['General', 'UI/UX', 'Performance', 'Crash', 'Feature Request']
-                      .map((category) => DropdownMenuItem(
-                            value: category,
-                            child: Text(category),
-                          ))
-                      .toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      selectedCategory = value!;
-                    });
-                  },
-                ),
-                const SizedBox(height: 16),
-                const Text('Priority:'),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  value: selectedPriority,
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                  ),
-                  items: ['Low', 'Medium', 'High', 'Critical']
-                      .map((priority) => DropdownMenuItem(
-                            value: priority,
-                            child: Text(priority),
-                          ))
-                      .toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      selectedPriority = value!;
-                    });
-                  },
+                  obscureText: true,
                 ),
               ],
             ),
@@ -507,35 +522,46 @@ class _PatientSettingsScreenState extends State<PatientSettingsScreen> {
               child: const Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: isSubmitting 
-                  ? null 
+              onPressed: isSubmitting
+                  ? null
                   : () async {
-                      if (bugController.text.trim().isEmpty) {
+                      final currentPassword = currentPasswordController.text.trim();
+                      final newPassword = newPasswordController.text.trim();
+                      final confirmPassword = confirmPasswordController.text.trim();
+                      if (newPassword != confirmPassword) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Please describe the issue')),
+                          const SnackBar(content: Text('Passwords do not match')),
                         );
                         return;
                       }
-                      
-                      setState(() {
-                        isSubmitting = true;
-                      });
-                      
-                      await _submitBugReport(
-                        bugController.text.trim(),
-                        selectedCategory,
-                        selectedPriority,
-                      );
-                      
-                      Navigator.of(context).pop();
+                      setState(() => isSubmitting = true);
+                      try {
+                        final user = FirebaseAuth.instance.currentUser;
+                        final cred = EmailAuthProvider.credential(
+                          email: user!.email!,
+                          password: currentPassword,
+                        );
+                        await user.reauthenticateWithCredential(cred);
+                        await user.updatePassword(newPassword);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Password changed successfully'), backgroundColor: Colors.green),
+                          );
+                        }
+                        Navigator.of(context).pop();
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Failed to change password: ${e.toString()}'), backgroundColor: Colors.red),
+                          );
+                        }
+                      } finally {
+                        setState(() => isSubmitting = false);
+                      }
                     },
-              child: isSubmitting 
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Submit'),
+              child: isSubmitting
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Text('Change'),
             ),
           ],
         ),
@@ -543,64 +569,85 @@ class _PatientSettingsScreenState extends State<PatientSettingsScreen> {
     );
   }
 
-  Future<void> _submitBugReport(String description, String category, String priority) async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        throw Exception('User not authenticated');
-      }
-
-      // Get patient details
-      final patientDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
-      
-      final patientData = patientDoc.data();
-      
-      // Generate ticket ID
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final ticketId = 'BUG-${timestamp.toString().substring(timestamp.toString().length - 8)}';
-      
-      // Collect device info (simplified for web compatibility)
-      final deviceInfo = {
-        'platform': 'Flutter',
-        'timestamp': DateTime.now().toIso8601String(),
-        'userAgent': 'LifeCare Connect App',
-      };
-
-      await FirebaseFirestore.instance.collection('bug_reports').add({
-        'ticketId': ticketId,
-        'description': description,
-        'category': category,
-        'priority': priority,
-        'status': 'Open',
-        'reportedBy': user.uid,
-        'reporterEmail': user.email ?? '',
-        'reporterRole': 'patient',
-        'reporterName': patientData?['fullName'] ?? 'Unknown Patient',
-        'deviceInfo': deviceInfo,
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Bug report submitted successfully! Ticket ID: $ticketId'),
-            backgroundColor: Colors.green,
+  void _showLogoutDialog() async {
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.logout, color: Colors.red),
+            SizedBox(width: 8),
+            Text('Confirm Logout'),
+          ],
+        ),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
           ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to submit bug report: ${e.toString()}'),
-            backgroundColor: Colors.red,
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Logout', style: TextStyle(color: Colors.red)),
           ),
-        );
+        ],
+      ),
+    );
+    if (shouldLogout == true) {
+      await FirebaseAuth.instance.signOut();
+      if (mounted) {
+        context.go('/login');
       }
     }
+  }
+
+  void _showDeleteAccountDialog() {
+    bool isDeleting = false;
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Delete Account'),
+          content: const Text('Are you sure you want to permanently delete your account? This action cannot be undone.'),
+          actions: [
+            TextButton(
+              onPressed: isDeleting ? null : () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              onPressed: isDeleting
+                  ? null
+                  : () async {
+                      setState(() => isDeleting = true);
+                      try {
+                        final user = FirebaseAuth.instance.currentUser;
+                        await FirebaseFirestore.instance.collection('users').doc(user!.uid).delete();
+                        await user.delete();
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Account deleted successfully'), backgroundColor: Colors.green),
+                          );
+                          Navigator.of(context).pop();
+                          Navigator.of(context).pushReplacementNamed('/login');
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Failed to delete account: ${e.toString()}'), backgroundColor: Colors.red),
+                          );
+                        }
+                      } finally {
+                        setState(() => isDeleting = false);
+                      }
+                    },
+              child: isDeleting
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Text('Delete'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

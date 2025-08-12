@@ -18,8 +18,8 @@ android {
         applicationId = "com.lifecare_connect"
         minSdk = 23
         targetSdk = flutter.targetSdkVersion
-        versionCode = 2 // Increased from 1 to 2
-        versionName = "1.0.1" // Updated version name
+    versionCode = 8 // Increased from 7 to 8
+    versionName = "1.0.8" // Updated version name
         multiDexEnabled = true // ✅ Required for large apps using many methods (e.g., Firebase)
     }
 
@@ -71,5 +71,5 @@ dependencies {
     implementation("androidx.appcompat:appcompat:1.6.1")
 
     // ✅ Java 8+ desugaring support for backward compatibility
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }

@@ -14,6 +14,7 @@ import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 // Import actual screens from features
+import '../../features/doctor/presentation/screens/doctor_settings_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 // Ensure that LoginScreen is defined as a class in login_screen.dart
 import '../../features/admin/presentation/screens/admin_dashboard.dart';
@@ -63,41 +64,53 @@ class AppRouter {
         },
       ),
       // Custom routes for CHW consultation flows
-      // Doctor dashboard subroutes
+      // Doctor dashboard with nested settings route
       GoRoute(
-        path: '/doctor_dashboard/patients',
-        name: 'doctor-patients',
-       builder: (context, state) => const DoctorPatientListScreen(),
-      ),
-      GoRoute(
-        path: '/doctor_dashboard/messages',
-        name: 'doctor-messages',
-        builder: (context, state) => const MessagesScreen(),
-      ),
-      GoRoute(
-        path: '/doctor_dashboard/appointments',
-        name: 'doctor-appointments',
-        builder: (context, state) {
-          final user = FirebaseAuth.instance.currentUser;
-          final userId = user?.uid ?? '';
-          return DoctorAppointmentsTabView(userId: userId);
-        },
-      ),
-      GoRoute(
-        path: '/doctor_dashboard/referrals',
-        name: 'doctor-referrals',
-       builder: (context, state) => const DoctorReferralsScreen(),
-      ),
-      GoRoute(
-        path: '/doctor_dashboard/analytics',
-        name: 'doctor-analytics',
-       builder: (context, state) => const DoctorAnalyticsScreen(),
-      ),
-      GoRoute(
-        path: '/doctor_dashboard/consultation',
-        builder: (context, state) {
-          return const DoctorConsultationScreen();
-        },
+        path: '/doctor_dashboard',
+        name: 'doctor-dashboard',
+        builder: (context, state) => const DoctorDashboard(),
+        routes: [
+          GoRoute(
+            path: 'settings',
+            name: 'doctor-settings',
+            builder: (context, state) => const DoctorSettingsScreen(),
+          ),
+          GoRoute(
+            path: 'patients',
+            name: 'doctor-patients',
+            builder: (context, state) => const DoctorPatientListScreen(),
+          ),
+          GoRoute(
+            path: 'messages',
+            name: 'doctor-messages',
+            builder: (context, state) => const MessagesScreen(),
+          ),
+          GoRoute(
+            path: 'appointments',
+            name: 'doctor-appointments',
+            builder: (context, state) {
+              final user = FirebaseAuth.instance.currentUser;
+              final userId = user?.uid ?? '';
+              return DoctorAppointmentsTabView(userId: userId);
+            },
+          ),
+          GoRoute(
+            path: 'referrals',
+            name: 'doctor-referrals',
+            builder: (context, state) => const DoctorReferralsScreen(),
+          ),
+          GoRoute(
+            path: 'analytics',
+            name: 'doctor-analytics',
+            builder: (context, state) => const DoctorAnalyticsScreen(),
+          ),
+          GoRoute(
+            path: 'consultation',
+            builder: (context, state) {
+              return const DoctorConsultationScreen();
+            },
+          ),
+        ],
       ),
       GoRoute(
         path: '/doctor_resources',
@@ -186,13 +199,7 @@ class AppRouter {
         ],
       ),
       
-      // Doctor Routes
-      GoRoute(
-        path: '/doctor_dashboard',
-        name: 'doctor-dashboard',
-        builder: (context, state) => const DoctorDashboard(),
-        // Removed duplicate subroutes for doctor dashboard features
-      ),
+
       
       // CHW Routes
       GoRoute(

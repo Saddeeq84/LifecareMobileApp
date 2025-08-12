@@ -6,7 +6,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class DoctorProfileScreen extends StatefulWidget {
   const DoctorProfileScreen({super.key});
@@ -86,6 +89,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
     final specialty = doctorData['specialty'] ?? 'Not specified';
     final hospital = doctorData['hospitalAffiliation'] ?? 'Not specified';
     final license = doctorData['licenseNumber'] ?? 'Not provided';
+  final licenseUrl = doctorData['licenseUrl'] as String?;
     final experience = doctorData['yearsOfExperience']?.toString() ?? '0';
     final bio = doctorData['bio'] ?? 'No bio available';
 
@@ -175,6 +179,10 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
               ]),
               
               const SizedBox(height: 24),
+
+              _buildSectionHeader('Medical License'),
+              _buildLicenseUploadCard(context, licenseUrl),
+              const SizedBox(height: 24),
               
 
               if (bio.isNotEmpty && bio != 'No bio available') ...[
@@ -233,6 +241,97 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildLicenseUploadCard(BuildContext context, String? licenseUrl) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (licenseUrl != null && licenseUrl.isNotEmpty)
+              Row(
+                children: [
+                  const Icon(Icons.check_circle, color: Colors.green),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text('License uploaded', style: TextStyle(color: Colors.green[700], fontWeight: FontWeight.w500)),
+                  ),
+                  TextButton(
+                    onPressed: () async {
+                      // Open the license file in browser
+                      if (await canLaunchUrl(Uri.parse(licenseUrl))) {
+                        await launchUrl(Uri.parse(licenseUrl), mode: LaunchMode.externalApplication);
+                      }
+                    },
+                    child: const Text('View'),
+                  ),
+                ],
+              )
+            else
+              Row(
+                children: [
+                  const Icon(Icons.warning, color: Colors.orange),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text('No license uploaded', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.w500)),
+                  ),
+                ],
+              ),
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.upload_file),
+              label: Text(licenseUrl == null ? 'Upload License' : 'Re-upload License'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.indigo,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              onPressed: () => _pickAndUploadLicense(context),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickAndUploadLicense(BuildContext context) async {
+    try {
+      final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png']);
+      if (result == null || result.files.isEmpty) return;
+      final file = result.files.first;
+      final fileBytes = file.bytes;
+      final fileName = file.name;
+      if (fileBytes == null) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to read file.')));
+        return;
+      }
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('User not logged in.')));
+        return;
+      }
+      final storageRef = FirebaseStorage.instance.ref().child('doctor_licenses/$userId/$fileName');
+      final uploadTask = storageRef.putData(fileBytes);
+      final snapshot = await uploadTask.whenComplete(() {});
+      final downloadUrl = await snapshot.ref.getDownloadURL();
+      // Update Firestore
+      await FirebaseFirestore.instance.collection('users').doc(userId).update({
+        'licenseUrl': downloadUrl,
+        'licenseUploadedAt': FieldValue.serverTimestamp(),
+      });
+      if (mounted) {
+        setState(() {
+          doctorData['licenseUrl'] = downloadUrl;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('License uploaded successfully.')));
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to upload license: $e')));
+    }
   }
 
   Widget _buildSectionHeader(String title) {

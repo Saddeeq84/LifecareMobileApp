@@ -314,7 +314,7 @@ class DoctorDashboard extends StatefulWidget {
             IconButton(
               icon: const Icon(Icons.settings, color: Colors.white),
               tooltip: 'Settings',
-              onPressed: () => context.push('/doctor_settings'),
+              onPressed: () => context.push('/doctor_dashboard/settings'),
             ),
             IconButton(
               icon: const Icon(Icons.logout, color: Colors.white),

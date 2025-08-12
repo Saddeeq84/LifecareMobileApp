@@ -1,9 +1,12 @@
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
 // ignore_for_file: use_build_context_synchronously
 
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:file_picker/file_picker.dart';
 
 // import '../sharedscreen/facility_register_widget.dart';
@@ -14,8 +17,8 @@ class AdminRegisterFacilityScreen extends StatefulWidget {
   @override
   State<AdminRegisterFacilityScreen> createState() =>
       _AdminRegisterFacilityScreenState();
-}
 
+}
 class _AdminRegisterFacilityScreenState
     extends State<AdminRegisterFacilityScreen> {
   bool _isSubmitting = false;
@@ -27,18 +30,46 @@ class _AdminRegisterFacilityScreenState
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   File? _selectedDocument;
-
+  Uint8List? _selectedDocumentBytes;
+  String? _selectedDocumentName;
+  
+  // Helper to get content type for web uploads
+  String _getContentType(String fileName) {
+    final ext = fileName.split('.').last.toLowerCase();
+    switch (ext) {
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      case 'pdf':
+        return 'application/pdf';
+      case 'doc':
+      case 'docx':
+        return 'application/msword';
+      default:
+        return 'application/octet-stream';
+    }
+  }
   Future<String?> _uploadDocument(File file) async {
     try {
       final fileName =
-          'facility_documents/${DateTime.now().millisecondsSinceEpoch}_${file.path.split('/').last}';
+          'facility_documents/${DateTime.now().millisecondsSinceEpoch}_${_selectedDocumentName ?? file.path.split('/').last}';
       final ref = FirebaseStorage.instance.ref().child(fileName);
-      await ref.putFile(file);
-      return await ref.getDownloadURL();
+      if (kIsWeb && _selectedDocumentBytes != null) {
+        // Web: upload using bytes
+        final uploadTask = await ref.putData(_selectedDocumentBytes!, SettableMetadata(contentType: _getContentType(_selectedDocumentName ?? fileName)));
+        return await uploadTask.ref.getDownloadURL();
+      } else {
+        // Mobile/Desktop: upload using File
+        await ref.putFile(file);
+        return await ref.getDownloadURL();
+      }
     } catch (e) {
       debugPrint("Document upload failed: $e");
       return null;
     }
+  // removed extra closing brace
   }
 
   Future<void> _pickDocument() async {
@@ -46,11 +77,19 @@ class _AdminRegisterFacilityScreenState
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'],
+        withData: kIsWeb,
       );
 
-      if (result != null && result.files.single.path != null) {
+      if (result != null) {
         setState(() {
-          _selectedDocument = File(result.files.single.path!);
+          _selectedDocumentName = result.files.single.name;
+          if (kIsWeb && result.files.single.bytes != null) {
+            _selectedDocumentBytes = result.files.single.bytes;
+            _selectedDocument = null;
+          } else if (result.files.single.path != null) {
+            _selectedDocument = File(result.files.single.path!);
+            _selectedDocumentBytes = null;
+          }
         });
       }
     } catch (e) {
@@ -69,8 +108,10 @@ class _AdminRegisterFacilityScreenState
       String? docUrl;
       if (_selectedDocument != null) {
         docUrl = await _uploadDocument(_selectedDocument!);
+        if (docUrl == null || docUrl.isEmpty) {
+          throw Exception('Document upload failed. Please try again.');
+        }
       }
-
 
       // Add to facilities collection
       final facilityRef = await FirebaseFirestore.instance.collection('facilities').add({
@@ -79,6 +120,7 @@ class _AdminRegisterFacilityScreenState
         'type': _typeController.text.trim(),
         'createdBy': 'admin',
         'isApproved': true,
+        'isRejected': false,
         'createdAt': FieldValue.serverTimestamp(),
         'contactPerson': _contactPersonController.text.trim(),
         'email': _emailController.text.trim(),
@@ -86,25 +128,14 @@ class _AdminRegisterFacilityScreenState
         if (docUrl != null) 'documentUrl': docUrl,
       });
 
-      // Also add to users collection for messaging
-      await FirebaseFirestore.instance.collection('users').doc(facilityRef.id).set({
-        'name': _nameController.text.trim(),
-        'email': _emailController.text.trim(),
-        'phone': _phoneController.text.trim(),
-        'location': _locationController.text.trim(),
-        'type': _typeController.text.trim(),
-        'role': 'facility',
-        'isActive': true,
-        'isApproved': true,
-        'createdAt': FieldValue.serverTimestamp(),
-        'facilityId': facilityRef.id,
-        if (docUrl != null) 'registrationDocUrl': docUrl,
-      });
+      // Send password setup (reset) email to facility owner
+      final ownerEmail = _emailController.text.trim();
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: ownerEmail);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text("✅ Facility registered successfully!")),
+              content: Text("✅ Facility registered! Password setup email sent to owner.")),
         );
         Navigator.of(context).pop();
       }
@@ -301,4 +332,5 @@ class _AdminRegisterFacilityScreenState
       ),
     );
   }
+
 }

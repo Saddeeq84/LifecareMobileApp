@@ -1,5 +1,7 @@
 
-
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:file_picker/file_picker.dart' as file_picker;
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -18,6 +20,28 @@ class DoctorCreateAccountScreen extends StatefulWidget {
 }
 
 class _DoctorCreateAccountScreenState extends State<DoctorCreateAccountScreen> {
+  String? licenseFileError;
+  // Returns the content type for a given file extension (used for web uploads)
+  String _getContentType(String fileName) {
+    final ext = fileName.split('.').last.toLowerCase();
+    switch (ext) {
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      case 'pdf':
+        return 'application/pdf';
+      default:
+        return 'application/octet-stream';
+    }
+  }
+  // firebase_auth 6.x does not support fetchSignInMethodsForEmail; always return empty list so registration proceeds.
+  Future<List<String>> fetchSignInMethodsForEmailWithErrorHandling(String email) async {
+  // NOTE: When firebase_auth supports fetchSignInMethodsForEmail again, restore real check here.
+    return [];
+  }
+  Uint8List? licenseFileBytes;
   final _formKey = GlobalKey<FormState>();
 
   final fullNameController = TextEditingController();
@@ -29,7 +53,10 @@ class _DoctorCreateAccountScreenState extends State<DoctorCreateAccountScreen> {
   String? selectedSpecialization;
   String? selectedGender;
   DateTime? selectedDOB;
+  final dobController = TextEditingController();
   File? profileImage;
+  Uint8List? profileImageBytes;
+  String? profileImageName;
   File? licenseFile;
   bool loading = false;
 
@@ -75,48 +102,142 @@ class _DoctorCreateAccountScreenState extends State<DoctorCreateAccountScreen> {
   Future<void> pickProfilePicture() async {
     final picked = await _picker.pickImage(source: ImageSource.gallery);
     if (picked != null) {
-      setState(() => profileImage = File(picked.path));
+      if (kIsWeb) {
+        final bytes = await picked.readAsBytes();
+        setState(() {
+          profileImageBytes = bytes;
+          profileImageName = picked.name;
+          profileImage = null;
+        });
+      } else {
+        setState(() {
+          profileImage = File(picked.path);
+          profileImageBytes = null;
+          profileImageName = null;
+        });
+      }
     }
   }
 
+  String? licenseFileName;
+  String? licenseFileExtension;
   Future<void> pickLicenseFile() async {
-    final picked = await _picker.pickImage(source: ImageSource.gallery);
-    if (picked != null) {
-      setState(() => licenseFile = File(picked.path));
+  // Use file_picker for all supported file types
+    final result = await file_picker.FilePicker.platform.pickFiles(
+      type: file_picker.FileType.custom,
+      allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf'],
+  withData: kIsWeb, // get bytes for web uploads
+    );
+    if (result != null && result.files.single.path != null) {
+      setState(() {
+        licenseFile = File(result.files.single.path!);
+        licenseFileName = result.files.single.name;
+        licenseFileExtension = result.files.single.extension?.toLowerCase();
+        if (kIsWeb && result.files.single.bytes != null) {
+          licenseFileBytes = result.files.single.bytes;
+        } else {
+          licenseFileBytes = null;
+        }
+      });
     }
   }
 
   Future<void> pickDOB() async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: DateTime(1990),
+      initialDate: selectedDOB ?? DateTime(1990),
       firstDate: DateTime(1950),
       lastDate: DateTime.now(),
     );
     if (picked != null) {
-      setState(() => selectedDOB = picked);
+      setState(() {
+        selectedDOB = picked;
+        dobController.text = '${picked.day.toString().padLeft(2, '0')}/'
+            '${picked.month.toString().padLeft(2, '0')}/'
+            '${picked.year}';
+      });
     }
   }
 
-  Future<String?> uploadFile(File file, String folderName) async {
-    try {
-      final ref = FirebaseStorage.instance
-          .ref('$folderName/${DateTime.now().millisecondsSinceEpoch}${file.path.split('/').last}');
-      final uploadTask = await ref.putFile(file);
-      return await uploadTask.ref.getDownloadURL();
-    } catch (e) {
 
+  Future<String?> uploadFile(File file, String folderName, {Uint8List? fileBytes, String? fileNameOverride}) async {
+    try {
+      final fileName = fileNameOverride ?? (kIsWeb ? 'web_upload_${DateTime.now().millisecondsSinceEpoch}' : '${DateTime.now().millisecondsSinceEpoch}${file.path.split('/').last}');
+      final ref = FirebaseStorage.instance.ref('$folderName/$fileName');
+      if (kIsWeb) {
+        if (fileBytes == null) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('File upload error: No file bytes provided for web upload.')),
+            );
+          }
+          return null;
+        }
+        // On web, upload using bytes only
+        final uploadTask = await ref.putData(fileBytes,
+            SettableMetadata(contentType: _getContentType(fileName)));
+        return await uploadTask.ref.getDownloadURL();
+      } else {
+        // On mobile/desktop, upload using File
+        final uploadTask = await ref.putFile(file);
+        return await uploadTask.ref.getDownloadURL();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('File upload error: $e')),
+        );
+      }
       return null;
     }
   }
 
   Future<void> handleRegister() async {
-    if (!_formKey.currentState!.validate()) return;
 
-    if (profileImage == null || licenseFile == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please upload all required documents')),
+    if (!_formKey.currentState!.validate()) {
+      setState(() => loading = false);
+      return;
+    }
+
+    // License upload is now optional. Show warning if not uploaded.
+    if (licenseFile == null) {
+      setState(() {
+        licenseFileError = 'No license uploaded. You must upload your license before your account can be approved by admin.';
+      });
+    } else {
+      setState(() {
+        licenseFileError = null;
+      });
+    }
+
+  // Check if the email is already registered
+    final email = emailController.text.trim();
+    final existing = await fetchSignInMethodsForEmailWithErrorHandling(email);
+    if (existing.isNotEmpty) {
+      final shouldEdit = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Email Already In Use'),
+          content: const Text('This email is already in use. Please update your email or cancel to stop.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Update'),
+            ),
+          ],
+        ),
       );
+      if (shouldEdit != true) {
+        setState(() => loading = false);
+        return;
+      }
+  // Focus the email field for user to update
+      FocusScope.of(context).requestFocus(FocusNode());
+      setState(() => loading = false);
       return;
     }
 
@@ -136,8 +257,10 @@ class _DoctorCreateAccountScreenState extends State<DoctorCreateAccountScreen> {
 
     setState(() => loading = true);
 
+    UserCredential? userCred;
     try {
-      UserCredential userCred = await FirebaseAuth.instance
+      // 1. Create user first
+      userCred = await FirebaseAuth.instance
           .createUserWithEmailAndPassword(
               email: emailController.text.trim(),
               password: passwordController.text.trim());
@@ -145,9 +268,42 @@ class _DoctorCreateAccountScreenState extends State<DoctorCreateAccountScreen> {
       final uid = userCred.user?.uid;
       if (uid == null) throw Exception("User creation failed");
 
-      final imageUrl = await uploadFile(profileImage!, 'doctor_profiles');
-      final licenseUrl = await uploadFile(licenseFile!, 'doctor_licenses');
+      // 2. Upload license file to user-specific folder (optional)
+      String? licenseUrl;
+      final licenseFolder = 'user_uploads/$uid/doctor_licenses';
+      if (licenseFile != null) {
+        if (kIsWeb && licenseFileBytes != null) {
+          licenseUrl = await uploadFile(
+            File('dummy'),
+            licenseFolder,
+            fileBytes: licenseFileBytes,
+            fileNameOverride: licenseFileName,
+          );
+        } else {
+          licenseUrl = await uploadFile(licenseFile!, licenseFolder);
+        }
+        if (licenseUrl == null || licenseUrl.isEmpty) {
+          throw Exception('License upload failed. Please try again.');
+        }
+      } else {
+        licenseUrl = null;
+      }
 
+      // 3. Upload profile image (if any) to user-specific folder
+      String? imageUrl;
+      final profileFolder = 'user_uploads/$uid/doctor_profiles';
+      if (kIsWeb && profileImageBytes != null) {
+        imageUrl = await uploadFile(
+          File('dummy'),
+          profileFolder,
+          fileBytes: profileImageBytes,
+          fileNameOverride: profileImageName,
+        );
+      } else if (profileImage != null) {
+        imageUrl = await uploadFile(profileImage!, profileFolder);
+      }
+
+      // 4. Save user document in Firestore
       await FirebaseFirestore.instance.collection('users').doc(uid).set({
         'fullName': fullNameController.text.trim(),
         'email': emailController.text.trim(),
@@ -159,38 +315,80 @@ class _DoctorCreateAccountScreenState extends State<DoctorCreateAccountScreen> {
         'imageUrl': imageUrl ?? '',
         'licenseUrl': licenseUrl ?? '',
         'isApproved': false,
+        'isRejected': false,
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-  await FirebaseAppCheck.instance.getToken();
+      await FirebaseAppCheck.instance.getToken();
 
-      // Show dialog and send email about admin approval requirement
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          content: const Text('Your email has been verified. Your account will require admin approval before it becomes active. You will receive another email once your account is approved.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('OK'),
-            ),
-          ],
-        ),
-      );
       await sendAdminApprovalRequiredEmail(
         emailController.text.trim(),
         fullNameController.text.trim(),
       );
 
-      Navigator.pop(context);
+      // Show success message and info dialog
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              licenseFile == null
+                ? 'Account created! You must upload your license before your account can be approved by admin.'
+                : 'Account created! Your account requires admin approval. You will receive an email when approved.'
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+        await showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Registration Submitted'),
+            content: Text(
+              licenseFile == null
+                ? 'Your registration was successful, but you must upload your license before your account can be approved by admin.'
+                : 'Your registration was successful and is pending admin approval. You will receive an email when your account is approved.'
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+        // Clear form fields after successful submission
+        fullNameController.clear();
+        emailController.clear();
+        phoneController.clear();
+        passwordController.clear();
+        confirmPasswordController.clear();
+        dobController.clear();
+        setState(() {
+          selectedSpecialization = null;
+          selectedGender = null;
+          selectedDOB = null;
+          profileImage = null;
+          licenseFile = null;
+          licenseFileBytes = null;
+          licenseFileName = null;
+          licenseFileExtension = null;
+          otherSpecialization = null;
+        });
+        // Keep the form open and empty after submission
+      }
     } catch (e) {
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('❌ Error: $e')),
-      );
+      // If user was created but a later step failed, delete the user to prevent ghost accounts
+      if (userCred != null && userCred.user != null) {
+        try {
+          await userCred.user!.delete();
+        } catch (_) {}
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('❌ Registration failed: $e')),
+        );
+      }
     }
-
-    setState(() => loading = false);
+    if (mounted) setState(() => loading = false);
   }
 
   @override
@@ -200,6 +398,7 @@ class _DoctorCreateAccountScreenState extends State<DoctorCreateAccountScreen> {
     phoneController.dispose();
     passwordController.dispose();
     confirmPasswordController.dispose();
+    dobController.dispose();
     super.dispose();
   }
 
@@ -309,39 +508,82 @@ class _DoctorCreateAccountScreenState extends State<DoctorCreateAccountScreen> {
                 validator: (val) => val == null ? 'Select gender' : null,
               ),
               const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      selectedDOB != null
-                          ? 'DOB: ${selectedDOB!.toLocal()}'.split(' ')[0]
-                          : 'Select Date of Birth',
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                  ),
-                  TextButton.icon(
-                    onPressed: pickDOB,
-                    icon: const Icon(Icons.calendar_today),
-                    label: const Text('Pick DOB'),
-                  ),
-                ],
+              TextFormField(
+                controller: dobController,
+                readOnly: true,
+                decoration: const InputDecoration(
+                  labelText: 'Date of Birth',
+                  suffixIcon: Icon(Icons.calendar_today),
+                ),
+                onTap: pickDOB,
+                validator: (val) => val == null || val.isEmpty ? 'Select Date of Birth' : null,
               ),
               const SizedBox(height: 20),
-              ElevatedButton.icon(
-                onPressed: pickLicenseFile,
-                icon: const Icon(Icons.upload_file),
-                label: Text(
-                  licenseFile == null
-                      ? 'Upload Practicing License'
-                      : 'License Selected',
-                  style: const TextStyle(fontSize: 16),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      licenseFile == null ? Colors.grey : Colors.teal.shade600,
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size.fromHeight(48),
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: pickLicenseFile,
+                    icon: const Icon(Icons.upload_file),
+                    label: Text(
+                      licenseFile == null
+                          ? 'Upload License'
+                          : 'Change License',
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          licenseFile == null ? Colors.grey : Colors.teal.shade600,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size.fromHeight(48),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Accepted file types: JPG, JPEG, PNG, PDF',
+                    style: TextStyle(fontSize: 13, color: Colors.black54),
+                  ),
+                  if (licenseFileError != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text(
+                        licenseFileError!,
+                        style: const TextStyle(color: Colors.red, fontSize: 13),
+                      ),
+                    ),
+                  if (licenseFile != null && licenseFileName != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Row(
+                        children: [
+                          if (licenseFileExtension == 'jpg' || licenseFileExtension == 'jpeg' || licenseFileExtension == 'png')
+                            kIsWeb && licenseFileBytes != null
+                                ? Image.memory(
+                                    licenseFileBytes!,
+                                    width: 60,
+                                    height: 60,
+                                    fit: BoxFit.cover,
+                                  )
+                                : Image.file(
+                                    licenseFile!,
+                                    width: 60,
+                                    height: 60,
+                                    fit: BoxFit.cover,
+                                  ),
+                          if (licenseFileExtension == 'pdf')
+                            const Icon(Icons.picture_as_pdf, color: Colors.red, size: 40),
+                          const SizedBox(width: 10),
+                          Flexible(
+                            child: Text(
+                              licenseFileName!,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
               ),
               const SizedBox(height: 30),
               ElevatedButton(

@@ -1,3 +1,4 @@
+import 'package:lifecare_connect/features/auth/presentation/screens/privacy_screen.dart';
 
 
 import 'package:flutter/material.dart';
@@ -32,88 +33,6 @@ class _CHWEditProfileScreenState extends State<CHWEditProfileScreen> {
   String _userName = '';
   String _userEmail = '';
   String _userRole = '';
-
-  @override
-  void initState() {
-    super.initState();
-    _loadUserData();
-    _loadSettings();
-  }
-
-  /// Load user data from Firebase
-  Future<void> _loadUserData() async {
-    setState(() => _isLoading = true);
-    
-    try {
-      final user = _auth.currentUser;
-      if (user != null) {
-        _userEmail = user.email ?? '';
-        
-        // Load user data from Firestore
-        final userDoc = await _firestore.collection('users').doc(user.uid).get();
-        if (userDoc.exists) {
-          final data = userDoc.data()!;
-          _userName = data['fullName'] ?? data['name'] ?? 'Unknown User';
-          _userRole = data['role'] ?? 'CHW';
-        }
-      }
-    } catch (e) {
-
-      _showErrorSnackBar('Failed to load user data');
-    } finally {
-      setState(() => _isLoading = false);
-    }
-  }
-
-  /// Load user settings from SharedPreferences or Firestore
-  Future<void> _loadSettings() async {
-    try {
-      final user = _auth.currentUser;
-      if (user != null) {
-        final settingsDoc = await _firestore
-            .collection('user_settings')
-            .doc(user.uid)
-            .get();
-            
-        if (settingsDoc.exists) {
-          final settings = settingsDoc.data()!;
-          setState(() {
-            _notificationsEnabled = settings['notificationsEnabled'] ?? true;
-            _pushNotifications = settings['pushNotifications'] ?? true;
-            _emailNotifications = settings['emailNotifications'] ?? false;
-            _darkMode = settings['darkMode'] ?? false;
-            _language = settings['language'] ?? 'English';
-            _timezone = settings['timezone'] ?? 'Auto';
-          });
-        }
-      }
-    } catch (e) {
-
-    }
-  }
-
-  /// Save settings to Firestore
-  Future<void> _saveSettings() async {
-    try {
-      final user = _auth.currentUser;
-      if (user != null) {
-        await _firestore.collection('user_settings').doc(user.uid).set({
-          'notificationsEnabled': _notificationsEnabled,
-          'pushNotifications': _pushNotifications,
-          'emailNotifications': _emailNotifications,
-          'darkMode': _darkMode,
-          'language': _language,
-          'timezone': _timezone,
-          'updatedAt': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
-        
-        _showSuccessSnackBar('Settings saved successfully');
-      }
-    } catch (e) {
-
-      _showErrorSnackBar('Failed to save settings');
-    }
-  }
 
   /// Show success message
   void _showSuccessSnackBar(String message) {
@@ -153,6 +72,72 @@ class _CHWEditProfileScreenState extends State<CHWEditProfileScreen> {
     }
   }
 
+  /// Load user data from Firebase
+  Future<void> _loadUserData() async {
+    setState(() => _isLoading = true);
+    try {
+      final user = _auth.currentUser;
+      if (user != null) {
+        _userEmail = user.email ?? '';
+        final userDoc = await _firestore.collection('users').doc(user.uid).get();
+        if (userDoc.exists) {
+          final data = userDoc.data()!;
+          _userName = data['fullName'] ?? data['name'] ?? 'Unknown User';
+          _userRole = data['role'] ?? 'CHW';
+        }
+      }
+    } catch (e) {
+      _showErrorSnackBar('Failed to load user data');
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  /// Load user settings from SharedPreferences or Firestore
+  Future<void> _loadSettings() async {
+    try {
+      final user = _auth.currentUser;
+      if (user != null) {
+        final settingsDoc = await _firestore
+            .collection('user_settings')
+            .doc(user.uid)
+            .get();
+        if (settingsDoc.exists) {
+          final settings = settingsDoc.data()!;
+          setState(() {
+            _notificationsEnabled = settings['notificationsEnabled'] ?? true;
+            _pushNotifications = settings['pushNotifications'] ?? true;
+            _emailNotifications = settings['emailNotifications'] ?? false;
+            _darkMode = settings['darkMode'] ?? false;
+            _language = settings['language'] ?? 'English';
+            _timezone = settings['timezone'] ?? 'Auto';
+          });
+        }
+      }
+    } catch (e) {}
+  }
+
+  /// Save settings to Firestore
+  Future<void> _saveSettings() async {
+    try {
+      final user = _auth.currentUser;
+      if (user != null) {
+        await _firestore.collection('user_settings').doc(user.uid).set({
+          'notificationsEnabled': _notificationsEnabled,
+          'pushNotifications': _pushNotifications,
+          'emailNotifications': _emailNotifications,
+          'darkMode': _darkMode,
+          'language': _language,
+          'timezone': _timezone,
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+        _showSuccessSnackBar('Settings saved successfully');
+      }
+    } catch (e) {
+      _showErrorSnackBar('Failed to save settings');
+    }
+  }
+
   /// Confirm logout
   Future<void> _confirmLogout() async {
     final shouldLogout = await showDialog<bool>(
@@ -173,7 +158,6 @@ class _CHWEditProfileScreenState extends State<CHWEditProfileScreen> {
         ],
       ),
     );
-
     if (shouldLogout == true) {
       try {
         await _auth.signOut();
@@ -193,7 +177,6 @@ class _CHWEditProfileScreenState extends State<CHWEditProfileScreen> {
         body: Center(child: CircularProgressIndicator()),
       );
     }
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Settings'),
@@ -211,27 +194,16 @@ class _CHWEditProfileScreenState extends State<CHWEditProfileScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // User Profile Section
           _buildUserProfileSection(),
           const SizedBox(height: 24),
-
-          // Notifications Section
           _buildNotificationsSection(),
           const SizedBox(height: 24),
-
-          // App Preferences Section
           _buildAppPreferencesSection(),
           const SizedBox(height: 24),
-
-          // Account Section
           _buildAccountSection(),
           const SizedBox(height: 24),
-
-          // Support Section
           _buildSupportSection(),
           const SizedBox(height: 32),
-
-          // Logout Button
           _buildLogoutButton(),
         ],
       ),
@@ -379,6 +351,18 @@ class _CHWEditProfileScreenState extends State<CHWEditProfileScreen> {
           trailing: const Icon(Icons.arrow_forward_ios, size: 16),
           onTap: () => _showTimezoneSelector(),
         ),
+        ListTile(
+          leading: const Icon(Icons.privacy_tip, color: Colors.teal),
+          title: const Text('Privacy Policy'),
+          subtitle: const Text('View our privacy policy'),
+          trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const PrivacyScreen()),
+            );
+          },
+        ),
       ],
     );
   }
@@ -397,18 +381,11 @@ class _CHWEditProfileScreenState extends State<CHWEditProfileScreen> {
           onTap: () => _changePassword(),
         ),
         ListTile(
-          title: const Text('Privacy Settings'),
-          subtitle: const Text('Manage your privacy preferences'),
-          leading: const Icon(Icons.privacy_tip),
+          title: const Text('Delete Account'),
+          subtitle: const Text('Permanently delete your account'),
+          leading: const Icon(Icons.delete_forever, color: Colors.red),
           trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-          onTap: () => _showPrivacySettings(),
-        ),
-        ListTile(
-          title: const Text('Data Export'),
-          subtitle: const Text('Download your data'),
-          leading: const Icon(Icons.download),
-          trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-          onTap: () => _exportData(),
+          onTap: _confirmDeleteAccount,
         ),
       ],
     );
@@ -417,35 +394,84 @@ class _CHWEditProfileScreenState extends State<CHWEditProfileScreen> {
   /// Build support section
   Widget _buildSupportSection() {
     return _buildSettingsSection(
-      title: 'Support',
-      icon: Icons.help,
+      title: 'Help & Support',
+      icon: Icons.help_outline,
       children: [
         ListTile(
-          title: const Text('Help Center'),
-          subtitle: const Text('Get help and support'),
-          leading: const Icon(Icons.help_center),
+          leading: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.orange.shade100,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.help,
+              color: Colors.orange.shade700,
+              size: 24,
+            ),
+          ),
+          title: const Text(
+            'Help & Support',
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 16,
+            ),
+          ),
+          subtitle: Text(
+            'Get help and contact support',
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontSize: 14,
+            ),
+          ),
           trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-          onTap: () => _openHelpCenter(),
-        ),
-        ListTile(
-          title: const Text('Contact Support'),
-          subtitle: const Text('Reach out to our support team'),
-          leading: const Icon(Icons.contact_support),
-          trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-          onTap: () => _contactSupport(),
-        ),
-        ListTile(
-          title: const Text('About'),
-          subtitle: const Text('App information and version'),
-          leading: const Icon(Icons.info),
-          trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-          onTap: () => _showAbout(),
+          onTap: () {
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Help & Support'),
+                content: const SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Need help with LifeCare Connect?',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      SizedBox(height: 16),
+                      Text('📧 Email: contact_lifecare@rhemn.org.ng'),
+                      SizedBox(height: 8),
+                      Text('📞 Phone: +2347072127123'),
+                      SizedBox(height: 8),
+                      Text('🕒 Hours: Monday - Friday, 8AM - 6PM'),
+                      SizedBox(height: 16),
+                      Text(
+                        'Common Issues:',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      SizedBox(height: 8),
+                      Text('• Login problems: Check internet connection'),
+                      Text('• Booking issues: Ensure all fields are filled'),
+                      Text('• Emergency services: Call 199 for immediate help'),
+                    ],
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Close'),
+                  ),
+                ],
+              ),
+            );
+          },
         ),
       ],
     );
   }
 
-  /// Build settings section widget
+  /// Build settings section
   Widget _buildSettingsSection({
     required String title,
     required IconData icon,
@@ -484,7 +510,7 @@ class _CHWEditProfileScreenState extends State<CHWEditProfileScreen> {
     );
   }
 
-  /// Build logout button
+  /// Logout button
   Widget _buildLogoutButton() {
     return ElevatedButton.icon(
       onPressed: _confirmLogout,
@@ -501,7 +527,6 @@ class _CHWEditProfileScreenState extends State<CHWEditProfileScreen> {
     );
   }
 
-  // Helper methods for settings actions
   void _showLanguageSelector() {
     showDialog(
       context: context,
@@ -552,33 +577,45 @@ class _CHWEditProfileScreenState extends State<CHWEditProfileScreen> {
     _showErrorSnackBar('Password change feature coming soon');
   }
 
-  void _showPrivacySettings() {
-    _showErrorSnackBar('Privacy settings feature coming soon');
-  }
-
-  void _exportData() {
-    _showErrorSnackBar('Data export feature coming soon');
-  }
-
-  void _openHelpCenter() {
-    _showErrorSnackBar('Help center feature coming soon');
-  }
-
-  void _contactSupport() {
-    _showErrorSnackBar('Contact support feature coming soon');
-  }
-
-  void _showAbout() {
-    showAboutDialog(
+  /// Confirm delete account
+  Future<void> _confirmDeleteAccount() async {
+    final shouldDelete = await showDialog<bool>(
       context: context,
-      applicationName: 'LifeCare Connect',
-      applicationVersion: '1.0.0',
-      applicationIcon: const Icon(Icons.local_hospital, size: 48),
-      children: [
-        const Text('Community Health Worker Management System'),
-        const SizedBox(height: 16),
-        const Text('© 2025 LifeCare Connect. All rights reserved.'),
-      ],
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Account'),
+        content: const Text('Are you sure you want to permanently delete your account? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
     );
+    if (shouldDelete == true) {
+      _deleteAccount();
+    }
+  }
+
+  /// Delete account logic
+  Future<void> _deleteAccount() async {
+    try {
+      final user = _auth.currentUser;
+      if (user != null) {
+        await _firestore.collection('users').doc(user.uid).delete();
+        await _firestore.collection('user_settings').doc(user.uid).delete();
+        await user.delete();
+        if (mounted) {
+          context.go('/login');
+        }
+      }
+    } catch (e) {
+      _showErrorSnackBar('Failed to delete account: ${e.toString()}');
+    }
   }
 }

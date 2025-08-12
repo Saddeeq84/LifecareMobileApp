@@ -542,102 +542,63 @@ class _MyHealthTabState extends State<MyHealthTab> with SingleTickerProviderStat
                           showDialog(
                             context: context,
                             builder: (context) {
-                              return FutureBuilder<Map<String, dynamic>>(
-                                future: () async {
-                                  final map = Map<String, dynamic>.from(filteredDetails);
-                                  // Hide prescribedAt, prescribedBy, requestedAt
-                                  map.removeWhere((k, v) {
-                                    final key = k.toLowerCase();
-                                    return key == 'prescribedat' ||
-                                           key == 'requestedat' ||
-                                           key == 'prescribedby' ||
-                                           key == 'timestamp' ||
-                                           key == 'createdat' ||
-                                           key == 'updatedat';
-                                  });
-                                  // Only show relevant fields for CHW/Doctor/Preconsultation
-                                  final relevantKeys = [
-                                    'symptoms',
-                                    'diagnosis',
-                                    'treatment',
-                                    'mainComplaint',
-                                    'notes',
-                                    'recommendations',
-                                    'findings',
-                                    'plan',
-                                    'reasonForVisit',
-                                    'complaint',
-                                    'vitals',
-                                    'medications',
-                                    'referralReason',
-                                    'Prescribed By',
-                                    'prescriptions',
-                                    'laboratoryInvestigations',
-                                    'radiologicalInvestigations'
-                                  ];
-                                  final typeKeys = [typeLower, consultTypeLower];
-                                  if (typeKeys.any((t) => t.contains('chw') || t.contains('consultation') || t.contains('doctor') || t.contains('preconsultation'))) {
-                                    map.removeWhere((k, v) => !relevantKeys.contains(k) && !relevantKeys.contains(k.toLowerCase().replaceAll('_','')));
-                                  }
-                                  return map;
-                                }(),
-                                builder: (context, snapshot) {
-                                  final map = snapshot.data ?? filteredDetails;
-                                  String formatLabel(String key) {
-                                    final k = key.toString().replaceAll('_', ' ');
-                                    return k.isNotEmpty ? (k[0].toUpperCase() + k.substring(1)) : k;
-                                  }
-                                  return AlertDialog(
-                                    title: Text(cardTitle),
-                                    content: SingleChildScrollView(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          ...map.entries
-                                              .where((entry) => entry.value != null && entry.value.toString().isNotEmpty)
-                                              .map((entry) {
-                                                final keyLower = entry.key.toLowerCase();
-                                                final isPrescription = keyLower == 'prescriptions';
-                                                final isLabTest = keyLower == 'laboratoryinvestigations';
-                                                final value = entry.value;
-                                                String displayValue;
-                                                if (isPrescription && value is List) {
-                                                  // If prescriptions is a list of objects, extract medication names
-                                                  displayValue = value.map((e) {
-                                                    if (e is Map && e.containsKey('name')) return e['name'];
-                                                    return e.toString();
-                                                  }).join(', ');
-                                                } else if (isLabTest && value is List) {
-                                                  // If lab tests is a list of objects, extract test names
-                                                  displayValue = value.map((e) {
-                                                    if (e is Map && e.containsKey('name')) return e['name'];
-                                                    return e.toString();
-                                                  }).join(', ');
-                                                } else {
-                                                  displayValue = value.toString();
-                                                }
-                                                return Padding(
-                                                  padding: const EdgeInsets.symmetric(vertical: 2),
-                                                  child: Row(
-                                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                                    children: [
-                                                      Text('${formatLabel(entry.key)}: ', style: const TextStyle(fontWeight: FontWeight.bold)),
-                                                      Expanded(child: Text(displayValue, style: const TextStyle(fontSize: 15))),
-                                                    ],
-                                                  ),
-                                                );
-                                              })
-                                        ],
-                                      ),
-                                    ),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () => Navigator.of(context).pop(),
-                                        child: const Text('Close'),
-                                      ),
+                              // Show all non-system fields, like doctor view
+                              final map = <String, dynamic>{};
+                              filteredDetails.forEach((key, value) {
+                                final k = key.toLowerCase();
+                                if (k == 'timestamp' || k == 'createdat' || k == 'updatedat' || k == 'appointmentid' || k == 'patientid' || k == 'prescribedat' || k == 'requestedat' || k == 'userId' || k == 'recordid' || k == 'id' || k == 'source' || k == 'status' || k == 'fileurls' || k == 'filenames' || k == 'uploadDate' || k == 'submissionTimestamp' || k == 'requiresReview' || k == 'accessibleby' || k == 'iseditable' || k == 'isdeletable') {
+                                  return;
+                                }
+                                map[key] = value;
+                              });
+                              String formatLabel(String key) {
+                                final k = key.toString().replaceAll('_', ' ');
+                                return k.isNotEmpty ? (k[0].toUpperCase() + k.substring(1)) : k;
+                              }
+                              return AlertDialog(
+                                title: Text(cardTitle),
+                                content: SingleChildScrollView(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      ...map.entries
+                                          .where((entry) => entry.value != null && entry.value.toString().isNotEmpty)
+                                          .map((entry) {
+                                            final value = entry.value;
+                                            String displayValue;
+                                            if (entry.key.toLowerCase() == 'prescriptions' && value is List) {
+                                              displayValue = value.map((e) {
+                                                if (e is Map && e.containsKey('name')) return e['name'];
+                                                return e.toString();
+                                              }).join(', ');
+                                            } else if (entry.key.toLowerCase() == 'laboratoryinvestigations' && value is List) {
+                                              displayValue = value.map((e) {
+                                                if (e is Map && e.containsKey('name')) return e['name'];
+                                                return e.toString();
+                                              }).join(', ');
+                                            } else {
+                                              displayValue = value.toString();
+                                            }
+                                            return Padding(
+                                              padding: const EdgeInsets.symmetric(vertical: 2),
+                                              child: Row(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text('${formatLabel(entry.key)}: ', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                                  Expanded(child: Text(displayValue, style: const TextStyle(fontSize: 15))),
+                                                ],
+                                              ),
+                                            );
+                                          })
                                     ],
-                                  );
-                                },
+                                  ),
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.of(context).pop(),
+                                    child: const Text('Close'),
+                                  ),
+                                ],
                               );
                             },
                           );

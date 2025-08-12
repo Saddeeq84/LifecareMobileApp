@@ -17,3 +17,7 @@ exports.sendAdminApprovalEmail = functions.https.onRequest(async (req, res) => {
     res.status(500).send('Failed to send email');
   }
 });
+
+// Export approval/rejection email functions for deployment
+exports.sendAccountApprovedEmail = require('./account_status_emails').sendAccountApprovedEmail;
+exports.sendAccountRejectedEmail = require('./account_status_emails').sendAccountRejectedEmail;
