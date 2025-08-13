@@ -6,7 +6,7 @@ exports.sendAdminApprovalEmail = functions.https.onRequest(async (req, res) => {
   const { email, name } = req.body;
   const msg = {
     to: email,
-    from: ' lifecare_connect@rhemn.org.ng', // Use your verified sender
+    from: 'admin@lifecare.rhemn.org.ng', // Use your verified sender
     subject: 'Admin Approval Required',
     text: `Hello ${name}, your account requires admin approval.`,
   };
