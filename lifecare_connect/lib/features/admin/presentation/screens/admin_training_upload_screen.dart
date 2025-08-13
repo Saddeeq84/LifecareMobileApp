@@ -1,6 +1,7 @@
 // ignore_for_file: use_build_context_synchronously
 
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -29,6 +30,7 @@ class _AdminTrainingUploadScreenState extends State<AdminTrainingUploadScreen> w
 
   String _selectedType = 'pdf';
   File? _selectedFile;
+  Uint8List? _selectedFileBytes;
   bool _isUploading = false;
   String _currentRole = 'chw'; // Track current tab role
 
@@ -69,22 +71,20 @@ class _AdminTrainingUploadScreenState extends State<AdminTrainingUploadScreen> w
 
   Future<void> _pickFile() async {
     // For patients, only allow video files
-    if (_currentRole == 'patient') {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.video,
-      );
-      if (result != null && result.files.single.path != null) {
-        setState(() => _selectedFile = File(result.files.single.path!));
-      }
-    } else {
-      // For CHW and doctors, allow both PDF and video
-      final result = await FilePicker.platform.pickFiles(
-        type: _selectedType == 'video' ? FileType.video : FileType.custom,
-        allowedExtensions: _selectedType == 'pdf' ? ['pdf'] : null,
-      );
-      if (result != null && result.files.single.path != null) {
-        setState(() => _selectedFile = File(result.files.single.path!));
-      }
+    final isPatient = _currentRole == 'patient';
+    final result = await FilePicker.platform.pickFiles(
+      type: isPatient
+          ? FileType.video
+          : (_selectedType == 'video' ? FileType.video : FileType.custom),
+      allowedExtensions: !isPatient && _selectedType == 'pdf' ? ['pdf'] : null,
+      withData: true,
+    );
+    if (result != null && result.files.isNotEmpty) {
+      setState(() {
+        final file = result.files.single;
+        _selectedFile = file.path != null ? File(file.path!) : null;
+        _selectedFileBytes = file.bytes;
+      });
     }
   }
 
@@ -104,7 +104,7 @@ class _AdminTrainingUploadScreenState extends State<AdminTrainingUploadScreen> w
     }
 
     // For all other cases, require a file
-    if (_selectedFile == null) {
+    if (_selectedFile == null && _selectedFileBytes == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select a file.')),
       );
@@ -114,37 +114,88 @@ class _AdminTrainingUploadScreenState extends State<AdminTrainingUploadScreen> w
     setState(() => _isUploading = true);
 
     try {
-      final fileName = p.basename(_selectedFile!.path);
+      final fileName = _selectedFile != null ? p.basename(_selectedFile!.path) : 'web_upload_${DateTime.now().millisecondsSinceEpoch}';
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      
-      // Enhanced storage path with better organization
       final ref = FirebaseStorage.instance
           .ref()
           .child('training_materials/$targetRole/${_selectedType}s/${timestamp}_$fileName');
 
-      final uploadTask = await ref.putFile(_selectedFile!);
-      final downloadUrl = await uploadTask.ref.getDownloadURL();
+      String downloadUrl;
+      int fileSize;
 
-      // Enhanced metadata for better targeting and offline sync
+      // Platform check for web
+      bool isWeb = identical(0, 0.0);
+
+      if (isWeb && _selectedFileBytes != null) {
+        fileSize = _selectedFileBytes!.length;
+        // Firebase Storage web upload limit is 10MB
+        if (fileSize > 10 * 1024 * 1024) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('File too large. Max 10MB allowed for web uploads.'), backgroundColor: Colors.red),
+          );
+          setState(() => _isUploading = false);
+          return;
+        }
+        try {
+          final uploadTask = await ref.putData(_selectedFileBytes!);
+          downloadUrl = await uploadTask.ref.getDownloadURL();
+        } catch (e) {
+          debugPrint('Web upload error: $e');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Web upload failed: $e'), backgroundColor: Colors.red),
+          );
+          setState(() => _isUploading = false);
+          return;
+        }
+      } else if (_selectedFile != null) {
+        try {
+          final uploadTask = await ref.putFile(_selectedFile!);
+          downloadUrl = await uploadTask.ref.getDownloadURL();
+          fileSize = await _selectedFile!.length();
+        } catch (e) {
+          debugPrint('Mobile/desktop upload error: $e');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Upload failed: $e'), backgroundColor: Colors.red),
+          );
+          setState(() => _isUploading = false);
+          return;
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No file data available for upload.'), backgroundColor: Colors.red),
+        );
+        setState(() => _isUploading = false);
+        return;
+      }
+
       final materialData = {
-        'id': '${timestamp}_${targetRole}_$_selectedType', // Unique ID for offline sync
+        'id': '${timestamp}_${targetRole}_$_selectedType',
         'title': _titleController.text.trim(),
         'description': _descController.text.trim(),
         'url': downloadUrl,
         'type': _selectedType,
         'targetRole': targetRole,
         'fileName': fileName,
-        'fileSize': await _selectedFile!.length(), // For download progress
+        'fileSize': fileSize,
         'uploadedAt': FieldValue.serverTimestamp(),
         'uploadedBy': FirebaseAuth.instance.currentUser?.uid ?? 'unknown',
-        'version': 1, // For future updates
-        'isActive': true, // For soft deletion
-        'downloadCount': 0, // Analytics
-        'tags': _generateTags(targetRole, _selectedType), // For better filtering
-        'syncStatus': 'synced', // For offline tracking
+        'version': 1,
+        'isActive': true,
+        'downloadCount': 0,
+        'tags': _generateTags(targetRole, _selectedType),
+        'syncStatus': 'synced',
       };
 
-      await FirebaseFirestore.instance.collection('training_materials').add(materialData);
+      try {
+        await FirebaseFirestore.instance.collection('training_materials').add(materialData);
+      } catch (e) {
+        debugPrint('Firestore write error: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save material: $e'), backgroundColor: Colors.red),
+        );
+        setState(() => _isUploading = false);
+        return;
+      }
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -161,14 +212,8 @@ class _AdminTrainingUploadScreenState extends State<AdminTrainingUploadScreen> w
       setState(() {
         _selectedType = targetRole == 'patient' ? 'video' : 'pdf';
         _selectedFile = null;
+        _selectedFileBytes = null;
       });
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Upload failed: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
     } finally {
       setState(() => _isUploading = false);
     }
